@@ -137,6 +137,11 @@ process_file() {
 
     # 9. Simplify well-known HTML snippets (if -s is set)
     #
+    # Converts linked HTML images like:
+    #   [<img src="img_url" alt="alt text" height="128" />](link_url)
+    # Into:
+    #   [![alt text](img_url)](link_url)
+    #
     # Converts blocks like:
     #   <div align="center" id="project-readme-header">
     #   <br>
@@ -147,9 +152,45 @@ process_file() {
     # Into:
     #   **bold text** [alt](link_url)
     if [ "${simplify_html}" -eq 1 ]; then
-        # 9a. Collapse <div ... id="project-readme-header">...</div> blocks
-        #     into a single line, removing HTML tags and blank lines
+        # 9a. Convert selected HTML snippets and collapse
+        #     <div ... id="project-readme-header">...</div> blocks into a
+        #     single line, removing HTML tags and blank lines.
         awk '
+        function attr(line, name, pos, rest, quote, end) {
+            pos = index(tolower(line), tolower(name))
+            if (pos == 0) {
+                return ""
+            }
+            rest = substr(line, pos + length(name))
+            if (rest !~ /^[[:space:]]*=/) {
+                return ""
+            }
+            sub(/^[[:space:]]*=[[:space:]]*/, "", rest)
+            quote = substr(rest, 1, 1)
+            if (quote != "\"" && quote != "\047") {
+                return ""
+            }
+            rest = substr(rest, 2)
+            end = index(rest, quote)
+            if (end == 0) {
+                return ""
+            }
+            return substr(rest, 1, end - 1)
+        }
+        function linked_img_to_markdown(line, href, image, alt) {
+            if (line !~ /^\[<img[[:space:]][^>]*>\]\([^)]*\)$/) {
+                return line
+            }
+            href = line
+            sub(/^.*\]\(/, "", href)
+            sub(/\)$/, "", href)
+            image = attr(line, "src")
+            alt = attr(line, "alt")
+            if (image == "") {
+                return line
+            }
+            return "[![" alt "](" image ")](" href ")"
+        }
         /<div[^>]*id=["'"'"']?project-readme-header["'"'"']?/ {
             in_block = 1; content = ""; next
         }
@@ -171,7 +212,7 @@ process_file() {
             content = content line
             next
         }
-        { print }
+        { print linked_img_to_markdown($0) }
         ' "${tmpfile}" > "${tmpfile}.simplified" && mv "${tmpfile}.simplified" "${tmpfile}"
     fi
 
