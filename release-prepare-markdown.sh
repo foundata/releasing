@@ -147,11 +147,7 @@ process_file() {
     # Into:
     #   **bold text** [alt](link_url)
     if [ "${simplify_html}" -eq 1 ]; then
-        # 9a. Convert markdown image-in-link [![alt](img)](url) to plain link [alt](url)
-        sed -E -i "" 's/\[!\[([^]]*)\]\([^)]*\)\]\(([^)]*)\)/[\1](\2)/g' "${tmpfile}" 2>/dev/null ||
-            sed -E -i 's/\[!\[([^]]*)\]\([^)]*\)\]\(([^)]*)\)/[\1](\2)/g' "${tmpfile}"
-
-        # 9b. Collapse <div ... id="project-readme-header">...</div> blocks
+        # 9a. Collapse <div ... id="project-readme-header">...</div> blocks
         #     into a single line, removing HTML tags and blank lines
         awk '
         /<div[^>]*id=["'"'"']?project-readme-header["'"'"']?/ {
@@ -167,6 +163,10 @@ process_file() {
             line = $0
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
             if (line == "" || tolower(line) ~ /^<br[[:space:]]*\/?>$/) next
+            if (line ~ /^\[!\[[^]]*\]\([^)]*\)\]\([^)]*\)$/) {
+                sub(/^\[!\[/, "[", line)
+                sub(/\]\([^)]*\)\]\(/, "](", line)
+            }
             if (content != "") content = content " "
             content = content line
             next
