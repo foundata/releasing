@@ -80,6 +80,7 @@ fi
 # Function to process a single file
 process_file() {
     local file="${1}"
+    local markdown_link_label="(([^]\`]|\`[^\`]*\`)*)"
     local tmpfile
 
     if [ ! -f "${file}" ]; then
@@ -107,13 +108,15 @@ process_file() {
 
     # 3. Markdown links with ./ prefix (not images)
     #    [text](./path) -> [text](${url_base_ui}/path)
-    sed -E -i "" "s#([^!]|^)\[([^]]*)\]\(\./([^)#[:space:]]+)\)#\1[\2](${url_base_ui}/\3)#g" "${tmpfile}" 2>/dev/null ||
-        sed -E -i "s#([^!]|^)\[([^]]*)\]\(\./([^)#[:space:]]+)\)#\1[\2](${url_base_ui}/\3)#g" "${tmpfile}"
+    #    A path fragment is preserved; a pure anchor does not match.
+    sed -E -i "" "s#([^!]|^)\[${markdown_link_label}\]\(\./([^)#[:space:]]+)(\#[^)[:space:]]*)?\)#\1[\2](${url_base_ui}/\4\5)#g" "${tmpfile}" 2>/dev/null ||
+        sed -E -i "s#([^!]|^)\[${markdown_link_label}\]\(\./([^)#[:space:]]+)(\#[^)[:space:]]*)?\)#\1[\2](${url_base_ui}/\4\5)#g" "${tmpfile}"
 
     # 4. Markdown links without ./ prefix (must not start with scheme, /, or #)
     #    [text](path) -> [text](${url_base_ui}/path)
-    sed -E -i "" "s#([^!]|^)\[([^]]*)\]\(([A-Za-z0-9][^):#[:space:]]+)\)#\1[\2](${url_base_ui}/\3)#g" "${tmpfile}" 2>/dev/null ||
-        sed -E -i "s#([^!]|^)\[([^]]*)\]\(([A-Za-z0-9][^):#[:space:]]+)\)#\1[\2](${url_base_ui}/\3)#g" "${tmpfile}"
+    #    Labels may contain ] inside backtick-delimited code spans.
+    sed -E -i "" "s#([^!]|^)\[${markdown_link_label}\]\(([A-Za-z0-9][^):#[:space:]]+)(\#[^)[:space:]]*)?\)#\1[\2](${url_base_ui}/\4\5)#g" "${tmpfile}" 2>/dev/null ||
+        sed -E -i "s#([^!]|^)\[${markdown_link_label}\]\(([A-Za-z0-9][^):#[:space:]]+)(\#[^)[:space:]]*)?\)#\1[\2](${url_base_ui}/\4\5)#g" "${tmpfile}"
 
     # 5. HTML href attributes with ./ prefix (case insensitive)
     #    href="./path" -> href="${url_base_ui}/path"
