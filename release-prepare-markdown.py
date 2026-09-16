@@ -388,14 +388,14 @@ def _source_path(value: str) -> str:
     return str(path)
 
 
-def _absolute(value: str, base: str, source_path: str) -> str:
+def _repository_target(value: str, source_path: str) -> tuple[str, str]:
     if value.startswith("/"):
         raise ValueError(
             "root-relative path has no repository origin on the publishing site"
         )
     parsed = urlsplit(value)
     path = unquote(parsed.path, errors="strict")
-    if "\\" in path or any(ord(char) < 32 for char in value):
+    if "\\" in path or any(ord(char) < 32 for char in value + path):
         raise ValueError("unsupported control character or backslash in destination")
     normalized = (
         posixpath.normpath(posixpath.join(posixpath.dirname(source_path), path))
@@ -407,7 +407,11 @@ def _absolute(value: str, base: str, source_path: str) -> str:
     normalized = "" if normalized == "." else normalized
     if path.endswith("/") and normalized:
         normalized += "/"
-    suffix = value[len(parsed.path) :]
+    return normalized, value[len(parsed.path) :]
+
+
+def _absolute(value: str, base: str, source_path: str) -> str:
+    normalized, suffix = _repository_target(value, source_path)
     return (
         base
         + "/"
@@ -422,6 +426,61 @@ def _location(text: str, offset: int) -> str:
     return f"{len(breaks) + 1}:{offset - beginning + 1}"
 
 
+def _raise_problems(text: str, problems: list[tuple[int, str]]) -> None:
+    if problems:
+        raise ValueError(
+            "\n".join(
+                f"{_location(text, offset)}: {reason}"
+                for offset, reason in sorted(problems)
+            )
+        )
+
+
+def validate_local_files(
+    text: str, *, repo_root: Path, source_path: str = "README.md"
+) -> None:
+    """Check relative destinations against an explicit local repository tree.
+
+    This optional filesystem check is separate from the pure transformation.
+    Links may name files or directories; images must name regular files. Symlinks
+    must resolve inside the root. Queries, fragments and external URLs are not
+    checked. Raise ValueError with original source locations for invalid targets.
+    """
+    source_path = _source_path(source_path)
+    try:
+        root = repo_root.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"cannot resolve repository root {repo_root}: {exc}") from exc
+    if not root.is_dir():
+        raise ValueError(f"repository root must be a directory: {repo_root}")
+    problems = []
+    for destination in analyze(text).destinations:
+        if not _local(destination.value):
+            continue
+        try:
+            relative, _ = _repository_target(destination.value, source_path)
+            target = (root / relative).resolve(strict=True)
+            if not target.is_relative_to(root):
+                raise ValueError("local target resolves outside the repository root")
+            mode = target.stat().st_mode
+            if destination.image and not stat.S_ISREG(mode):
+                raise ValueError("image target must be a regular file")
+            if relative.endswith("/") and not stat.S_ISDIR(mode):
+                raise ValueError("target with a trailing slash must be a directory")
+            if not (stat.S_ISREG(mode) or stat.S_ISDIR(mode)):
+                raise ValueError("local target must be a regular file or directory")
+        except FileNotFoundError:
+            problems.append(
+                (
+                    destination.start,
+                    f"{destination.value!r}: local target does not exist",
+                )
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            problems.append((destination.start, f"{destination.value!r}: {exc}"))
+    _raise_problems(text, problems)
+
+
 def _apply(text: str, edits: list[tuple[int, int, str]]) -> str:
     end = len(text)
     parts: list[str] = []
@@ -434,8 +493,7 @@ def _apply(text: str, edits: list[tuple[int, int, str]]) -> str:
     return "".join(reversed(parts))
 
 
-def _simplify(text: str) -> str:
-    original = _apply(text, analyze(text).image_links)
+def _collapse_header(original: str) -> str:
     text, positions = _normalize(original)
     document = analyze(text)
     edits = []
@@ -523,12 +581,16 @@ def prepare_markdown(
     ui_base: str,
     source_path: str = "README.md",
     simplify: bool = False,
+    simplify_badges: bool = False,
+    collapse_header: bool = False,
     strict: bool = False,
 ) -> str:
     """Rewrite active destinations without filesystem, Git or network access.
 
     Strict diagnostics refer to the original source. The source path is relative
     to the repository root and independent of the output file's location.
+    Simplify enables both badge simplification and header collapse; either
+    operation can also be selected independently.
     """
     source_path = _source_path(source_path)
     raw_base, ui_base = _base(raw_base), _base(ui_base)
@@ -551,16 +613,12 @@ def prepare_markdown(
         if destination.attribute:
             replacement = html.escape(replacement, quote=True)
         edits.append((destination.start, destination.end, replacement))
-    if problems:
-        raise ValueError(
-            "\n".join(
-                f"{_location(text, offset)}: {reason}"
-                for offset, reason in sorted(problems)
-            )
-        )
+    _raise_problems(text, problems)
     output = _apply(text, edits)
-    if simplify:
-        output = _simplify(output)
+    if simplify or simplify_badges:
+        output = _apply(output, analyze(output).image_links)
+    if simplify or collapse_header:
+        output = _collapse_header(output)
     if strict and any(
         _local(destination.value) for destination in analyze(output).destinations
     ):
@@ -631,6 +689,22 @@ def _write(path: Path, data: bytes, mode: int) -> None:
             temporary.unlink(missing_ok=True)
 
 
+def _show_diff(path: Path, target: Path, original: str, result: str) -> None:
+    if original == result:
+        print(f"Unchanged: {path}", file=sys.stderr)
+        return
+    # Display all input line endings as LF, without changing the actual output.
+    for line in difflib.unified_diff(
+        _lines(_normalize(original)[0]),
+        _lines(_normalize(result)[0]),
+        fromfile=str(path),
+        tofile=str(target),
+    ):
+        sys.stderr.write(line)
+        if not line.endswith("\n"):
+            sys.stderr.write("\n\\ No newline at end of file\n")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the non-interactive CLI; reserve stdout for generated Markdown."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -649,15 +723,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--source-path", help="repository-relative input path (default: README.md)"
     )
     parser.add_argument(
+        "--repo-root",
+        type=Path,
+        help="also check relative destinations exist inside this local directory",
+    )
+    parser.add_argument(
         "-s",
         "--simplify",
         action="store_true",
         help="collapse project header and linked Markdown images",
     )
     parser.add_argument(
+        "--simplify-badges",
+        action="store_true",
+        help="replace inline linked Markdown images with text links",
+    )
+    parser.add_argument(
+        "--collapse-header",
+        action="store_true",
+        help="collapse only the project-readme-header div",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="fail on unresolved paths or unsupported resource attributes",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="validate and show a diff on stderr without writing any files",
     )
     output = parser.add_mutually_exclusive_group()
     output.add_argument(
@@ -677,6 +771,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "files", nargs="+", type=Path, help="UTF-8 Markdown input files"
     )
     args = parser.parse_args(argv)
+    if args.dry_run and args.output == "-":
+        parser.error("--dry-run cannot be combined with --stdout or --output -")
     if len(args.files) != 1 and (
         args.output is not None or args.source_path is not None
     ):
@@ -694,12 +790,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise ValueError(f"{path}: UTF-8 byte-order marks are unsupported")
             text = original.decode("utf-8")
             try:
+                if args.repo_root is not None:
+                    validate_local_files(
+                        text,
+                        repo_root=args.repo_root,
+                        source_path=args.source_path or "README.md",
+                    )
                 result = prepare_markdown(
                     text,
                     raw_base=raw_base,
                     ui_base=ui_base,
                     source_path=args.source_path or "README.md",
                     simplify=args.simplify,
+                    simplify_badges=args.simplify_badges,
+                    collapse_header=args.collapse_header,
                     strict=args.strict,
                 )
             except ValueError as exc:
@@ -716,6 +820,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     )
                 if target.exists() and not target.is_file():
                     raise ValueError("output must be a regular file")
+                if not target.parent.is_dir():
+                    raise ValueError(
+                        f"output parent must be a directory: {target.parent}"
+                    )
             mode = stat.S_IMODE(
                 (target if target.exists() and args.output != "-" else path)
                 .stat()
@@ -724,20 +832,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             prepared.append((path, target, text, result, mode))
         # Finish validation for the whole batch before replacing any input.
         for path, target, original_text, result, mode in prepared:
-            if args.output == "-":
+            if args.dry_run:
+                _show_diff(path, target, original_text, result)
+            elif args.output == "-":
                 sys.stdout.buffer.write(result.encode("utf-8"))
                 sys.stdout.buffer.flush()
             elif args.output is not None or result != original_text:
                 _write(target, result.encode("utf-8"), mode)
                 if args.output is None:
-                    sys.stderr.writelines(
-                        difflib.unified_diff(
-                            original_text.splitlines(keepends=True),
-                            result.splitlines(keepends=True),
-                            fromfile=str(path),
-                            tofile=str(path),
-                        )
-                    )
+                    _show_diff(path, target, original_text, result)
             elif args.output is None:
                 print(f"Unchanged: {path}", file=sys.stderr)
     except (OSError, UnicodeError, ValueError) as exc:

@@ -166,3 +166,54 @@ def test_unicode_line_separators_remain_literal_content() -> None:
 def test_strict_locations_follow_input_line_endings(newline: str) -> None:
     with pytest.raises(ValueError, match="3:5:"):
         prepare(newline.join(["Title", "", "[x](/root.md)"]))
+
+
+@pytest.mark.parametrize("simplify_badges", [False, True])
+@pytest.mark.parametrize("collapse_header", [False, True])
+@pytest.mark.parametrize("newline", ["\n", "\r\n", "\r"])
+def test_simplification_operations_are_independent(
+    simplify_badges: bool, collapse_header: bool, newline: str
+) -> None:
+    badge = "[![badge](./badge.svg)](./page.md)"
+    source = (
+        '<div id="project-readme-header">\n\n'
+        f"**Project**\n\n{badge}\n<br>\n</div>\n\nOutside {badge}\n"
+    )
+    output_badge = (
+        f"[badge]({UI}/page.md)"
+        if simplify_badges
+        else f"[![badge]({RAW}/badge.svg)]({UI}/page.md)"
+    )
+    expected = (
+        f"**Project** {output_badge}\n"
+        if collapse_header
+        else '<div id="project-readme-header">\n\n'
+        f"**Project**\n\n{output_badge}\n<br>\n</div>\n"
+    ) + f"\nOutside {output_badge}\n"
+    source, expected = source.replace("\n", newline), expected.replace("\n", newline)
+    assert (
+        prepare(
+            source,
+            simplify_badges=simplify_badges,
+            collapse_header=collapse_header,
+        )
+        == expected
+    )
+    assert prepare(source, simplify=True) == prepare(
+        source, simplify_badges=True, collapse_header=True
+    )
+    assert prepare(source, simplify=True) == prepare(
+        source,
+        simplify=True,
+        simplify_badges=simplify_badges,
+        collapse_header=collapse_header,
+    )
+
+
+def test_badges_only_does_not_attempt_malformed_header_collapse() -> None:
+    source = '<div id="project-readme-header">\n\n[![badge](a.svg)](a.md)\n'
+    assert prepare(source, simplify_badges=True) == (
+        '<div id="project-readme-header">\n\n' + f"[badge]({UI}/a.md)\n"
+    )
+    with pytest.raises(ValueError, match="unclosed project-readme-header"):
+        prepare(source, collapse_header=True)

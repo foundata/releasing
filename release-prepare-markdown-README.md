@@ -36,6 +36,30 @@ operation requires explicit organization and repository names, or both custom
 URL bases. The output must not alias the input, including through a hard link or
 symlink.
 
+## Previewing changes
+
+Use `--dry-run` to validate the inputs and show a unified diff without writing
+any files:
+
+```sh
+uv run --frozen --script ./release-prepare-markdown.py \
+  -o foundata -r example --ref refs/tags/v1.0.0 \
+  --strict --dry-run ./README.md
+```
+
+Diffs and unchanged-file notices go to stderr; stdout stays empty. A successful
+preview returns `0`, whether or not changes are needed. Validation errors return
+`1`. Every input in a batch is validated before any diff is shown.
+
+Combine `--dry-run` with `--output PATH` to preview a separate output file. The
+diff compares the input with the proposed transformation, not with any existing
+output file. No output or temporary file is created or replaced. Output alias
+and parent-directory checks still apply; a preview does not test write access.
+`--stdout` and `--output -` cannot be combined with `--dry-run`.
+
+The displayed diff uses LF line endings and marks missing final newlines. This
+does not change the line endings retained in the generated Markdown.
+
 ## Existing in-place usage
 
 The old positional-file interface remains available, including multiple files:
@@ -126,11 +150,12 @@ external URLs, autolinks and local `#anchors` remain unchanged. Line endings and
 the presence or absence of a final newline are preserved during destination
 rewriting.
 
-This is not a Markdown formatter, HTML sanitizer or remote link checker. It does
-not resolve refs, check file existence, fetch URLs or promise to understand
-every publishing extension. GFM tables in the corpus are covered by the
-independent publishing-renderer tests; arbitrary extensions require their own
-fixtures.
+This is not a Markdown formatter, HTML sanitizer or remote link checker. By
+default it does not check file existence; `--repo-root` enables an optional
+local check. It never resolves remote refs, fetches URLs or promises to
+understand every publishing extension. GFM tables in the corpus are covered by
+the independent publishing-renderer tests; arbitrary extensions require their
+own fixtures.
 
 ## Strict validation
 
@@ -153,24 +178,74 @@ UTF-8 without a byte-order mark or NUL characters.
 Exit status is `0` on success, `1` for transformation or file errors, and `2`
 for invalid command-line syntax.
 
+## Optional local file checks
+
+`--repo-root DIRECTORY` additionally checks repository-relative destinations
+against an explicit local directory. This can be a plain exported tree with no
+Git metadata. The input itself may be a temporary file elsewhere:
+
+```sh
+uv run --frozen --script ./release-prepare-markdown.py \
+  -o foundata -r example --ref refs/tags/v1.0.0 \
+  --repo-root /tmp/exported-project --source-path docs/README.md \
+  --strict --dry-run /tmp/input-readme.md
+```
+
+Resolution uses `--source-path`, not the input's filesystem location. Its
+default is still `README.md`, including for each file in a legacy batch. Supply
+an explicit source path and process documents individually when their repository
+locations differ.
+
+Links may name regular files or directories; images and HTML `src`/`poster`
+targets must name regular files. Trailing slashes require directories. Symlinks
+are accepted only when they resolve inside the supplied root. Missing targets,
+broken or looping symlinks, paths escaping the root and special files fail the
+check. URL-encoded paths are decoded once, using the same path resolution as the
+rewriter. Queries and fragments are excluded from filesystem lookup.
+
+The check covers supported relative destinations in the original input,
+including reference definitions and images that simplification would remove.
+Code and comments, external URLs and local `#anchors` are exempt. Remote files,
+refs and anchors are not verified; the caller must provide the intended tree.
+Unsupported syntax such as `srcset` still requires `--strict` to be rejected.
+
+Local-check errors fail even without `--strict` and include original source
+locations. All batch inputs are checked before writing anything. Without
+`--repo-root`, transformation does not inspect destination files. The reusable
+`prepare_markdown()` function remains filesystem-free; `validate_local_files()`
+provides the separate optional check.
+
 ## Optional HTML simplification
 
-`-s` / `--simplify` remains opt-in. It follows the shell's two transformations:
+Two independent flags control simplification:
 
-1. Convert inline linked Markdown images such as `[![badge](image)](page)` to
-   `[badge](page)` throughout active document content.
-2. Collapse a `div` with the exact ID `project-readme-header` into one line,
-   trimming blank lines and standalone `br` tags.
+1. `--simplify-badges` converts inline linked Markdown images such as
+   `[![badge](image)](page)` to `[badge](page)` throughout active document
+   content. It applies to every such image link, not only badge services.
+2. `--collapse-header` collapses a `div` with the exact ID
+   `project-readme-header` into one line, trimming blank lines and standalone
+   `br` tags. It does not simplify the linked images inside it.
+
+`-s` / `--simplify` remains the compatibility shorthand for both operations,
+with badges simplified first. All flags are opt-in; combining `-s` with either
+individual flag is harmless. For example, keep a centered header but replace
+its linked Markdown badges with text links:
+
+```sh
+uv run --frozen --script ./release-prepare-markdown.py \
+  -o foundata -r example --simplify-badges --dry-run ./README.md
+```
 
 Other HTML inside the header is retained. Linked HTML screenshot images remain
 HTML, including their dimensions. There is no Python-only conversion from HTML
 images to Markdown. Code and comments remain protected even when `-s` is
 enabled.
 
-Malformed, unclosed, nested or inline header blocks are refused. Headers
-containing code blocks, comments or multiline code spans are also refused rather
-than collapsed destructively. Keep `-s` off when the publishing platform already
-renders the original structure correctly.
+When header collapse is requested, malformed, unclosed, nested or inline header
+blocks are refused. Headers containing code blocks, comments or multiline code
+spans are also refused rather than collapsed destructively. Badge-only mode
+leaves these headers intact. Leave simplification off when the publishing
+platform already renders the original structure correctly.
 
 ## Compatibility and tests
 

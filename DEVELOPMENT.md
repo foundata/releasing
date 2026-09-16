@@ -66,6 +66,8 @@ required nor installed.
 - `tests/integration/`: CLI file operations, shell comparisons and independent
   rendering checks.
 - `tests/fixtures/cases.json`: small reviewed inputs and exact expected output.
+- `tests/fixtures/mixed-content*.md`: nested containers, references, tables,
+  HTML, code and comments with exact expected Markdown and renderer assertions.
 - `tests/fixtures/corpus/`: 21 project README snapshots, both shell outputs and
   provenance.
 
@@ -83,6 +85,16 @@ failure before any write, stdout purity, encoding failures, aliases, atomic
 replacement and permission preservation. Renderer tests examine actual HTML link
 and image destinations, including screenshot dimensions; successful parsing
 alone is not the assertion.
+
+Combination tests place identical active and literal link syntax in nested
+lists, block quotes and tables, across LF, CRLF and CR line endings. They check
+exact output and idempotence. Simplification tests cover the independent flags
+and their equivalence to `-s`.
+
+Dry-run tests verify diffs, exit statuses and unchanged contents, modes, inodes
+and timestamps. Local-file checks use disposable directory trees, including
+encoded paths, directory links, missing files, symlinks and special files. They
+never require destination files from sibling projects or contact remote URLs.
 
 ## Corpus maintenance
 

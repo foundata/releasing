@@ -25,8 +25,14 @@ class Transformer(Protocol):
         ui_base: str,
         source_path: str = "README.md",
         simplify: bool = False,
+        simplify_badges: bool = False,
+        collapse_header: bool = False,
         strict: bool = False,
     ) -> str: ...
+
+    def validate_local_files(
+        self, text: str, *, repo_root: Path, source_path: str = "README.md"
+    ) -> None: ...
 
 
 def load_script() -> Transformer:
@@ -46,6 +52,8 @@ def prepare(
     *,
     source_path: str = "README.md",
     simplify: bool = False,
+    simplify_badges: bool = False,
+    collapse_header: bool = False,
     strict: bool = True,
 ) -> str:
     return TRANSFORMER.prepare_markdown(
@@ -54,5 +62,7 @@ def prepare(
         ui_base=UI,
         source_path=source_path,
         simplify=simplify,
+        simplify_badges=simplify_badges,
+        collapse_header=collapse_header,
         strict=strict,
     )

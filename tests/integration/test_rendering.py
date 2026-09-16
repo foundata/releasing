@@ -38,23 +38,25 @@ def rendered(text: str) -> Rendered:
 
 
 @pytest.mark.parametrize("repository", REPOSITORIES)
-@pytest.mark.parametrize("simplify", [False, True], ids=["default", "simplified"])
+@pytest.mark.parametrize("mode", ["default", "simplified", "badges", "header"])
 def test_every_corpus_readme_renders_without_repository_relative_urls(
-    repository: str, simplify: bool
+    repository: str, mode: str
 ) -> None:
     source = (CORPUS / repository / "README.md").read_text(encoding="utf-8")
     prepared = TRANSFORMER.prepare_markdown(
         source,
         raw_base=f"https://raw.githubusercontent.com/foundata/{repository}/refs/heads/main",
         ui_base=f"https://github.com/foundata/{repository}/blob/main",
-        simplify=simplify,
+        simplify=mode == "simplified",
+        simplify_badges=mode == "badges",
+        collapse_header=mode == "header",
         strict=True,
     )
     page = rendered(prepared)
     assert page.links
     for value in [*page.links, *(str(image["src"]) for image in page.images)]:
         assert value.startswith(("#", "//")) or urlsplit(value).scheme, value
-    if not simplify:
+    if mode in {"default", "header"}:
         assert len(page.images) == len(rendered(source).images)
 
 
@@ -79,3 +81,30 @@ def test_renderer_check_can_detect_a_missed_relative_link() -> None:
     page = rendered("[unprepared](./relative.md#anchor)")
     assert page.links == ["./relative.md#anchor"]
     assert not urlsplit(page.links[0]).scheme
+
+
+@pytest.mark.parametrize("simplify_badges", [False, True])
+def test_mixed_content_renders_expected_links_and_images(simplify_badges: bool) -> None:
+    source = (FIXTURES / "mixed-content.md").read_text(encoding="utf-8")
+    page = rendered(prepare(source, simplify_badges=simplify_badges))
+    assert page.links == [
+        "#user-content-mixed-content",
+        UI + "/docs/guide.md#intro",
+        UI + "/docs/guide.md#intro",
+        UI + "/docs/guide.md?plain=1#shot",
+        UI + "/docs/guide.md#intro",
+        UI + "/docs/guide.md#html",
+        UI + "/docs/a%28b%29.md",
+        "#user-content-mixed-content",
+        "https://example.org/docs",
+        "mailto:docs@example.org",
+    ]
+    assert [image["src"] for image in page.images] == [
+        *([] if simplify_badges else [RAW + "/assets/logo.svg#mark"]),
+        RAW + "/assets/shot.avif",
+        RAW + "/assets/logo.svg#mark",
+    ]
+    screenshot = next(
+        image for image in page.images if image["src"] == RAW + "/assets/shot.avif"
+    )
+    assert screenshot["height"] == "128"
