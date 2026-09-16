@@ -1,0 +1,95 @@
+[
+  {
+    "name": "links-and-fragments",
+    "input": "[guide](./docs/a.md#part) [single](a) [folder](docs/) [anchor](#local)\n",
+    "expected": "[guide](https://ui.example/repo/ref/docs/a.md#part) [single](https://ui.example/repo/ref/a) [folder](https://ui.example/repo/ref/docs/) [anchor](#local)\n"
+  },
+  {
+    "name": "every-image-format",
+    "input": "![avif](./assets/a.avif) ![extensionless](assets/logo) ![svg](./logo.svg#icon) ![query](./a.PNG?download=1#x)\n",
+    "expected": "![avif](https://raw.example/repo/ref/assets/a.avif) ![extensionless](https://raw.example/repo/ref/assets/logo) ![svg](https://raw.example/repo/ref/logo.svg#icon) ![query](https://raw.example/repo/ref/a.PNG?download=1#x)\n"
+  },
+  {
+    "name": "nested-image-link",
+    "input": "[![logo](./logo.svg)](./docs.md#start)\n",
+    "expected": "[![logo](https://raw.example/repo/ref/logo.svg)](https://ui.example/repo/ref/docs.md#start)\n"
+  },
+  {
+    "name": "code-in-labels",
+    "input": "[`mapping[\"key\"]`](./docs.md) [`]`](./closing.md) [`[`](./opening.md)\n",
+    "expected": "[`mapping[\"key\"]`](https://ui.example/repo/ref/docs.md) [`]`](https://ui.example/repo/ref/closing.md) [`[`](https://ui.example/repo/ref/opening.md)\n"
+  },
+  {
+    "name": "titles-angle-destinations-and-parentheses",
+    "input": "[guide](<./docs/a b.md#part> 'The guide') ![pic](./assets/a\\(b\\).svg \"title\") [balanced](docs/a(b).md)\n",
+    "expected": "[guide](<https://ui.example/repo/ref/docs/a%20b.md#part> 'The guide') ![pic](https://raw.example/repo/ref/assets/a%28b%29.svg \"title\") [balanced](https://ui.example/repo/ref/docs/a%28b%29.md)\n"
+  },
+  {
+    "name": "references-and-shared-image-reference",
+    "input": "[guide][manual] ![logo][brand] [download][brand] [manual][]\n\n[manual]: ./docs.md#part \"Guide\"\n[brand]: <./assets/logo.avif>\n[unused]: ./unused.md\n",
+    "expected": "[guide][manual] ![logo][brand] [download][brand] [manual][]\n\n[manual]: https://ui.example/repo/ref/docs.md#part \"Guide\"\n[brand]: <https://raw.example/repo/ref/assets/logo.avif>\n[unused]: https://ui.example/repo/ref/unused.md\n"
+  },
+  {
+    "name": "multiline-reference-definition",
+    "input": "[guide]\n\n[guide]:\n  <./docs/a b.md>\n  'Title'\n",
+    "expected": "[guide]\n\n[guide]:\n  <https://ui.example/repo/ref/docs/a%20b.md>\n  'Title'\n"
+  },
+  {
+    "name": "references-in-containers",
+    "input": "> [manual]: ./docs.md\n>\n> [manual]\n\n- ![brand]\n\n  [brand]: ./logo.svg\n",
+    "expected": "> [manual]: https://ui.example/repo/ref/docs.md\n>\n> [manual]\n\n- ![brand]\n\n  [brand]: https://raw.example/repo/ref/logo.svg\n"
+  },
+  {
+    "name": "protected-markdown-and-comments",
+    "input": "`[inline](./code.md)` and `` `[long](./code.md)` ``\n\n```markdown\n[x](./code.md) <a href=\"./code.md\">x</a>\n```\n\n    [indented](./code.md)\n\n<!-- [comment](./comment.md) <img src=\"./comment.png\"> -->\n\n[real](./real.md)\n",
+    "expected": "`[inline](./code.md)` and `` `[long](./code.md)` ``\n\n```markdown\n[x](./code.md) <a href=\"./code.md\">x</a>\n```\n\n    [indented](./code.md)\n\n<!-- [comment](./comment.md) <img src=\"./comment.png\"> -->\n\n[real](https://ui.example/repo/ref/real.md)\n"
+  },
+  {
+    "name": "nested-fences-and-list-links",
+    "input": "- [one](./one.md)\n\n  ~~~~markdown\n  [code](./code.md)\n  ~~~~\n\n  [two](./two.md)\n\n> ```text\n> [code](./code.md)\n> ```\n>\n> [three](./three.md)\n",
+    "expected": "- [one](https://ui.example/repo/ref/one.md)\n\n  ~~~~markdown\n  [code](./code.md)\n  ~~~~\n\n  [two](https://ui.example/repo/ref/two.md)\n\n> ```text\n> [code](./code.md)\n> ```\n>\n> [three](https://ui.example/repo/ref/three.md)\n"
+  },
+  {
+    "name": "html-attributes-and-formatting",
+    "input": "<A HREF = './docs.md#part' data-href='./ignored.md'>Guide</A>\n<img SRC = \"./a.avif?x=1&amp;y=2#icon\" height=\"128\" data-src=\"./ignored.svg\">\n",
+    "expected": "<A HREF = 'https://ui.example/repo/ref/docs.md#part' data-href='./ignored.md'>Guide</A>\n<img SRC = \"https://raw.example/repo/ref/a.avif?x=1&amp;y=2#icon\" height=\"128\" data-src=\"./ignored.svg\">\n"
+  },
+  {
+    "name": "linked-html-screenshot",
+    "input": "[<img src=\"./screenshot.png\" alt=\"Screenshot\" height=\"128\" />](./screenshot.png)\n",
+    "expected": "[<img src=\"https://raw.example/repo/ref/screenshot.png\" alt=\"Screenshot\" height=\"128\" />](https://ui.example/repo/ref/screenshot.png)\n"
+  },
+  {
+    "name": "unquoted-html",
+    "input": "<a href=docs/a.md#part>Guide</a> <img src=assets/logo>\n",
+    "expected": "<a href=https://ui.example/repo/ref/docs/a.md#part>Guide</a> <img src=https://raw.example/repo/ref/assets/logo>\n"
+  },
+  {
+    "name": "external-links-and-autolinks",
+    "input": "[web](https://example.org/a#x) [mail](mailto:a@example.org) [cdn](//cdn.example.org/a) [anchor](#local) <https://example.org> <a@example.org>\n",
+    "expected": "[web](https://example.org/a#x) [mail](mailto:a@example.org) [cdn](//cdn.example.org/a) [anchor](#local) <https://example.org> <a@example.org>\n"
+  },
+  {
+    "name": "parent-paths-and-source-location",
+    "source_path": "docs/sub/README.md",
+    "input": "[license](../../LICENSES/GPL.txt) [sibling](../guide.md) ![logo](./a.svg) [query](?plain=1)\n",
+    "expected": "[license](https://ui.example/repo/ref/LICENSES/GPL.txt) [sibling](https://ui.example/repo/ref/docs/guide.md) ![logo](https://raw.example/repo/ref/docs/sub/a.svg) [query](https://ui.example/repo/ref/docs/sub/README.md?plain=1)\n"
+  },
+  {
+    "name": "non-alphanumeric-and-encoded-paths",
+    "input": "[hidden](.github/a.md) [underscore](_docs/a.md) [encoded](docs/a%20b.md)\n",
+    "expected": "[hidden](https://ui.example/repo/ref/.github/a.md) [underscore](https://ui.example/repo/ref/_docs/a.md) [encoded](https://ui.example/repo/ref/docs/a%20b.md)\n"
+  },
+  {
+    "name": "header-and-global-badge-simplification",
+    "simplify": true,
+    "input": "Before\n\n<div align=\"center\" id=\"project-readme-header\">\n<br>\n\n**Support**\n\n[![Stars](https://example.org/badge.svg)](https://example.org/project)\n<br>\n</div>\n\nOutside [![REUSE](https://example.org/reuse.svg)](https://example.org/reuse).\n",
+    "expected": "Before\n\n**Support** [Stars](https://example.org/project)\n\nOutside [REUSE](https://example.org/reuse).\n"
+  },
+  {
+    "name": "simplification-preserves-code-and-html-images",
+    "simplify": true,
+    "input": "`[![alt](./code.svg)](./code.md)`\n\n[<img src=\"./pic.png\" height=\"128\">](./pic.png)\n\n```html\n<div id=\"project-readme-header\">\n[![x](./x.svg)](./x.md)\n</div>\n```\n",
+    "expected": "`[![alt](./code.svg)](./code.md)`\n\n[<img src=\"https://raw.example/repo/ref/pic.png\" height=\"128\">](https://ui.example/repo/ref/pic.png)\n\n```html\n<div id=\"project-readme-header\">\n[![x](./x.svg)](./x.md)\n</div>\n```\n"
+  }
+]

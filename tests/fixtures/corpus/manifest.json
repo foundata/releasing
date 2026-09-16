@@ -1,0 +1,131 @@
+{
+  "shell_sha256": "81a00437012bfdde111123211f72f471d0e42a048482bf7138937853709504cd",
+  "readmes": [
+    {
+      "repository": "ansible-docsmith",
+      "revision": "ac2f807e1d6c51d5c4311ef8815145de6120c7e5",
+      "matches_committed_readme": true,
+      "sha256": "0e14fc81ce85bf16e3269ca08ddb7fcf3731bb8dbb613830b100c55e599a26fc"
+    },
+    {
+      "repository": "conclear",
+      "revision": "93692472fdb99cc2d3ea0e9c8aa8332d92d6ac63",
+      "matches_committed_readme": true,
+      "sha256": "e48a19e980c8901e830c58db38d3676d076fba8f612a527d5f22330400af6333"
+    },
+    {
+      "repository": "oci-almalinux10-itt",
+      "revision": "994fbd87226959147628ac6207a67d62b24f9d9a",
+      "matches_committed_readme": true,
+      "sha256": "c3b1f2b15f86a9e6b90cad18260d391c2f5b9e6ab26e9072f70993d68d62908f"
+    },
+    {
+      "repository": "oci-almalinux8-itt",
+      "revision": "e7bbea4eaaed7d92cc5d00201d7acd5e0bc56680",
+      "matches_committed_readme": true,
+      "sha256": "2ae1ac66d8f1db23198214a1c97c8fa9d0ed475ef713aad83261862f41fd7d73"
+    },
+    {
+      "repository": "oci-almalinux9-itt",
+      "revision": "2ece39ac37221269c0b5c28c1310b46ff11c3ac5",
+      "matches_committed_readme": true,
+      "sha256": "4ee9f8adcae33d7bb524490bc7d6110b265d55ae3681631d2b2e4e452faf2641"
+    },
+    {
+      "repository": "oci-centosstream10-itt",
+      "revision": "e165e60c847c3617597a5947a2a6e10ad8b1d438",
+      "matches_committed_readme": true,
+      "sha256": "6c261f8caf059f0b3a113059683e5a52b4b42a5698a790ceaf99d61277b63a23"
+    },
+    {
+      "repository": "oci-centosstream9-itt",
+      "revision": "b09ade8672a218ff4ffa90b2db86b9c37aa340a1",
+      "matches_committed_readme": true,
+      "sha256": "8269f337e8a38c567e518c4ca3fc7e2157ca2a3feeefe78b8cdb11a39c37e0de"
+    },
+    {
+      "repository": "oci-debian11-itt",
+      "revision": "e8b82caf90d06265b4b6790ccd07b27ef0d267a0",
+      "matches_committed_readme": true,
+      "sha256": "9c0f6818e0d0fd1ca258ce10f01d8bffc0c673c287416459e37b971c3168cb02"
+    },
+    {
+      "repository": "oci-debian12-itt",
+      "revision": "d10946de555bed8463c3dff4f1cecaacaae8fe64",
+      "matches_committed_readme": true,
+      "sha256": "728c5da7e4399c21a7fc0288fef94dda9b2e2a9037653d23501674fd4cecdb06"
+    },
+    {
+      "repository": "oci-debian13-itt",
+      "revision": "5a3ec33ea1f74d91fda880ef3e7df0833c04090e",
+      "matches_committed_readme": true,
+      "sha256": "2acfefbe5859476da83434726d21039bd41dff6c7090c43c635f7202bd7e0d63"
+    },
+    {
+      "repository": "oci-fedora40-itt",
+      "revision": "55ee3d83ee1f75176e5af5d646772ab1f98d286f",
+      "matches_committed_readme": true,
+      "sha256": "2bdf14e6010a1130960cf7a7f3f0db8823a7b7df4b52d13c5d7489999842cea4"
+    },
+    {
+      "repository": "oci-fedora41-itt",
+      "revision": "3805d119386607ce40ea9b31766793aefe112674",
+      "matches_committed_readme": true,
+      "sha256": "d7d2bbe01d204b7bee2976c52fa71e99a6b861b5b460a55f4290e73af810d923"
+    },
+    {
+      "repository": "oci-fedora42-itt",
+      "revision": "d50f5b69b470c149ec7c6094bfe15ef46b366da2",
+      "matches_committed_readme": true,
+      "sha256": "075771cefd0961cc142f78d7bdb3a1c645f7c3f7975bf60f229692a3aac0977b"
+    },
+    {
+      "repository": "oci-fedora43-itt",
+      "revision": "a1e5606910d231c4025c2db479a3662c6dea52cd",
+      "matches_committed_readme": true,
+      "sha256": "334ae6fa2eeda85b1ddd6976d01bb8c5b5cda2321b42ffed1037ddb539bbafa9"
+    },
+    {
+      "repository": "oci-fedora44-itt",
+      "revision": "be129734e3c2b5a210d46335e203a7c929110fb8",
+      "matches_committed_readme": true,
+      "sha256": "5c38a373d16c53cca1e98772bd5341430c8568ca8d85f3f5528561efc8ab8157"
+    },
+    {
+      "repository": "oci-opensuseleap156-itt",
+      "revision": "0f4f9f21112c8cdc5111486364c58d2ae6235f9b",
+      "matches_committed_readme": true,
+      "sha256": "f1fd4307d609a149ee94a6259b79fc0e59c3ecf205f0612fc5355b7aded714f6"
+    },
+    {
+      "repository": "oci-opensuseleap160-itt",
+      "revision": "6e5066177dc6bd16d04facc05c71162f2ff1a959",
+      "matches_committed_readme": true,
+      "sha256": "b4cf10e277cd6d1e20985dbf5e9481f9436d780cacc516c21844c638b57d672c"
+    },
+    {
+      "repository": "oci-ubuntu2204-itt",
+      "revision": "4f469d9beebec765c0616f1301c0105ae41db79a",
+      "matches_committed_readme": true,
+      "sha256": "e2524cfb5423804e6e68d36b77bcde6a822b775fef27fb779ad9cfb367fbab84"
+    },
+    {
+      "repository": "oci-ubuntu2404-itt",
+      "revision": "5b7826ef16e9ef28a2f7a6dc1dfa82e7f6196071",
+      "matches_committed_readme": true,
+      "sha256": "bbf791166488004312eb5488c70e18db8be60dcd8b32a9d6b3e9a12c650d8086"
+    },
+    {
+      "repository": "oci-ubuntu2604-itt",
+      "revision": "c22d54dd8350d45d5d7703194cbd3882971e662c",
+      "matches_committed_readme": true,
+      "sha256": "f4080a07da683aa8dd5a481588a9520e6a6613adf7554390f306656db4a72f2b"
+    },
+    {
+      "repository": "scanmole",
+      "revision": "d7ba09102772fa0012ab07e10531a36f374bad48",
+      "matches_committed_readme": false,
+      "sha256": "c1437de7bb88940cc3f1eaeac69f8195dc0af2fcc63ea1b6aaba0a79bac76292"
+    }
+  ]
+}

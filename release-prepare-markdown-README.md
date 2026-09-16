@@ -1,187 +1,191 @@
-# release-prepare-markdown.sh - Usage Examples
+# Preparing Markdown for package indexes
 
-## Overview
+`release-prepare-markdown.py` rewrites repository-relative Markdown and HTML
+destinations to absolute URLs. It preserves the document around those
+destinations, including HTML image dimensions. Use it on a temporary copy or
+write a separate output file. The shell script remains available and unchanged.
 
-This script converts relative links in markdown files to absolute URLs, making them work correctly on package hosting platforms like PyPI, npm, etc.
+## Running the script
 
-## Features
+The script supports Python 3.12 through 3.14. Its only direct runtime dependency
+is `markdown-it-py`, declared in inline script metadata. `uv` manages the
+environment; no package installation into the system Python is needed.
 
-- ✅ Converts markdown links: `[text](./path)` → absolute URL
-- ✅ Converts markdown images: `![alt](./image.png)` → raw URL
-- ✅ Converts HTML href attributes: `href="./path"`
-- ✅ Converts HTML src attributes: `src="./image.png"`
-- ✅ Handles paths with and without `./` prefix
-- ✅ Supports subdirectory paths: `docs/guide.md`
-- ✅ Preserves external links, absolute paths, and anchors
-- ✅ Uses raw URLs for images/binary files
-- ✅ Uses UI URLs for documentation files
-- ✅ Shows unified diff before replacing files
-- ✅ Reports when no changes are needed
-
-## Basic Usage
-
-```bash
-# Process a single README.md file with auto-detected settings
-./release-prepare-markdown.sh README.md
-
-# Process multiple files
-./release-prepare-markdown.sh README.md CHANGELOG.md docs/*.md
+```sh
+uv run --frozen --script ./release-prepare-markdown.py \
+  -o foundata -r example --ref refs/tags/v1.0.0 \
+  --strict --output /tmp/example-pypi.md ./README.md
 ```
 
-## Auto-Detected Defaults
+Keep the script's adjacent `.py.lock` file for frozen execution. Dependency
+setup may need network access on the first run. Transformation itself is
+offline, non-interactive and deterministic for the same input and arguments. It
+never invokes Git or consults `.git`.
 
-When run from `/home/user/dev/foundata/ansible-docsmith/`:
+Write Markdown to stdout instead:
 
-- **Organization**: `foundata` (parent directory name)
-- **Repository**: `ansible-docsmith` (current directory name)
-- **Branch**: `main`
-- **Raw URL base**: `https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/`
-- **UI URL base**: `https://github.com/foundata/ansible-docsmith/blob/main/`
-
-## Custom Options
-
-```bash
-# Specify custom branch
-./release-prepare-markdown.sh -b develop README.md
-
-# Override organization and repository
-./release-prepare-markdown.sh -o myorg -r myrepo README.md
-
-# Use custom URL bases (e.g., for GitLab)
-./release-prepare-markdown.sh \
-    -u "https://gitlab.com/myorg/myrepo/-/blob/main/" \
-    -a "https://gitlab.com/myorg/myrepo/-/raw/main/" \
-    README.md
+```sh
+uv run --frozen --script ./release-prepare-markdown.py \
+  -o foundata -r example --ref refs/tags/v1.0.0 \
+  --strict --stdout ./README.md
 ```
 
-## Conversion Examples
+`--output -` is equivalent to `--stdout`. Both require one input. Stdout
+contains only the transformed Markdown; diagnostics go to stderr. Out-of-place
+operation requires explicit organization and repository names, or both custom
+URL bases. The output must not alias the input, including through a hard link or
+symlink.
 
-### Before Processing
+## Existing in-place usage
 
-```markdown
-# My Project
+The old positional-file interface remains available, including multiple files:
 
-See the [REUSE.toml](./REUSE.toml) file for licensing.
-
-Read the [contributing guide](docs/CONTRIBUTING.md).
-
-![Logo](./logo.png)
-
-![Screenshot](assets/screenshot.jpg)
-
-<img src="./banner.png" alt="Banner">
+```sh
+uv run --frozen --script ./release-prepare-markdown.py \
+  -b main -o foundata -r example ./README.md ./CHANGELOG.md
 ```
 
-### Script Output with Diff
+`--in-place` makes that default mode explicit. In this mode only, omitted
+organization and repository names default to the current directory's parent name
+and current directory name. The branch defaults to `main`. A changed file
+produces a unified diff on stderr. Unchanged files are not replaced. Changed
+files are replaced atomically while retaining permissions. In-place symlink
+inputs are refused.
 
-```bash
-$ ./release-prepare-markdown.sh README.md
+All inputs are read and transformed before any file is written, so a strict
+validation failure leaves the complete batch unchanged. A later filesystem
+failure can leave earlier successful replacements in place; multi-file writes
+are not a filesystem transaction.
 
-Processing: README.md
+The shell remains callable with its existing interface:
 
-Changes for README.md:
-----------------------------------------
---- README.md
-+++ README.md
-@@ -1,11 +1,11 @@
- # My Project
- 
--See the [REUSE.toml](./REUSE.toml) file for licensing.
-+See the [REUSE.toml](https://github.com/foundata/ansible-docsmith/blob/main/REUSE.toml) file for licensing.
- 
--Read the [contributing guide](docs/CONTRIBUTING.md).
-+Read the [contributing guide](https://github.com/foundata/ansible-docsmith/blob/main/docs/CONTRIBUTING.md).
- 
--![Logo](./logo.png)
-+![Logo](https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/logo.png)
- 
--![Screenshot](assets/screenshot.jpg)
-+![Screenshot](https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/assets/screenshot.jpg)
- 
--<img src="./banner.png" alt="Banner">
-+<img src="https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/banner.png" alt="Banner">
-----------------------------------------
-
-Completed: README.md
-All files processed successfully
+```sh
+./release-prepare-markdown.sh -b main -o foundata -r example ./README.md
 ```
 
-### After Processing
+## Branches, tags and source paths
 
-```markdown
-# My Project
+`-b` / `--branch` accepts a branch name. `--ref` accepts `refs/heads/NAME`,
+`refs/tags/NAME`, or a full commit SHA. The options are mutually exclusive. Use
+an explicit commit SHA when links must identify an exact source revision; tags
+remain subject to repository tag-management policy. No ref is resolved or
+checked remotely.
 
-See the [REUSE.toml](https://github.com/foundata/ansible-docsmith/blob/main/REUSE.toml) file for licensing.
+For `-b main`, the default bases retain the shell's spelling:
 
-Read the [contributing guide](https://github.com/foundata/ansible-docsmith/blob/main/docs/CONTRIBUTING.md).
+- Images: `https://raw.githubusercontent.com/ORG/REPO/refs/heads/main/`.
+- Links: `https://github.com/ORG/REPO/blob/main/`.
 
-![Logo](https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/logo.png)
+With `--ref`, the supplied ref is used in both bases. Ordinary Markdown links
+use the GitHub file viewer even when the destination is a PDF, archive or image.
+Markdown images use raw URLs regardless of extension. HTML `href` uses the UI
+base; `src` and `poster` use the raw base.
 
-![Screenshot](https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/assets/screenshot.jpg)
+`--source-path` is the input document's path relative to the repository root. It
+defaults to `README.md`, regardless of the input or output filesystem location.
+Set it when transforming a document from a subdirectory:
 
-<img src="https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/banner.png" alt="Banner">
+```sh
+uv run --frozen --script ./release-prepare-markdown.py \
+  -o foundata -r example --ref refs/tags/v1.0.0 \
+  --source-path docs/README.md --strict \
+  --output /tmp/example-docs.md ./docs/README.md
 ```
 
-## What Gets Converted
+Here `../LICENSES/GPL-3.0-or-later.txt` resolves from `docs/` to the repository
+root. Moving the output into a package directory does not change that
+resolution. `--source-path` requires a single input.
 
-### ✅ Converted to Absolute URLs
+For another forge or custom routing, supply both bases. Trailing slashes are
+normalized:
 
-- `[text](./path)` - links with ./ prefix
-- `[text](path)` - relative links starting with alphanumeric
-- `[text](docs/guide.md)` - subdirectory paths
-- `href="./path"` and `href="path"` - HTML links
-- `![img](./pic.png)` - images with ./ prefix
-- `![img](assets/pic.png)` - relative image paths
-- `src="./image.png"` - HTML image sources
-
-### ❌ NOT Converted (Preserved)
-
-- `[Google](https://google.com)` - external links (contain ://)
-- `[Root](/root/file.md)` - absolute paths (start with /)
-- `[Section](#anchor)` - anchor links (start with #)
-- `[Already](https://github.com/org/repo/file.md)` - already absolute
-
-## Image/Binary File Extensions
-
-These file types use the raw URL base:
-- Images: png, jpg, jpeg, svg, gif, webp, ico
-- Archives: zip, tar, gz, bz2, xz
-- Media: mp4, webm
-- Documents: pdf
-
-All other files use the UI URL base for proper rendering on GitHub.
-
-## Integration with CI/CD
-
-```yaml
-# Example GitHub Actions workflow
-- name: Prepare README for release
-  run: |
-    ./release-prepare-markdown.sh README.md
-    
-# The modified README.md can now be packaged
+```sh
+uv run --frozen --script ./release-prepare-markdown.py \
+  -a https://gitlab.example/org/repo/-/raw/v1.0.0/ \
+  -u https://gitlab.example/org/repo/-/blob/v1.0.0/ \
+  --strict --output /tmp/example.md ./README.md
 ```
 
-## Requirements
+## Supported transformations
 
-- Bash 4.0+
-- sed with extended regex support (-E flag)
-- Standard Unix utilities (basename, dirname, mktemp)
+The parser uses CommonMark. Supported destinations include inline links and
+images, titled or angle-bracketed destinations, balanced or escaped parentheses,
+nested images inside links, and reference-style definitions. Fragments and
+queries are retained. Repository paths are normalized and URL-encoded where
+necessary.
 
-## Coding Standards
+Reference definitions retain their labels, titles and layout. Definitions used
+by images get the raw base; other definitions get the UI base. A definition
+shared by a link and an image uses the raw base so that the image loads. Unused
+and duplicate definitions are also prepared.
 
-The script follows these standards:
-- ✅ Shellcheck validated
-- ✅ Formatted with shfmt (--indent 4 --posix)
-- ✅ Uses `${var}` notation throughout
-- ✅ No color output
-- ✅ Proper error handling with set -e -u
+HTML attributes are parsed as HTML. Quoting, spacing, tag spelling and unrelated
+attributes are preserved. Attributes such as `data-src` are not treated as
+`src`. HTML comments, fenced and indented code blocks, inline code spans,
+external URLs, autolinks and local `#anchors` remain unchanged. Line endings and
+the presence or absence of a final newline are preserved during destination
+rewriting.
 
-## Notes
+This is not a Markdown formatter, HTML sanitizer or remote link checker. It does
+not resolve refs, check file existence, fetch URLs or promise to understand
+every publishing extension. GFM tables in the corpus are covered by the
+independent publishing-renderer tests; arbitrary extensions require their own
+fixtures.
 
-- The script modifies files in-place
-- A unified diff is displayed before each file is modified
-- Files with no changes show "No changes needed" message
-- Original files are replaced with processed versions
-- Make sure to backup or version control your files before running
-- The script uses temporary files during processing for safety
+## Strict validation
+
+`--strict` fails if a parsed repository-relative destination cannot be resolved,
+such as a root-relative `/docs/file.md` or a `../` path escaping the repository.
+Diagnostics identify the input file and original line and column. A second parse
+checks for remaining active relative destinations. Literal examples inside code
+and comments are exempt.
+
+Strict mode also refuses HTML `srcset`, whose multi-URL syntax is outside this
+tool's supported attribute scope. Without strict mode, unresolved destinations
+and unsupported attributes remain untouched. Source-mapping errors always fail
+instead of guessing which characters to replace.
+
+Strict mode is optional for compatibility, and recommended for generated package
+descriptions. A successful check establishes the supported syntax contract; it
+does not establish that remote files or anchors exist. Input and output must be
+UTF-8 without a byte-order mark or NUL characters.
+
+Exit status is `0` on success, `1` for transformation or file errors, and `2`
+for invalid command-line syntax.
+
+## Optional HTML simplification
+
+`-s` / `--simplify` remains opt-in. It follows the shell's two transformations:
+
+1. Convert inline linked Markdown images such as `[![badge](image)](page)` to
+   `[badge](page)` throughout active document content.
+2. Collapse a `div` with the exact ID `project-readme-header` into one line,
+   trimming blank lines and standalone `br` tags.
+
+Other HTML inside the header is retained. Linked HTML screenshot images remain
+HTML, including their dimensions. There is no Python-only conversion from HTML
+images to Markdown. Code and comments remain protected even when `-s` is
+enabled.
+
+Malformed, unclosed, nested or inline header blocks are refused. Headers
+containing code blocks, comments or multiline code spans are also refused rather
+than collapsed destructively. Keep `-s` off when the publishing platform already
+renders the original structure correctly.
+
+## Compatibility and tests
+
+All 21 frozen project READMEs match the shell byte-for-byte with and without
+`-s`. The corpus includes conclear, ansible-docsmith, ScanMole and 18 OCI
+integration-test repositories. Their source revisions and SHA-256 values are
+recorded with the fixtures.
+
+Approved fixes beyond shell behavior are covered by focused fixtures: protected
+code/comments; fragment-bearing images and HTML attributes; arbitrary image
+extensions; reference definitions; titled links; nested image links; path
+normalization; and preservation of HTML formatting, file permissions and line
+endings. These cases are intentional corrections, not a general formatting pass.
+
+The [development guide](./DEVELOPMENT.md) describes the fixture suite, shell
+comparison, rendering checks, licensing and repeatable `uv` commands. These
+checks use temporary files. No project build, release gate, upload or committed
+README rewrite is part of this tool's verification.

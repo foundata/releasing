@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[project]
+name = "foundata-releasing"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["markdown-it-py==4.2.0"]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+  "mypy>=1.17.1",
+  "pytest>=9.0",
+  "readme-renderer[md]>=44",
+  "ruff>=0.12.11",
+  "rumdl>=0.2.66",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "C4", "UP", "RUF", "A", "D"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+
+[tool.mypy]
+files = ["release-prepare-markdown.py", "tests"]
+python_version = "3.12"
+strict = true
+enable_error_code = ["explicit-override"]
+warn_unreachable = true
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+filterwarnings = ["error"]
+strict = true
+testpaths = ["tests"]
+markers = ["integration: local subprocess and renderer checks; no network"]

@@ -1,0 +1,19 @@
+version = 1
+SPDX-PackageName = "foundata release helpers"
+SPDX-PackageSupplier = "foundata GmbH (https://foundata.com)"
+
+[[annotations]]
+path = [
+  ".gitignore",
+  "pyproject.toml",
+  "uv.lock",
+  "release-prepare-markdown.py",
+  "release-prepare-markdown.py.lock",
+  "release-prepare-markdown-README.md",
+  "DEVELOPMENT.md",
+  "REUSE.toml",
+  "tests/**",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "foundata GmbH (https://foundata.com)"
+SPDX-License-Identifier = "GPL-3.0-or-later"
