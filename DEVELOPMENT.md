@@ -1,10 +1,11 @@
 # Developing release helpers
 
 The repository is the `releasing` Python package: the `release` command and
-the `releasing` import package under `src/`. The Markdown transformer is its
-first module. Python 3.11 to 3.14 are supported; the 3.11 floor exists for
-consumers that target Debian 12. Use `uv` for
-development environments and for running the command.
+the `releasing` import package under `src/`. One module per release step, with
+`markdown`, `changelog`, `version`, `config` and `artifacts` free of Git,
+network and subprocess use so they also work inside an exported tree. Python
+3.11 to 3.14 are supported; the 3.11 floor exists for consumers that target
+Debian 12. Use `uv` for development environments and for running the command.
 
 ## Setup and checks
 
@@ -35,10 +36,9 @@ uv run --frozen python tests/check_markdown.py --format
 
 The Markdown check uses the exact foundata guide flags, with no local
 configuration. It targets the README, the command documentation under `docs/`
-and the commit-review documentation.
-Corpus snapshots and expected output are deliberately excluded: formatting them
-would invalidate the comparison. Other legacy helpers and their documentation
-are not checked.
+and the commit-review documentation in `tools/`. Corpus snapshots and their
+expected output are deliberately excluded: formatting them would invalidate the
+comparison.
 
 ## Shell checks
 
@@ -63,9 +63,12 @@ compatibility check.
 
 ## Dependencies
 
-`markdown-it-py` is the only direct runtime dependency. The parser decides which
-text is a link, reference definition, code block, code span or HTML region. A
-small adapter records source positions through its parsing rules; edits replace
+`markdown-it-py` is the only direct runtime dependency on Python 3.12 and
+newer; 3.11 additionally needs `typing-extensions` for the `override`
+decorator. Everything else comes from the standard library, including the
+archive, JSON, hashing and HTTP handling. The parser decides which text is a
+link, reference definition, code block, code span or HTML region. A small
+adapter records source positions through its parsing rules; edits replace
 destinations in the original source. The document is never serialized from its
 syntax tree.
 
@@ -81,13 +84,13 @@ publishing renderer. Twine is neither required nor installed.
 
 - `tests/unit/`: fixture transformations, parser boundaries and validation
   errors.
-- `tests/integration/`: CLI file operations, shell comparisons and independent
-  rendering checks.
+- `tests/integration/`: command-line behaviour, temporary Git repositories,
+  real builds and independent rendering checks.
 - `tests/fixtures/cases.json`: small reviewed inputs and exact expected output.
 - `tests/fixtures/mixed-content*.md`: nested containers, references, tables,
   HTML, code and comments with exact expected Markdown and renderer assertions.
-- `tests/fixtures/corpus/`: 21 project README snapshots, both shell outputs and
-  provenance.
+- `tests/fixtures/corpus/`: 21 project README snapshots, the expected output of
+  both modes and their provenance.
 
 Tests import the installed package (`uv sync` installs it in editable mode)
 and use temporary directories; they never edit checked-in fixtures. The complete
@@ -122,9 +125,11 @@ never require destination files from sibling projects or contact remote URLs.
 
 Snapshots cover `conclear`, `ansible-docsmith`, `scanmole` and all 18 local
 `oci-*-itt` repositories. `manifest.json` records each repository's source
-revision, the README SHA-256 and whether it matches that revision. It also
-records the unchanged shell script's SHA-256. The current Python output matches
-every frozen shell output in both modes, with no corpus exceptions.
+revision, the README SHA-256 and whether it matches that revision. The current
+output matches every frozen expectation in both modes, with no corpus
+exceptions. The shell script that produced those expectations has been retired;
+changing one is now a deliberate fixture change, reviewed in the commit that
+changes the behaviour.
 
 To deliberately refresh the snapshots from a directory containing those
 repositories:
@@ -134,8 +139,8 @@ uv run --frozen python tests/corpus.py --refresh-from /path/to/foundata
 uv run --frozen pytest
 ```
 
-The refresh reads working-tree READMEs and runs the shell only on temporary
-copies. Review all resulting fixture changes. A working-tree snapshot that
+The refresh reads working-tree READMEs and regenerates the expected output.
+Review all resulting fixture changes. A working-tree snapshot that
 differs from its recorded commit is identified in the manifest rather than
 presented as committed content. Changes in corpus membership require updating
 the coverage assertion.
@@ -145,10 +150,10 @@ the coverage assertion.
 New Python files use the foundata copyright and `GPL-3.0-or-later` SPDX headers.
 `REUSE.toml` supplies scoped annotations for metadata, documentation and
 fixtures, including the unmodified foundata README snapshots. The GPL text is in
-`LICENSES/`. These annotations do not change licensing metadata on unrelated
-legacy helpers.
+`LICENSES/`.
 
-Use concise scoped commit subjects, such as
-`markdown: preserve fragments in prepared links`. Keep directly related tests
-and documentation with the behavior change. Follow the foundata Python, Markdown
+Use one scoped subject line, such as
+`markdown: preserve fragments in prepared links`, and no body unless the
+motivation cannot be recovered from the diff. Keep directly related tests and
+documentation with the behaviour change. Follow the foundata Python, Markdown
 and Git commit guides.
