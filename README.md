@@ -69,6 +69,12 @@ and `2` on invalid usage. Diagnostics go to stderr; stdout carries only
 generated output.
 
 
+## Releasing this package
+
+`releasing` releases itself with its own commands; see
+[Releasing a Python package](./docs/python-packages.md). The declaration is
+the `[tool.releasing]` table in `pyproject.toml`.
+
 ## Development
 
 See the [development guide](./DEVELOPMENT.md) for the checks, the test layout
