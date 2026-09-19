@@ -2,9 +2,10 @@
 
 `release markdown prepare` rewrites repository-relative Markdown and HTML
 destinations to absolute URLs. It preserves the document around those
-destinations, including HTML image dimensions. Use it on a temporary copy or
-write a separate output file. The original shell script remains in the
-repository as the frozen baseline.
+destinations, including HTML image dimensions. It writes in place, so use it on
+a temporary copy or write a separate output file. `release build` prepares the
+declared documents inside an exported tree instead, which is what a release
+uses.
 
 ## Running the command
 
@@ -80,12 +81,6 @@ validation failure leaves the complete batch unchanged. A later filesystem
 failure can leave earlier successful replacements in place; multi-file writes
 are not a filesystem transaction.
 
-The shell remains callable with its existing interface:
-
-```sh
-./release-prepare-markdown.sh -b main -o foundata -r example ./README.md
-```
-
 ## Branches, tags and source paths
 
 `-b` / `--branch` accepts a branch name. `--ref` accepts `refs/heads/NAME`,
@@ -94,7 +89,7 @@ an explicit commit SHA when links must identify an exact source revision; tags
 remain subject to repository tag-management policy. No ref is resolved or
 checked remotely.
 
-For `-b main`, the default bases retain the shell's spelling:
+For `-b main`, the default bases are:
 
 - Images: `https://raw.githubusercontent.com/ORG/REPO/refs/heads/main/`.
 - Links: `https://github.com/ORG/REPO/blob/main/`.
@@ -248,18 +243,19 @@ platform already renders the original structure correctly.
 
 ## Compatibility and tests
 
-All 21 frozen project READMEs match the shell byte-for-byte with and without
+All 21 frozen project READMEs match their expected output with and without
 `-s`. The corpus includes conclear, ansible-docsmith, ScanMole and 18 OCI
 integration-test repositories. Their source revisions and SHA-256 values are
 recorded with the fixtures.
 
-Approved fixes beyond shell behavior are covered by focused fixtures: protected
-code/comments; fragment-bearing images and HTML attributes; arbitrary image
-extensions; reference definitions; titled links; nested image links; path
-normalization; and preservation of HTML formatting, file permissions and line
-endings. These cases are intentional corrections, not a general formatting pass.
+Approved fixes beyond the original shell behaviour are covered by focused
+fixtures: protected code/comments; fragment-bearing images and HTML attributes;
+arbitrary image extensions; reference definitions; titled links; nested image
+links; path normalization; and preservation of HTML formatting, file permissions
+and line endings. These cases are intentional corrections, not a general
+formatting pass.
 
-The [development guide](../DEVELOPMENT.md) describes the fixture suite, shell
-comparison, rendering checks, licensing and repeatable `uv` commands. These
+The [development guide](../DEVELOPMENT.md) describes the fixture suite, the
+corpus, rendering checks, licensing and repeatable `uv` commands. These
 checks use temporary files. No project build, release gate, upload or committed
 README rewrite is part of this tool's verification.

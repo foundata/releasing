@@ -1,13 +1,14 @@
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Refresh immutable README snapshots and shell baselines from local repositories."""
+"""Refresh the immutable README snapshots and their expected output."""
 
 import argparse
 import hashlib
 import json
 import subprocess
-import tempfile
 from pathlib import Path
+
+from releasing.markdown import prepare_markdown
 
 
 def main() -> None:
@@ -15,7 +16,6 @@ def main() -> None:
     parser.add_argument("--refresh-from", required=True, type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    shell = root / "release-prepare-markdown.sh"
     destination = root / "tests" / "fixtures" / "corpus"
     repositories = sorted(
         [
@@ -44,29 +44,16 @@ def main() -> None:
         target.mkdir(parents=True, exist_ok=True)
         (target / "README.md").write_bytes(data)
         for simplify in (False, True):
-            with tempfile.TemporaryDirectory(prefix="markdown-baseline-") as value:
-                temporary = Path(value) / "README.md"
-                temporary.write_bytes(data)
-                subprocess.run(
-                    [
-                        "bash",
-                        str(shell),
-                        "-o",
-                        "foundata",
-                        "-r",
-                        repository.name,
-                        "-b",
-                        "main",
-                        *(["-s"] if simplify else []),
-                        str(temporary),
-                    ],
-                    check=True,
-                    capture_output=True,
-                    timeout=30,
-                )
-                (
-                    target / ("shell-simplified.md" if simplify else "shell.md")
-                ).write_bytes(temporary.read_bytes())
+            prepared = prepare_markdown(
+                data.decode("utf-8"),
+                raw_base=f"https://raw.githubusercontent.com/foundata/{repository.name}/refs/heads/main",
+                ui_base=f"https://github.com/foundata/{repository.name}/blob/main",
+                simplify=simplify,
+                strict=True,
+            )
+            (target / ("shell-simplified.md" if simplify else "shell.md")).write_text(
+                prepared, encoding="utf-8", newline=""
+            )
         entries.append(
             {
                 "repository": repository.name,
@@ -75,14 +62,11 @@ def main() -> None:
                 "sha256": hashlib.sha256(data).hexdigest(),
             }
         )
-    manifest = {
-        "shell_sha256": hashlib.sha256(shell.read_bytes()).hexdigest(),
-        "readmes": entries,
-    }
+    manifest = {"readmes": entries}
     (destination / "manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
-    print(f"Captured {len(entries)} READMEs and both shell modes in {destination}")
+    print(f"Captured {len(entries)} READMEs and both modes in {destination}")
 
 
 if __name__ == "__main__":

@@ -91,8 +91,8 @@ publishing renderer. Twine is neither required nor installed.
 
 Tests import the installed package (`uv sync` installs it in editable mode)
 and use temporary directories; they never edit checked-in fixtures. The complete
-suite requires Git, Bash and the shell baseline's Unix tools, but no network,
-existing Git checkout or sibling repository. Dash is also needed for the full
+suite requires Git and `uv`, but no network, existing Git checkout or sibling
+repository. Dash is also needed for the full
 commit-review compatibility matrix. Pure transformation tests can run
 separately:
 
