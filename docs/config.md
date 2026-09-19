@@ -1,15 +1,21 @@
 # The release declaration
 
-Every `release` command reads one declaration per project: the facts that
-differ between projects, stated once. It lives in `[tool.releasing]` of
+Project-aware `release` commands share one declaration: the facts that differ
+between projects, stated once. It lives in `[tool.releasing]` of
 `pyproject.toml`. A repository without a `pyproject.toml` uses the same keys at
 the top level of a `releasing.toml` beside it. Exactly one of the two must
 declare it.
 
 `release config check` loads the declaration, applies every default, verifies
-that every file it names exists and prints the effective values. Every other
-command runs the same check first. Loading never runs Git or another program,
-so it works in an exported source tree.
+that every file it names exists and prints the effective values. The
+`version`, `changelog`, `build`, `tag` and `verify` commands also load and
+validate it. Loading never runs Git or another program, so it works in an
+exported source tree.
+
+`markdown prepare` and `artifacts verify` run without a declaration.
+`artifacts check` and `artifacts manifest` load it only when `--version` is
+omitted; supplying that option makes the artifact operations independent of
+the project configuration.
 
 ## Keys
 

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The release declaration: one table per project that every command reads.
+"""The release declaration shared by project-aware commands.
 
 The declaration lives in ``[tool.releasing]`` of ``pyproject.toml`` or, for
 repositories without one, at the top level of ``releasing.toml``. Every

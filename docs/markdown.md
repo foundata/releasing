@@ -10,8 +10,8 @@ uses.
 ## Running the command
 
 The command is part of the `releasing` package; see the
-[README](../README.md) for installation. Its only runtime dependency is
-`markdown-it-py`.
+[README](../README.md) for installation. Its direct runtime dependencies are
+`markdown-it-py` and `typing-extensions`.
 
 ```sh
 release markdown prepare \
@@ -257,5 +257,6 @@ formatting pass.
 
 The [development guide](../DEVELOPMENT.md) describes the fixture suite, the
 corpus, rendering checks, licensing and repeatable `uv` commands. These
-checks use temporary files. No project build, release gate, upload or committed
-README rewrite is part of this tool's verification.
+checks use temporary files. Package integration tests also build disposable
+sample projects; they do not upload artifacts, run other projects' release
+gates or rewrite committed READMEs.

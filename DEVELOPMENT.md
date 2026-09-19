@@ -23,8 +23,9 @@ git diff --check
 ```
 
 Run these commands sequentially: selecting another Python version replaces the
-development environment. They only run local checks. There are no builds,
-release gates, uploads or changes to other projects.
+development environment. The checks are local and include real builds of
+temporary sample projects and workspaces. They do not upload artifacts, run
+other projects' release gates or change other projects.
 
 Apply Python lint fixes before formatting:
 
@@ -63,9 +64,10 @@ compatibility check.
 
 ## Dependencies
 
-`markdown-it-py` is the only direct runtime dependency on Python 3.12 and
-newer; 3.11 additionally needs `typing-extensions` for the `override`
-decorator. Everything else comes from the standard library, including the
+The direct runtime dependencies are `markdown-it-py` and `typing-extensions`
+on every supported Python version. The latter supplies the `override`
+decorator through one unconditional import, including on Python 3.11.
+Everything else comes from the standard library, including the
 archive, JSON, hashing and HTTP handling. The parser decides which text is a
 link, reference definition, code block, code span or HTML region. A small
 adapter records source positions through its parsing rules; edits replace

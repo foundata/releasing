@@ -10,12 +10,17 @@ links were never rewritten, and a wheel carrying a tool cache directory.
 Fails, naming every problem, when any file:
 
 - carries another version in its metadata or its file name than expected;
-- has a description (the index page) with repository-relative link or image
-  destinations, found by the same Markdown parser `release markdown prepare`
-  uses, or no description at all;
+- has a Markdown description (the index page) with repository-relative link
+  or image destinations, found by the same Markdown parser `release markdown
+  prepare` uses;
 - contains a tool cache, `__pycache__`, bytecode, a `.git` directory, editor or
   patch leftovers;
 - contains an absolute path, a `..` component or a symbolic link.
+
+Source distributions and collection tarballs must have non-empty descriptions.
+An empty wheel description is accepted; a whitespace-only description still
+fails. Python descriptions declared as a non-Markdown content type are treated
+as absent by these checks.
 
 The expected version is `--version`, or otherwise the version the project's
 sites state (`release version check`). With a project, every declared
@@ -24,7 +29,9 @@ named in `MANIFEST.json` is the description.
 
 ## `release artifacts manifest FILE... --out artifacts.json`
 
-Runs the same checks, then records the SHA-256 and size of every file:
+Checks the supplied files, then records the SHA-256 and size of every file.
+Unlike `artifacts check` with a project declaration, this command does not
+require an artifact for every declared distribution:
 
 ```json
 {
