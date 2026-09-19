@@ -206,12 +206,29 @@ def _build_artifacts(exported: Path, config: ReleaseConfig, staged: Path) -> lis
 
 def _build_python(exported: Path, staged: Path) -> list[Path]:
     uv = str(processes.executable("uv"))
+    if _is_workspace_root(exported):
+        # A virtual workspace root is not a distribution; its members are. uv
+        # builds each member's source distribution and its wheel from that.
+        processes.run(
+            [uv, "build", "--all-packages", "--out-dir", str(staged)], cwd=exported
+        )
+        return _distributions(staged)
     processes.run([uv, "build", "--sdist", "--out-dir", str(staged), str(exported)])
     sdist = _one(staged, "*.tar.gz")
     # The wheel comes from the source distribution, so what is published is what
     # a consumer installing from source would get.
     processes.run([uv, "build", "--wheel", "--out-dir", str(staged), str(sdist)])
     return _distributions(staged)
+
+
+def _is_workspace_root(exported: Path) -> bool:
+    """Whether the project is a uv workspace root that declares no distribution."""
+    try:
+        data = tomllib.loads((exported / "pyproject.toml").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
+        raise BuildError(f"cannot read pyproject.toml: {exc}") from exc
+    workspace = data.get("tool", {}).get("uv", {}).get("workspace")
+    return "project" not in data and isinstance(workspace, dict)
 
 
 def _build_collection(exported: Path, staged: Path) -> list[Path]:

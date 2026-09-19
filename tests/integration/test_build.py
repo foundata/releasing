@@ -248,3 +248,90 @@ def test_workspace_sources_are_not_local_paths(repository: Path) -> None:
     )
     result = release(repository, "build", "--out", str(repository.parent / "dist"))
     assert result.returncode == 0, result.stderr
+
+
+WORKSPACE_ROOT = """[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.releasing]
+repository = "foundata/product"
+version-files = [
+  "packages/engine/pyproject.toml",
+  "packages/frontend/pyproject.toml",
+]
+dependency-pins = [
+  { file = "packages/frontend/pyproject.toml", name = "engine" },
+]
+
+[[tool.releasing.readmes]]
+copies = ["packages/engine/README.md", "packages/frontend/README.md"]
+"""
+MEMBER = """[project]
+name = "{name}"
+version = "1.0.0"
+description = "A workspace member."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [{dependencies}]
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+"""
+
+
+@pytest.fixture
+def workspace(tmp_path: Path) -> Path:
+    if shutil.which("uv") is None:
+        pytest.skip("uv is required to build distributions")
+    root = tmp_path / "product"
+    root.mkdir()
+    (root / "README.md").write_text(README, encoding="utf-8")
+    (root / "DEVELOPMENT.md").write_text("# Development\n", encoding="utf-8")
+    (root / "CHANGELOG.md").write_text(
+        CHANGELOG.replace("foundata/sample", "foundata/product"), encoding="utf-8"
+    )
+    (root / "assets").mkdir()
+    (root / "assets" / "logo.svg").write_text("<svg></svg>\n", encoding="utf-8")
+    (root / "pyproject.toml").write_text(WORKSPACE_ROOT, encoding="utf-8")
+    for name, dependencies in (("engine", ""), ("frontend", '"engine>=1.0.0,<2"')):
+        package = root / "packages" / name
+        (package / "src" / name).mkdir(parents=True)
+        (package / "src" / name / "__init__.py").write_text(
+            '"""Member."""\n', encoding="utf-8"
+        )
+        (package / "README.md").write_text(
+            f"# {name}\n\nA pointer.\n", encoding="utf-8"
+        )
+        (package / "pyproject.toml").write_text(
+            MEMBER.format(name=name, dependencies=dependencies), encoding="utf-8"
+        )
+    git(root.parent, "init", "-q", "-b", "main", str(root))
+    git(root, "add", ".")
+    git(root, "commit", "-q", "-m", "project: establish the product")
+    return root
+
+
+def test_build_produces_every_workspace_member(workspace: Path) -> None:
+    out = workspace.parent / "dist"
+    result = release(workspace, "build", "--out", str(out), "--expect", "1.0.0")
+    assert result.returncode == 0, result.stderr
+    assert sorted(path.name for path in out.iterdir()) == sorted(
+        [
+            "artifacts.json",
+            "engine-1.0.0-py3-none-any.whl",
+            "engine-1.0.0.tar.gz",
+            "frontend-1.0.0-py3-none-any.whl",
+            "frontend-1.0.0.tar.gz",
+        ]
+    )
+    # The prepared project README replaced both members' pointer READMEs, so
+    # each package index page shows the full project page.
+    with zipfile.ZipFile(out / "frontend-1.0.0-py3-none-any.whl") as archive:
+        metadata = next(n for n in archive.namelist() if n.endswith("METADATA"))
+        description = archive.read(metadata).decode()
+    assert "A pointer." not in description
+    assert (
+        "https://github.com/foundata/product/blob/refs/tags/v1.0.0/DEVELOPMENT.md"
+        in description
+    )
