@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from releasing.forges import Forge
-from releasing.version import is_version
+from releasing.version import is_prerelease, is_version
 
 PLACEHOLDER = "- Nothing worth mentioning right now."
 _HEADING = re.compile(r"^## \[(?P<label>[^\]]+)\](?: - (?P<date>\S+))?[ \t]*$")
@@ -142,7 +142,9 @@ def check(
             problems.append(
                 f"line {unreleased[0]}: [unreleased] must compare {latest}...HEAD: {expected}"
             )
-    if version is not None:
+    # A pre-release is not a release: it needs no dated section of its own, and
+    # a project before its first release has none at all.
+    if version is not None and not is_prerelease(version):
         if not released or released[0].label != version:
             problems.append(f"the latest released section must be [{version}]")
     return problems

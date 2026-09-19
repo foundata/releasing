@@ -190,3 +190,17 @@ def test_antsibull_release_lookup() -> None:
     assert antsibull_has_release(yaml, "1.4.0")
     assert not antsibull_has_release(yaml, "1.4")
     assert not antsibull_has_release(yaml, "1.5.0")
+
+
+def test_a_prerelease_needs_no_released_section() -> None:
+    # The version under development, and a project before its first release,
+    # legitimately have nothing but Unreleased.
+    fresh = "# Changelog\n\n## [Unreleased]\n\n- All functionality and files.\n"
+    assert check(fresh, forge=FORGE, tag_format="v{version}") == []
+    assert (
+        check(fresh, forge=FORGE, tag_format="v{version}", version="1.0.0.dev0") == []
+    )
+    assert check(fresh, forge=FORGE, tag_format="v{version}", version="2.0.0rc1") == []
+    assert check(fresh, forge=FORGE, tag_format="v{version}", version="1.0.0") == [
+        "the latest released section must be [1.0.0]"
+    ]
