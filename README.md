@@ -41,6 +41,10 @@ Every command reads the project's release declaration, one table in
 - `release version check` and `release version bump`: every declared
   version site, the lockfile, lockstep pins and the tag agree, or move them all
   to a new version. See [Version sites](./docs/version.md).
+- `release changelog check`, `show` and `release`: Keep a Changelog
+  sections, dates and links are consistent, one section is printed for a
+  release description, or the unreleased entries become a dated section. See
+  [Changelog sections](./docs/changelog.md).
 - `release markdown prepare`: rewrite repository-relative link and image
   destinations to absolute URLs without reformatting the document. See
   [Preparing Markdown for package indexes](./docs/markdown.md).

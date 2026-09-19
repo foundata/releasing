@@ -9,6 +9,21 @@ from pathlib import Path
 import pytest
 
 pytestmark = pytest.mark.integration
+CHANGELOG = """# Changelog
+
+## [Unreleased]
+
+- Something new.
+
+
+## [1.2.3] - 2026-09-01
+
+- Initial.
+
+
+[unreleased]: https://github.com/foundata/example/compare/v1.2.3...HEAD
+[1.2.3]: https://github.com/foundata/example/releases/tag/v1.2.3
+"""
 GIT_ENV = {
     "GIT_CONFIG_NOSYSTEM": "1",
     "GIT_CONFIG_GLOBAL": os.devnull,
@@ -47,7 +62,7 @@ def release(
 @pytest.fixture
 def repository(tmp_path: Path) -> Path:
     (tmp_path / "README.md").write_text("# Example\n", encoding="utf-8")
-    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
+    (tmp_path / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "example"\nversion = "1.2.3"\n\n'
         '[tool.releasing]\nrepository = "foundata/example"\n',
@@ -71,7 +86,7 @@ def test_version_check_prints_the_version_and_honours_tags(repository: Path) -> 
 
 def test_version_check_works_in_an_exported_tree_without_git(tmp_path: Path) -> None:
     (tmp_path / "README.md").write_text("# Example\n", encoding="utf-8")
-    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
+    (tmp_path / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "example"\nversion = "1.2.3"\n\n'
         '[tool.releasing]\nrepository = "foundata/example"\n',
@@ -91,4 +106,10 @@ def test_version_bump_prints_diffs_and_refuses_dirty_sites(repository: Path) -> 
     assert b"uncommitted changes in version files" in result.stderr
     result = release(repository, "version", "bump", "1.4.0", "--no-lock", "--force")
     assert result.returncode == 0, result.stderr
+    # The changelog still names 1.2.3 as the latest release, so the check fails
+    # until the changelog is released too.
+    result = release(repository, "version", "check")
+    assert result.returncode == 1
+    assert b"latest released section must be [1.4.0]" in result.stderr
+    assert release(repository, "changelog", "release", "1.4.0").returncode == 0
     assert release(repository, "version", "check").stdout == b"1.4.0\n"

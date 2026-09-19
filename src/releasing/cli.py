@@ -11,11 +11,12 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable, Sequence
+from datetime import date
 from pathlib import Path
 from typing import cast
 from urllib.parse import quote
 
-from releasing import config, markdown, version
+from releasing import changelog, config, forges, markdown, version
 
 Runner = Callable[[argparse.Namespace], int]
 
@@ -295,7 +296,13 @@ def _run_version_check(args: argparse.Namespace) -> int:
             expect=args.expect,
             tags_on_head=None if tags is None else tags.split(),
         )
-    except (config.ConfigError, version.VersionError, ValueError) as exc:
+        _check_changelog(loaded, found)
+    except (
+        config.ConfigError,
+        version.VersionError,
+        changelog.ChangelogError,
+        ValueError,
+    ) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     print(found)
@@ -331,6 +338,105 @@ def _run_version_bump(args: argparse.Namespace) -> int:
     except (OSError, subprocess.SubprocessError) as exc:
         print(f"Error: uv lock failed: {exc}", file=sys.stderr)
         return 1
+    return 0
+
+
+def _read(path: Path) -> str:
+    try:
+        with path.open(encoding="utf-8", newline="") as stream:
+            return stream.read()
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(f"cannot read {path}: {exc}") from exc
+
+
+def _check_changelog(loaded: config.ReleaseConfig, found: str) -> None:
+    if loaded.changelog_format == "antsibull":
+        text = _read(loaded.root / "changelogs" / "changelog.yaml")
+        if not changelog.antsibull_has_release(text, found):
+            raise changelog.ChangelogError(
+                f"changelogs/changelog.yaml has no release {found}; "
+                "run antsibull-changelog release"
+            )
+        return
+    problems = changelog.check(
+        _read(loaded.root / loaded.changelog),
+        forge=forges.forge_for(loaded),
+        tag_format=loaded.tag_format,
+        version=found,
+    )
+    if problems:
+        raise changelog.ChangelogError(f"{loaded.changelog}:\n" + "\n".join(problems))
+
+
+def _run_changelog_check(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        if loaded.changelog_format == "antsibull":
+            if args.version is None:
+                raise ValueError(
+                    "antsibull-changelog owns this changelog; pass --version to "
+                    "check that a release is recorded"
+                )
+            _check_changelog(loaded, args.version)
+        else:
+            problems = changelog.check(
+                _read(loaded.root / loaded.changelog),
+                forge=forges.forge_for(loaded),
+                tag_format=loaded.tag_format,
+                version=args.version,
+            )
+            if problems:
+                raise changelog.ChangelogError(
+                    f"{loaded.changelog}:\n" + "\n".join(problems)
+                )
+    except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    print(f"{loaded.changelog}: ok")
+    return 0
+
+
+def _run_changelog_show(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        if loaded.changelog_format == "antsibull":
+            raise ValueError("antsibull-changelog owns this changelog; nothing to show")
+        body = changelog.show(_read(loaded.root / loaded.changelog), args.version)
+    except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    sys.stdout.write(body)
+    return 0
+
+
+def _run_changelog_release(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        when = date.fromisoformat(args.date) if args.date else None
+        if loaded.changelog_format == "antsibull":
+            command = ["antsibull-changelog", "release", "--version", args.version]
+            if when is not None:
+                command += ["--date", when.isoformat()]
+            print("release: " + " ".join(command), file=sys.stderr)
+            subprocess.run(command, cwd=loaded.root, check=True, timeout=600)
+            return 0
+        path = loaded.root / loaded.changelog
+        result = changelog.release(
+            _read(path),
+            args.version,
+            forge=forges.forge_for(loaded),
+            tag_format=loaded.tag_format,
+            when=when,
+            placeholder=args.placeholder,
+        )
+        _write(path, result.encode("utf-8"), stat.S_IMODE(path.stat().st_mode))
+    except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"Error: changelog release failed: {exc}", file=sys.stderr)
+        return 1
+    print(f"{loaded.changelog}: released {args.version}")
     return 0
 
 
@@ -396,6 +502,43 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-lock", action="store_true", help="do not run uv lock afterwards"
     )
     version_bump.set_defaults(run=_run_version_bump)
+    changelog_parser = commands.add_parser(
+        "changelog", help="check, show or release Keep a Changelog sections"
+    )
+    changelog_commands = changelog_parser.add_subparsers(
+        dest="subcommand", required=True, metavar="SUBCOMMAND", title="subcommands"
+    )
+    changelog_check = changelog_commands.add_parser(
+        "check",
+        help="sections, dates, order and link definitions are consistent",
+        description=changelog.__doc__,
+    )
+    _add_project(changelog_check)
+    changelog_check.add_argument(
+        "--version", metavar="X.Y.Z", help="also require this latest release"
+    )
+    changelog_check.set_defaults(run=_run_changelog_check)
+    changelog_show = changelog_commands.add_parser(
+        "show", help="print one version's section, for a release description"
+    )
+    _add_project(changelog_show)
+    changelog_show.add_argument("version", metavar="X.Y.Z", help="or Unreleased")
+    changelog_show.set_defaults(run=_run_changelog_show)
+    changelog_release = changelog_commands.add_parser(
+        "release",
+        help="turn the Unreleased entries into a dated version section",
+    )
+    _add_project(changelog_release)
+    changelog_release.add_argument("version", metavar="X.Y.Z", help="the version")
+    changelog_release.add_argument(
+        "--date", metavar="YYYY-MM-DD", help="release date (default: today)"
+    )
+    changelog_release.add_argument(
+        "--placeholder",
+        default=changelog.PLACEHOLDER,
+        help="entry for the fresh Unreleased section",
+    )
+    changelog_release.set_defaults(run=_run_changelog_release)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )
