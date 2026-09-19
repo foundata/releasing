@@ -16,7 +16,16 @@ from pathlib import Path
 from typing import cast
 from urllib.parse import quote
 
-from releasing import artifacts, changelog, config, forges, markdown, version
+from releasing import (
+    artifacts,
+    build,
+    changelog,
+    config,
+    forges,
+    markdown,
+    processes,
+    version,
+)
 
 Runner = Callable[[argparse.Namespace], int]
 
@@ -522,8 +531,9 @@ def _run_artifacts_manifest(args: argparse.Namespace) -> int:
 
 def _run_artifacts_verify(args: argparse.Namespace) -> int:
     try:
-        manifest = artifacts.load_manifest(cast(Path, args.manifest))
-        directory = cast(Path, args.directory) or cast(Path, args.manifest).parent
+        manifest_path = cast(Path, args.manifest)
+        manifest = artifacts.load_manifest(manifest_path)
+        directory = cast("Path | None", args.directory) or manifest_path.parent
         problems = artifacts.verify_manifest(manifest, directory)
     except (artifacts.ArtifactError, OSError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -534,6 +544,37 @@ def _run_artifacts_verify(args: argparse.Namespace) -> int:
             print(f"  {problem}", file=sys.stderr)
         return 1
     print(f"{len(manifest.artifacts)} artifact(s) match the manifest")
+    return 0
+
+
+def _run_build(args: argparse.Namespace) -> int:
+    try:
+        result = build.build(
+            cast(Path, args.project),
+            revision=args.revision,
+            out=cast(Path, args.out),
+            expect=args.expect,
+        )
+    except (
+        config.ConfigError,
+        version.VersionError,
+        changelog.ChangelogError,
+        artifacts.ArtifactError,
+        build.BuildError,
+        processes.ProcessError,
+        ValueError,
+    ) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    for prepared in result.prepared:
+        print(f"prepared: {prepared}", file=sys.stderr)
+    for path in result.files:
+        print(path)
+    print(result.manifest)
+    print(
+        f"release: {result.version} from {result.revision[:12]} in {result.directory}",
+        file=sys.stderr,
+    )
     return 0
 
 
@@ -690,6 +731,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="where the files are (default: beside the manifest)",
     )
     artifacts_verify.set_defaults(run=_run_artifacts_verify)
+    build_parser = commands.add_parser(
+        "build",
+        help="build distributions from an exported revision",
+        description=build.__doc__,
+    )
+    _add_project(build_parser)
+    build_parser.add_argument(
+        "--revision",
+        default="HEAD",
+        metavar="REV",
+        help="what to export (default: HEAD)",
+    )
+    build_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        metavar="DIR",
+        help="new directory for the distributions and their manifest",
+    )
+    build_parser.add_argument(
+        "--expect", metavar="X.Y.Z", help="the version the revision must state"
+    )
+    build_parser.set_defaults(run=_run_build)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )

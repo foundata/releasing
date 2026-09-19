@@ -15,7 +15,13 @@ from releasing.changelog import (
 )
 from releasing.forges import Forge
 
-FORGE = Forge("github", "foundata/example", "https://github.com")
+FORGE = Forge(
+    "github",
+    "foundata/example",
+    "https://github.com",
+    "https://raw.githubusercontent.com",
+    "https://api.github.com",
+)
 HEAD = """# Changelog
 
 All notable changes to this project will be documented in this file.

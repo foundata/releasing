@@ -1,0 +1,57 @@
+# Building from an exported revision
+
+A release is a commit, not a working tree. `release build` exports the
+committed revision with `git archive`, prepares the package-index Markdown
+inside that export, builds there, checks the result and records a manifest.
+The working tree is never modified, so no `git restore` is needed afterwards
+and an uncommitted file can never reach an artifact.
+
+```sh
+release build --out "../dist-${version}"
+```
+
+## What it does
+
+1. Resolves `--revision` (default `HEAD`) to a full commit and exports it.
+   `export-ignore` in `.gitattributes` is the one mechanism for keeping a
+   tracked file out of the artifacts.
+2. Loads the release declaration from the export and runs `version check`
+   there, so the version that ships is the committed one. `--expect X.Y.Z`
+   additionally pins what that version must be.
+3. Runs the changelog check for that version.
+4. Prepares every declared document: relative destinations are validated
+   against the exported tree, rewritten against the forge at the version's tag
+   ref, and copied over the documents named in `copies`.
+5. Builds the distributions. For Python that is a source distribution from the
+   export and a wheel from that source distribution, so what is published is
+   what installing from source produces. For an Ansible collection it is
+   `ansible-galaxy collection build`.
+6. Runs the artifact checks and writes the files plus `artifacts.json` into
+   `--out`, which must not exist yet. The directory appears complete or not at
+   all.
+
+## Output
+
+```text
+../dist-1.0.0/
+├── artifacts.json
+├── sample-1.0.0-py3-none-any.whl
+└── sample-1.0.0.tar.gz
+```
+
+The artifact paths go to stdout, one per line, so a publishing step can read
+them. Progress and the prepared documents go to stderr.
+
+Because the build runs before the tag exists, the prepared links point at the
+version's tag ref (`refs/tags/vX.Y.Z` by default). The tag is pushed with the
+release, or the artifacts are never uploaded.
+
+## Verifying and publishing what was built
+
+`release artifacts verify` re-checks the directory against its manifest
+immediately before uploading, so exactly the validated bytes are published:
+
+```sh
+release artifacts verify "../dist-${version}/artifacts.json"
+uv publish "../dist-${version}"/*.whl "../dist-${version}"/*.tar.gz
+```

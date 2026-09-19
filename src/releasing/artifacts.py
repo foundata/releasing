@@ -38,6 +38,9 @@ _FORBIDDEN_PARTS = frozenset(
 )
 _FORBIDDEN_NAMES = frozenset({".coverage", ".DS_Store"})
 _FORBIDDEN_SUFFIXES = frozenset({".pyc", ".pyo", ".orig", ".rej"})
+# uv_build keeps the untransformed project file beside the rewritten one in
+# every source distribution, so this one name is expected rather than litter.
+_EXPECTED_NAMES = frozenset({"pyproject.toml.orig"})
 
 
 class ArtifactError(ValueError):
@@ -353,9 +356,13 @@ def _member_problems(member: str) -> list[str]:
         for part in parts
     ):
         problems.append(f"contains generated path {member}")
-    elif parts and (
-        parts[-1] in _FORBIDDEN_NAMES
-        or PurePosixPath(parts[-1]).suffix in _FORBIDDEN_SUFFIXES
+    elif (
+        parts
+        and parts[-1] not in _EXPECTED_NAMES
+        and (
+            parts[-1] in _FORBIDDEN_NAMES
+            or PurePosixPath(parts[-1]).suffix in _FORBIDDEN_SUFFIXES
+        )
     ):
         problems.append(f"contains generated file {member}")
     return problems
