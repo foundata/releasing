@@ -114,6 +114,102 @@ def test_create_refuses_a_dirty_tree_or_a_disagreeing_version(repository: Path) 
     assert git(repository, "tag", "--list") == ""
 
 
+@pytest.mark.parametrize("requested, expected_status", [("1.0.0", 0), ("2.0.0", 1)])
+def test_create_checks_the_selected_revision(
+    repository: Path, requested: str, expected_status: int
+) -> None:
+    for name in ("pyproject.toml", "CHANGELOG.md"):
+        path = repository / name
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("1.0.0", "2.0.0"),
+            encoding="utf-8",
+        )
+    git(repository, "commit", "-qam", "release: prepare 2.0.0")
+    result = release(
+        repository, "tag", "create", requested, "--revision", "HEAD~1", "--offline"
+    )
+    assert result.returncode == expected_status, result.stderr
+    if expected_status == 0:
+        assert git(repository, "rev-parse", "v1.0.0^{commit}") == git(
+            repository, "rev-parse", "HEAD~1"
+        )
+    else:
+        assert b"expected 2.0.0, sites state 1.0.0" in result.stderr
+        assert git(repository, "tag", "--list") == ""
+    assert git(repository, "status", "--porcelain") == ""
+
+
+@pytest.mark.parametrize("revision", ["HEAD", "HEAD~1"])
+def test_create_refuses_a_stale_changelog_in_the_selected_revision(
+    repository: Path, revision: str
+) -> None:
+    path = repository / "CHANGELOG.md"
+    path.write_text(CHANGELOG.replace("1.0.0", "0.9.0"), encoding="utf-8")
+    git(repository, "commit", "-qam", "changelog: retain the previous release")
+    if revision != "HEAD":
+        path.write_text(CHANGELOG, encoding="utf-8")
+        git(repository, "commit", "-qam", "changelog: record the current release")
+    result = release(
+        repository, "tag", "create", "1.0.0", "--revision", revision, "--offline"
+    )
+    assert result.returncode == 1
+    assert b"latest released section must be [1.0.0]" in result.stderr
+    assert b"Traceback" not in result.stderr
+    assert git(repository, "tag", "--list") == ""
+
+
+@pytest.mark.parametrize("site", ["lockfile", "pin"])
+def test_create_checks_lockfile_and_pins_in_the_selected_revision(
+    repository: Path, site: str
+) -> None:
+    if site == "lockfile":
+        path = repository / "uv.lock"
+        before = '[[package]]\nname = "example"\nversion = "0.9.0"\n'
+        expected = b"uv.lock records example 0.9.0"
+    else:
+        path = repository / "pyproject.toml"
+        before = (
+            path.read_text(encoding="utf-8").replace(
+                "[tool.releasing]",
+                'dependencies = ["engine>=0.9.0,<2"]\n\n[tool.releasing]',
+            )
+            + 'dependency-pins = [{ file = "pyproject.toml", name = "engine" }]\n'
+        )
+        expected = b"engine lower bound is 0.9.0"
+    path.write_text(before, encoding="utf-8")
+    git(repository, "add", ".")
+    git(repository, "commit", "-qm", "release: record a stale dependency version")
+    path.write_text(before.replace("0.9.0", "1.0.0"), encoding="utf-8")
+    git(repository, "commit", "-qam", "release: align the dependency version")
+    result = release(
+        repository, "tag", "create", "1.0.0", "--revision", "HEAD~1", "--offline"
+    )
+    assert result.returncode == 1
+    assert expected in result.stderr
+    assert git(repository, "tag", "--list") == ""
+
+
+@pytest.mark.parametrize("recorded", ["0.9.0", "1.0.0"])
+def test_create_checks_antsibull_releases(repository: Path, recorded: str) -> None:
+    (repository / "pyproject.toml").write_text(
+        '[tool.releasing]\nrepository = "foundata/example"\n'
+        'ecosystem = "ansible-collection"\n',
+        encoding="utf-8",
+    )
+    (repository / "galaxy.yml").write_text("version: 1.0.0\n", encoding="utf-8")
+    (repository / "changelogs").mkdir()
+    (repository / "changelogs" / "changelog.yaml").write_text(
+        f"releases:\n  {recorded}:\n    changes: {{}}\n", encoding="utf-8"
+    )
+    git(repository, "add", ".")
+    git(repository, "commit", "-qm", "release: declare the collection")
+    result = release(repository, "tag", "create", "1.0.0", "--offline")
+    assert result.returncode == (0 if recorded == "1.0.0" else 1), result.stderr
+    if recorded != "1.0.0":
+        assert b"changelogs/changelog.yaml has no release 1.0.0" in result.stderr
+        assert git(repository, "tag", "--list") == ""
+
+
 def test_check_reports_a_lightweight_or_misplaced_tag(repository: Path) -> None:
     git(repository, "tag", "v1.0.0")
     result = release(repository, "tag", "check", "1.0.0", "--offline")

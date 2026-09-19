@@ -15,7 +15,11 @@ Creates the annotated tag, by default `vX.Y.Z` with the message
   the version;
 - the tag already exists locally or on the remote.
 
-`--revision` tags something other than `HEAD`. Pushing is a separate step.
+`--revision` tags something other than `HEAD`. The version and changelog
+checks read that committed revision's declaration and files in a temporary
+export, including its lockfile and dependency pins. The current declaration
+supplies the tag name and message. The working tree is left untouched.
+Pushing is a separate step.
 
 ## `release tag check X.Y.Z`
 

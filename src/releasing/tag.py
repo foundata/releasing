@@ -9,12 +9,13 @@ the tag and start over" escape depends on; once a release exists the version is
 spent and the fix needs a new one.
 """
 
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from releasing import forge_api, processes, version
-from releasing.config import ReleaseConfig
-from releasing.forges import Forge
+from releasing import build, changelog, forge_api, processes, version
+from releasing.config import ReleaseConfig, load_release_config
+from releasing.forges import Forge, forge_for
 
 
 class TagError(RuntimeError):
@@ -74,7 +75,8 @@ def create(
 ) -> str:
     """Create the annotated release tag for ``version_string`` under guard.
 
-    The working tree must be clean, every version site must state the version,
+    The working tree must be clean. The selected revision's declaration,
+    version sites, lockfile, pins and changelog must agree with the version,
     and the tag must exist neither locally nor on the remote.
     """
     tag = config.tag(version_string)
@@ -87,7 +89,7 @@ def create(
     target = processes.git(
         root, "rev-parse", "--verify", f"{revision}^{{commit}}"
     ).strip()
-    found = version.check(root, config, expect=version_string)
+    found = _check_revision(root, target, version_string)
     current = state(root, config, forge, tag, offline=offline)
     if current.revision is not None:
         raise TagError(f"tag {tag} already exists locally at {current.revision[:12]}")
@@ -95,6 +97,36 @@ def create(
         raise TagError(f"tag {tag} already exists on the remote")
     processes.git(root, "tag", "-a", tag, target, "-m", config.tag_message_for(found))
     return tag
+
+
+def _check_revision(root: Path, revision: str, expected: str) -> str:
+    with tempfile.TemporaryDirectory(prefix="releasing-tag-") as value:
+        exported = Path(value)
+        build.export(root, revision, exported)
+        config = load_release_config(exported)
+        found = version.check(exported, config, expect=expected)
+        path = exported / (
+            "changelogs/changelog.yaml"
+            if config.changelog_format == "antsibull"
+            else config.changelog
+        )
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            raise TagError(f"cannot read {path.relative_to(exported)}: {exc}") from exc
+        if config.changelog_format == "antsibull":
+            if not changelog.antsibull_has_release(text, found):
+                raise TagError(f"changelogs/changelog.yaml has no release {found}")
+        else:
+            problems = changelog.check(
+                text,
+                forge=forge_for(config),
+                tag_format=config.tag_format,
+                version=found,
+            )
+            if problems:
+                raise TagError(f"{config.changelog}:\n" + "\n".join(problems))
+        return found
 
 
 def delete(
