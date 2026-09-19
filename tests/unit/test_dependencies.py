@@ -36,3 +36,9 @@ def test_rule_api_used_by_the_adapter_is_present() -> None:
     # release that renames or removes them must fail here, not in production.
     for rule in (reference, html_inline, image, link):
         assert callable(rule)
+
+
+def test_package_ships_the_typing_marker() -> None:
+    # Without PEP 561's marker a consumer running mypy in strict mode cannot
+    # see this package's annotations and reports every import as untyped.
+    assert (ROOT / "src" / "releasing" / "py.typed").is_file()
