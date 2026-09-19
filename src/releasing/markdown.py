@@ -359,6 +359,11 @@ def analyze(text: str) -> Document:
     return document
 
 
+def is_local(value: str) -> bool:
+    """Whether a destination is repository-relative rather than absolute or an anchor."""
+    return _local(value)
+
+
 def _local(value: str) -> bool:
     return (
         bool(value) and not value.startswith(("#", "//")) and not _SCHEME.match(value)

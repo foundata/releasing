@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import cast
 from urllib.parse import quote
 
-from releasing import changelog, config, forges, markdown, version
+from releasing import artifacts, changelog, config, forges, markdown, version
 
 Runner = Callable[[argparse.Namespace], int]
 
@@ -440,6 +440,115 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
     return 0
 
 
+def _expected_version(
+    args: argparse.Namespace,
+) -> tuple[config.ReleaseConfig | None, str]:
+    """The version artifacts must carry: --version, else the project's sites."""
+    if args.version is not None:
+        if not version.is_version(args.version):
+            raise ValueError(f"not a version: {args.version!r}")
+        return None, args.version
+    loaded = _load_config(args)
+    return loaded, version.check(loaded.root, loaded)
+
+
+def _run_artifacts_check(args: argparse.Namespace) -> int:
+    try:
+        loaded, expected = _expected_version(args)
+        inspected = [artifacts.inspect(path) for path in args.files]
+        names = (
+            ()
+            if loaded is None
+            else tuple(
+                name for name in version.project_names(loaded.root, loaded).values()
+            )
+        )
+        problems = artifacts.check(inspected, version=expected, names=names)
+    except (
+        config.ConfigError,
+        version.VersionError,
+        artifacts.ArtifactError,
+        ValueError,
+    ) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    if problems:
+        print("Error: artifacts are not publishable:", file=sys.stderr)
+        for problem in problems:
+            print(f"  {problem}", file=sys.stderr)
+        return 1
+    for artifact in inspected:
+        print(
+            f"{artifact.path.name}: {artifact.kind} {artifact.name} {artifact.version}"
+        )
+    return 0
+
+
+def _run_artifacts_manifest(args: argparse.Namespace) -> int:
+    try:
+        loaded, expected = _expected_version(args)
+        inspected = [artifacts.inspect(path) for path in args.files]
+        problems = artifacts.check(inspected, version=expected)
+        if problems:
+            raise ValueError(
+                "artifacts are not publishable:\n  " + "\n  ".join(problems)
+            )
+        manifest = artifacts.build_manifest(
+            list(args.files),
+            repository=args.repository or (loaded.repository if loaded else ""),
+            version=expected,
+            source_revision=args.revision,
+        )
+        text = artifacts.dump_manifest(manifest)
+        if args.out is None:
+            sys.stdout.write(text)
+        else:
+            target = cast(Path, args.out)
+            if target.exists():
+                raise ValueError(f"manifest must not already exist: {target}")
+            _write(target, text.encode("utf-8"), 0o644)
+            print(f"{target}: {len(manifest.artifacts)} artifact(s) recorded")
+    except (
+        config.ConfigError,
+        version.VersionError,
+        artifacts.ArtifactError,
+        OSError,
+        ValueError,
+    ) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _run_artifacts_verify(args: argparse.Namespace) -> int:
+    try:
+        manifest = artifacts.load_manifest(cast(Path, args.manifest))
+        directory = cast(Path, args.directory) or cast(Path, args.manifest).parent
+        problems = artifacts.verify_manifest(manifest, directory)
+    except (artifacts.ArtifactError, OSError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    if problems:
+        print("Error: files differ from the manifest:", file=sys.stderr)
+        for problem in problems:
+            print(f"  {problem}", file=sys.stderr)
+        return 1
+    print(f"{len(manifest.artifacts)} artifact(s) match the manifest")
+    return 0
+
+
+def _add_artifact_arguments(parser: argparse.ArgumentParser) -> None:
+    _add_project(parser)
+    parser.add_argument(
+        "--version",
+        metavar="X.Y.Z",
+        help="the version to expect (default: the project's version sites)",
+    )
+    parser.add_argument(
+        "files", nargs="+", type=Path, help="wheels, sdists or collection tarballs"
+    )
+
+
 def _add_project(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--project",
@@ -539,6 +648,48 @@ def build_parser() -> argparse.ArgumentParser:
         help="entry for the fresh Unreleased section",
     )
     changelog_release.set_defaults(run=_run_changelog_release)
+    artifacts_parser = commands.add_parser(
+        "artifacts", help="inspect distributions and record their digests"
+    )
+    artifacts_commands = artifacts_parser.add_subparsers(
+        dest="subcommand", required=True, metavar="SUBCOMMAND", title="subcommands"
+    )
+    artifacts_check = artifacts_commands.add_parser(
+        "check",
+        help="version, file names, description links, litter and unsafe members",
+        description=artifacts.__doc__,
+    )
+    _add_artifact_arguments(artifacts_check)
+    artifacts_check.set_defaults(run=_run_artifacts_check)
+    artifacts_manifest = artifacts_commands.add_parser(
+        "manifest", help="check the files and record their SHA-256 digests"
+    )
+    _add_artifact_arguments(artifacts_manifest)
+    artifacts_manifest.add_argument(
+        "--out",
+        type=Path,
+        metavar="PATH",
+        help="write the manifest here (default: stdout)",
+    )
+    artifacts_manifest.add_argument(
+        "--revision",
+        metavar="SHA",
+        help="the source revision the files were built from",
+    )
+    artifacts_manifest.add_argument(
+        "--repository", metavar="OWNER/NAME", help="override the declared repository"
+    )
+    artifacts_manifest.set_defaults(run=_run_artifacts_manifest)
+    artifacts_verify = artifacts_commands.add_parser(
+        "verify", help="files beside a manifest match its digests exactly"
+    )
+    artifacts_verify.add_argument("manifest", type=Path, help="the manifest file")
+    artifacts_verify.add_argument(
+        "--directory",
+        type=Path,
+        help="where the files are (default: beside the manifest)",
+    )
+    artifacts_verify.set_defaults(run=_run_artifacts_verify)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )

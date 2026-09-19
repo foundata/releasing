@@ -45,6 +45,9 @@ Every command reads the project's release declaration, one table in
   sections, dates and links are consistent, one section is printed for a
   release description, or the unreleased entries become a dated section. See
   [Changelog sections](./docs/changelog.md).
+- `release artifacts check`, `manifest` and `verify`: distributions carry
+  the right version, a description without relative links and no litter; their
+  digests are recorded and later compared. See [Artifacts](./docs/artifacts.md).
 - `release markdown prepare`: rewrite repository-relative link and image
   destinations to absolute URLs without reformatting the document. See
   [Preparing Markdown for package indexes](./docs/markdown.md).

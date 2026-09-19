@@ -62,6 +62,7 @@ def main() -> int:
             "--no-cache",
             "README.md",
             "DEVELOPMENT.md",
+            "docs/artifacts.md",
             "docs/changelog.md",
             "docs/config.md",
             "docs/markdown.md",
