@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Run the foundata Markdown guide's flags on maintained transformer documentation."""
+"""Run the foundata Markdown guide's flags on maintained helper documentation."""
 
 import argparse
 import subprocess
@@ -61,6 +61,7 @@ def main() -> int:
             *RULES,
             "--no-cache",
             "release-prepare-markdown-README.md",
+            "git-review-unpushed-README.md",
             "DEVELOPMENT.md",
         ],
         cwd=Path(__file__).resolve().parents[1],

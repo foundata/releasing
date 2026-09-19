@@ -203,6 +203,7 @@ git_directory=''
 rebase_started='0'
 review_index='0'
 review_total='0'
+review_tree=''
 
 ###
 # Print command usage.
@@ -216,8 +217,11 @@ usage() {
     '' \
     'Options:' \
     '  -t repository  Local Git repository (default: current directory).' \
-    '  -u upstream    Comparison ref (default: current branch upstream).' \
+    '  -u upstream    Narrow the range (default: current branch upstream).' \
     '  -h             Print this help.' \
+    '' \
+    'A fetch of the configured remote upstream is always required.' \
+    'The comparison ref must not include commits already on that upstream.' \
     '' \
     'Actions for each commit:' \
     '  e  Edit the commit message, then review the same commit again.' \
@@ -364,42 +368,37 @@ resolve_script_path() {
 }
 
 ###
-# Find the remote represented by a remote-tracking upstream ref.
+# Verify that review has not picked up unrelated file changes.
 # Globals:
 #   repository
+#   rebase_started - Cleared to preserve unexpected changes on exit.
 # Arguments:
-#   $1 - Full upstream ref name.
+#   $1 - Expected HEAD tree, or empty before the first review stop.
 # Outputs:
-#   Writes the best matching remote name to STDOUT, if found.
-find_upstream_remote() {
-  local full_upstream="${1}"
-  local remote_list
-  local candidate
-  local best_match=''
+#   Writes errors and manual recovery guidance to STDERR.
+# Returns:
+#   0 if unchanged and clean, 1 if the state must be inspected manually.
+verify_review_state() {
+  local expected_tree="${1}"
+  local repository_status
+  local current_tree
 
-  if ! remote_list="$(git -C "${repository}" remote)"; then
-    return 1
+  if ! repository_status="$(git -C "${repository}" status --porcelain --untracked-files=all)"; then
+    print_error 'Unable to inspect the working tree.'
+  elif [ -n "${repository_status}" ]; then
+    print_error 'Files changed during review; refusing to include or discard them.'
+  elif ! current_tree="$(git -C "${repository}" rev-parse --verify 'HEAD^{tree}')"; then
+    print_error 'Unable to inspect the current commit tree.'
+  elif [ -n "${expected_tree}" ] && [ "${current_tree}" != "${expected_tree}" ]; then
+    print_error 'The commit tree changed during a message-only review.'
+  else
+    return 0
   fi
 
-  while IFS= read -r candidate; do
-    [ -n "${candidate}" ] || continue
-    case "${full_upstream}" in
-      "refs/remotes/${candidate}/"*)
-        if [ "${#candidate}" -gt "${#best_match}" ]; then
-          best_match="${candidate}"
-        fi
-        ;;
-      *) ;;
-    esac
-  done <<EOF
-${remote_list}
-EOF
-
-  if [ -n "${best_match}" ]; then
-    printf '%s\n' "${best_match}"
-  fi
-
-  return 0
+  rebase_started='0'
+  print_error 'Review stopped; the current state was preserved without an automatic abort.'
+  print_error 'Inspect the changes and run git rebase --continue or git rebase --abort manually.'
+  return 1
 }
 
 ###
@@ -420,12 +419,14 @@ rebase_in_progress() {
 # Globals:
 #   rebase_started
 #   repository
+#   review_tree
 # Arguments:
 #   None
 # Outputs:
 #   Writes an error to STDERR if Git cannot restore the branch.
 abort_active_rebase() {
   if [ "${rebase_started}" -eq 1 ] && rebase_in_progress; then
+    verify_review_state "${review_tree}" || return 1
     if ! git -C "${repository}" rebase --abort; then
       print_error 'Automatic rebase abort failed; inspect the repository state.'
     fi
@@ -474,24 +475,31 @@ show_current_commit() {
   git -C "${repository}" log -1 \
     --date='format:%Y-%m-%d %H:%M:%S %z' \
     --format='commit %H%nAuthor: %an <%ae>%nDate:   %ad%n%n%B' \
-    'HEAD'
+    'HEAD' || return "${?}"
   printf '%s\n' '------------------------------------------------------------------------'
+  return 0
 }
 
 ###
 # Review one commit until the user accepts or aborts it.
 # Globals:
 #   repository
+#   review_tree - Set to the current tree before accepting message edits.
 # Arguments:
 #   None
 # Outputs:
 #   Writes prompts, commit messages, and requested diffs to STDOUT.
 # Returns:
-#   0 to continue, 2 to abort, 1 on input failure.
+#   0 to continue, 2 to abort, 1 on display, input or state failure.
 review_current_commit() {
   local answer
 
+  if ! review_tree="$(git -C "${repository}" rev-parse --verify 'HEAD^{tree}')"; then
+    print_error 'Unable to inspect the current commit tree.'
+    return 1
+  fi
   while :; do
+    verify_review_state "${review_tree}" || return 1
     if ! show_current_commit; then
       print_error 'Unable to display the current commit.'
       return 1
@@ -503,10 +511,11 @@ review_current_commit() {
       print_error 'Unable to read a response.'
       return 1
     fi
+    verify_review_state "${review_tree}" || return 1
 
     case "${answer}" in
       'e' | 'E' | 'edit' | 'Edit' | 'y' | 'Y' | 'yes' | 'Yes')
-        if ! git -C "${repository}" commit --amend; then
+        if ! git -C "${repository}" commit --amend --only --allow-empty; then
           print_error 'The commit message was not changed.'
         fi
         ;;
@@ -536,6 +545,7 @@ review_current_commit() {
 #   repository
 #   review_index
 #   review_total
+#   review_tree
 #   target_directory
 #   upstream
 # Arguments:
@@ -548,9 +558,9 @@ run_review() {
   local current_branch
   local repository_status
   local operation_state
-  local configured_remote=''
-  local full_upstream=''
-  local fetch_remote=''
+  local configured_remote
+  local remote_branch
+  local published_oid
   local upstream_oid
   local merge_commit
   local script_path
@@ -590,15 +600,6 @@ run_review() {
     return 1
   fi
 
-  if [ -z "${upstream}" ]; then
-    if ! upstream="$(
-      git -C "${repository}" rev-parse \
-        --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null
-    )"; then
-      print_error "Branch ${current_branch} has no configured upstream; use -u."
-      return 1
-    fi
-  fi
   case "${upstream}" in
     -*)
       print_error 'The upstream ref must not start with a hyphen.'
@@ -607,35 +608,57 @@ run_review() {
     *) ;;
   esac
 
-  configured_remote="$(
+  if ! configured_remote="$(
     git -C "${repository}" config --get "branch.${current_branch}.remote" \
-      2>/dev/null || true
-  )"
-  full_upstream="$(
-    git -C "${repository}" rev-parse --symbolic-full-name "${upstream}" \
-      2>/dev/null || true
-  )"
-  if [ -n "${full_upstream}" ]; then
-    fetch_remote="$(find_upstream_remote "${full_upstream}")"
+      2>/dev/null
+  )" || [ -z "${configured_remote}" ] || [ "${configured_remote}" = '.' ]; then
+    print_error "Branch ${current_branch} requires a configured remote upstream, even with -u."
+    return 1
   fi
-  if [ -z "${fetch_remote}" ]; then
-    fetch_remote="${configured_remote}"
+  if ! remote_branch="$(
+    git -C "${repository}" config --get-all "branch.${current_branch}.merge"
+  )" || ! git check-ref-format "${remote_branch}"; then
+    print_error 'Exactly one valid upstream branch must be configured.'
+    return 1
   fi
-
-  if [ -n "${fetch_remote}" ] && [ "${fetch_remote}" != '.' ]; then
-    printf 'Fetching remote %s...\n' "${fetch_remote}"
-    if ! git -C "${repository}" fetch "${fetch_remote}"; then
-      print_error "Unable to fetch remote: ${fetch_remote}"
+  case "${remote_branch}" in
+    refs/heads/*) ;;
+    *)
+      print_error 'The configured upstream must name a remote branch.'
       return 1
-    fi
-  else
-    printf '%s\n' 'No remote fetch is needed for the selected local upstream.'
+      ;;
+  esac
+  printf 'Fetching upstream %s from %s...\n' "${remote_branch}" "${configured_remote}"
+  # Fetch the exact branch: a general fetch can succeed while a deleted
+  # upstream still has a stale local remote-tracking ref.
+  if ! git -C "${repository}" fetch --no-tags --no-recurse-submodules \
+    -- "${configured_remote}" "${remote_branch}"; then
+    print_error 'Unable to fetch the configured upstream; review is blocked.'
+    return 1
   fi
-
-  if ! upstream_oid="$(
+  if ! published_oid="$(
+    git -C "${repository}" rev-parse --verify 'FETCH_HEAD^{commit}'
+  )"; then
+    print_error 'Unable to resolve the freshly fetched upstream.'
+    return 1
+  fi
+  if ! git -C "${repository}" merge-base --is-ancestor "${published_oid}" 'HEAD'; then
+    print_error 'The freshly fetched upstream is not an ancestor of the current branch.'
+    print_error 'Reconcile the divergent branch before reviewing commit messages.'
+    return 1
+  fi
+  if [ -z "${upstream}" ]; then
+    upstream="${configured_remote}:${remote_branch}"
+    upstream_oid="${published_oid}"
+  elif ! upstream_oid="$(
     git -C "${repository}" rev-parse --verify "${upstream}^{commit}" 2>/dev/null
   )"; then
-    print_error "Upstream does not resolve to a commit: ${upstream}"
+    print_error "Comparison ref does not resolve to a commit: ${upstream}"
+    return 1
+  fi
+  if ! git -C "${repository}" merge-base --is-ancestor "${published_oid}" "${upstream_oid}"; then
+    print_error 'The comparison ref would include published commits or diverges from the upstream.'
+    print_error 'Use -u only to narrow the range above the freshly fetched upstream.'
     return 1
   fi
   if ! git -C "${repository}" merge-base --is-ancestor "${upstream_oid}" 'HEAD'; then
@@ -689,7 +712,7 @@ run_review() {
   trap 'handle_signal 130' INT
   trap 'handle_signal 143' TERM
 
-  git -C "${repository}" -c 'rebase.updateRefs=false' rebase \
+  git -C "${repository}" -c 'rebase.updateRefs=false' -c 'rebase.abbreviateCommands=false' rebase \
     --interactive --no-autosquash --keep-empty "${upstream_oid}"
   rebase_status="${?}"
   if [ "${rebase_status}" -ne 0 ]; then
@@ -715,16 +738,22 @@ run_review() {
       return 1
     fi
 
+    verify_review_state "${review_tree}" || return 1
+    review_tree=''
     git -C "${repository}" rebase --continue
     rebase_status="${?}"
     if [ "${rebase_status}" -ne 0 ]; then
-      print_error 'The rebase could not continue; restoring the original branch.'
+      print_error 'The rebase could not continue.'
       return 1
     fi
   done
 
   rebase_started='0'
   trap - EXIT HUP INT TERM
+  if [ "${review_index}" -ne "${review_total}" ]; then
+    print_error "Reviewed ${review_index} of ${review_total} commits; review is incomplete."
+    return 1
+  fi
   printf '%s\n' 'All unpushed commit messages were reviewed.'
   return 0
 }

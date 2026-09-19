@@ -1,4 +1,4 @@
-# Developing the Markdown transformer
+# Developing release helpers
 
 The repository keeps its standalone release helpers. The Markdown transformer is
 one Python script with inline dependency metadata; this repository is not
@@ -32,9 +32,31 @@ uv run --frozen python tests/check_markdown.py --format
 ```
 
 The Markdown check uses the exact foundata guide flags, with no local
-configuration. It targets the transformer documentation. Corpus snapshots and
-expected output are deliberately excluded: formatting them would invalidate the
-comparison. Other helpers and their documentation are outside this change.
+configuration. It targets the transformer and commit-review documentation.
+Corpus snapshots and expected output are deliberately excluded: formatting them
+would invalidate the comparison. Other legacy helpers and their documentation
+are not checked.
+
+## Shell checks
+
+For `git-review-unpushed.sh`, use the foundata shell guide's exact checks:
+
+```sh
+shfmt --language-dialect posix --indent 2 --case-indent --binary-next-line --simplify --diff git-review-unpushed.sh
+shellcheck --shell=sh --severity=style --exclude=SC2292 --exclude=SC3040 --exclude=SC3043 --enable=all git-review-unpushed.sh
+checkbashisms git-review-unpushed.sh
+dash -n git-review-unpushed.sh
+bash -n git-review-unpushed.sh
+uv run --frozen pytest tests/integration/test_git_review.py
+```
+
+Use the same shfmt flags with `--write` instead of `--diff` to format the
+script. These tools are development requirements, not new runtime dependencies.
+The terminal-driven regression tests use isolated Git configuration, temporary
+repositories and local filesystem remotes. Git transport is restricted to local
+files in the test environment. Tests never fetch real project remotes or push.
+They exercise both Dash and Bash; a missing shell is reported as a skipped
+compatibility check.
 
 ## Dependencies
 
@@ -72,8 +94,10 @@ required nor installed.
   provenance.
 
 Tests use temporary directories and never edit checked-in fixtures. The complete
-suite requires Bash and the shell baseline's Unix tools, but no network, Git
-checkout or sibling repository. Pure transformation tests can run separately:
+suite requires Git, Bash and the shell baseline's Unix tools, but no network,
+existing Git checkout or sibling repository. Dash is also needed for the full
+commit-review compatibility matrix. Pure transformation tests can run
+separately:
 
 ```sh
 uv run --frozen pytest tests/unit
