@@ -67,12 +67,18 @@ compatibility check.
 The direct runtime dependencies are `markdown-it-py` and `typing-extensions`
 on every supported Python version. The latter supplies the `override`
 decorator through one unconditional import, including on Python 3.11.
-Everything else comes from the standard library, including the
-archive, JSON, hashing and HTTP handling. The parser decides which text is a
-link, reference definition, code block, code span or HTML region. A small
-adapter records source positions through its parsing rules; edits replace
-destinations in the original source. The document is never serialized from its
-syntax tree.
+Everything else comes from the standard library, including the archive, JSON,
+hashing and HTTP handling. The parser decides which text is a link, reference
+definition, code block, code span or HTML region. The private
+`_markdown_syntax` module owns its rule adapter, source coordinates and
+analysis records. It constructs the parser and document for each call and
+imports no release-step module.
+
+`markdown` uses those records for URL rewriting, simplification and optional
+local-file validation. It retains the public analysis imports alongside
+`prepare_markdown` and `validate_local_files`. Edits replace destinations in
+the original source; the document is never serialized from its syntax tree.
+CLI file replacement and build-workspace cleanup stay with their callers.
 
 The adapter uses the parser's rule API, so the dependency is bounded below the
 next major version and a test checks that the installed parser satisfies the
