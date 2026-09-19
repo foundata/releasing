@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "git-review-unpushed.sh"
+SCRIPT = ROOT / "tools" / "git-review-unpushed.sh"
 PROMPT = b"[e]dit, [d]iff, [n]ext, or [a]bort? "
 pytestmark = pytest.mark.integration
 

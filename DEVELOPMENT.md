@@ -42,14 +42,14 @@ are not checked.
 
 ## Shell checks
 
-For `git-review-unpushed.sh`, use the foundata shell guide's exact checks:
+For `tools/git-review-unpushed.sh`, use the foundata shell guide's exact checks:
 
 ```sh
-shfmt --language-dialect posix --indent 2 --case-indent --binary-next-line --simplify --diff git-review-unpushed.sh
-shellcheck --shell=sh --severity=style --exclude=SC2292 --exclude=SC3040 --exclude=SC3043 --enable=all git-review-unpushed.sh
-checkbashisms git-review-unpushed.sh
-dash -n git-review-unpushed.sh
-bash -n git-review-unpushed.sh
+shfmt --language-dialect posix --indent 2 --case-indent --binary-next-line --simplify --diff tools/git-review-unpushed.sh
+shellcheck --shell=sh --severity=style --exclude=SC2292 --exclude=SC3040 --exclude=SC3043 --enable=all tools/git-review-unpushed.sh
+checkbashisms tools/git-review-unpushed.sh
+dash -n tools/git-review-unpushed.sh
+bash -n tools/git-review-unpushed.sh
 uv run --frozen pytest tests/integration/test_git_review.py
 ```
 

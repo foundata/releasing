@@ -98,7 +98,7 @@ your branch history or push anything:
 uv run --frozen pytest tests/integration/test_git_review.py
 ```
 
-The [development guide](./DEVELOPMENT.md) lists the shell style checks.
+The [development guide](../DEVELOPMENT.md) lists the shell style checks.
 
 
 

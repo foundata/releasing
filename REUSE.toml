@@ -10,7 +10,7 @@ path = [
   "README.md",
   "src/**",
   "docs/**",
-  "git-review-unpushed-README.md",
+  "tools/**",
   "DEVELOPMENT.md",
   "REUSE.toml",
   "tests/**",

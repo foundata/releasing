@@ -70,7 +70,7 @@ def main() -> int:
             "docs/tag.md",
             "docs/verify.md",
             "docs/version.md",
-            "git-review-unpushed-README.md",
+            "tools/git-review-unpushed-README.md",
         ],
         cwd=Path(__file__).resolve().parents[1],
         check=False,
