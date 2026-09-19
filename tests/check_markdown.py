@@ -64,6 +64,7 @@ def main() -> int:
             "DEVELOPMENT.md",
             "docs/config.md",
             "docs/markdown.md",
+            "docs/version.md",
             "git-review-unpushed-README.md",
         ],
         cwd=Path(__file__).resolve().parents[1],

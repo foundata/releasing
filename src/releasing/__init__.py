@@ -2,6 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Release helpers: prepare, check and verify software releases."""
 
-from importlib.metadata import version
+from importlib import metadata
 
-__version__ = version("releasing")
+__version__ = metadata.version("releasing")

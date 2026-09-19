@@ -7,6 +7,7 @@ import difflib
 import os
 import re
 import stat
+import subprocess
 import sys
 import tempfile
 from collections.abc import Callable, Sequence
@@ -14,7 +15,7 @@ from pathlib import Path
 from typing import cast
 from urllib.parse import quote
 
-from releasing import config, markdown
+from releasing import config, markdown, version
 
 Runner = Callable[[argparse.Namespace], int]
 
@@ -263,6 +264,85 @@ def _run_config_check(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_config(args: argparse.Namespace) -> config.ReleaseConfig:
+    return config.load_release_config(cast(Path, args.project))
+
+
+def _git(root: Path, *arguments: str) -> str | None:
+    """Run a read-only Git query in ``root``; None when it is not a checkout."""
+    if not (root / ".git").exists():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), *arguments],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError(f"git {arguments[0]} failed in {root}: {exc}") from exc
+    return result.stdout
+
+
+def _run_version_check(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        tags = _git(loaded.root, "tag", "--points-at", "HEAD")
+        found = version.check(
+            loaded.root,
+            loaded,
+            expect=args.expect,
+            tags_on_head=None if tags is None else tags.split(),
+        )
+    except (config.ConfigError, version.VersionError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    print(found)
+    return 0
+
+
+def _run_version_bump(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        touched = [*loaded.version_files, *(pin.file for pin in loaded.dependency_pins)]
+        status = _git(loaded.root, "status", "--porcelain", "--", *touched)
+        if status and not args.force:
+            raise ValueError(
+                "uncommitted changes in version files; commit or stash them, "
+                "or pass --force:\n" + status.rstrip()
+            )
+        edits = version.bump(loaded.root, loaded, args.version)
+        for edit in edits:
+            sys.stdout.writelines(
+                difflib.unified_diff(
+                    edit.before.splitlines(keepends=True),
+                    edit.after.splitlines(keepends=True),
+                    fromfile=f"a/{edit.file}",
+                    tofile=f"b/{edit.file}",
+                )
+            )
+        if (loaded.root / "uv.lock").is_file() and not args.no_lock:
+            print("release: uv lock", file=sys.stderr)
+            subprocess.run(["uv", "lock"], cwd=loaded.root, check=True, timeout=600)
+    except (config.ConfigError, version.VersionError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"Error: uv lock failed: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _add_project(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--project",
+        type=Path,
+        default=Path.cwd(),
+        help="project root holding pyproject.toml or releasing.toml (default: .)",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the `release` parser with every subcommand registered."""
     parser = argparse.ArgumentParser(
@@ -282,13 +362,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="validate the declaration and every file it names",
         description=config.__doc__,
     )
-    config_check.add_argument(
-        "--project",
-        type=Path,
-        default=Path.cwd(),
-        help="project root holding pyproject.toml or releasing.toml (default: .)",
-    )
+    _add_project(config_check)
     config_check.set_defaults(run=_run_config_check)
+    version_parser = commands.add_parser(
+        "version", help="check or bump every declared version site"
+    )
+    version_commands = version_parser.add_subparsers(
+        dest="subcommand", required=True, metavar="SUBCOMMAND", title="subcommands"
+    )
+    version_check = version_commands.add_parser(
+        "check",
+        help="every site, the lockfile, the pins and the tag on HEAD agree",
+        description=version.__doc__,
+    )
+    _add_project(version_check)
+    version_check.add_argument(
+        "--expect", metavar="X.Y.Z", help="the version the sites must state"
+    )
+    version_check.set_defaults(run=_run_version_check)
+    version_bump = version_commands.add_parser(
+        "bump",
+        help="rewrite every site and lockstep pin, then run uv lock",
+        description="Print a unified diff of every rewritten file to stdout.",
+    )
+    _add_project(version_bump)
+    version_bump.add_argument("version", metavar="X.Y.Z", help="the new version")
+    version_bump.add_argument(
+        "--force",
+        action="store_true",
+        help="rewrite version files that have uncommitted changes",
+    )
+    version_bump.add_argument(
+        "--no-lock", action="store_true", help="do not run uv lock afterwards"
+    )
+    version_bump.set_defaults(run=_run_version_bump)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )
