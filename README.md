@@ -61,6 +61,9 @@ Every command reads the project's release declaration, one table in
   destinations to absolute URLs without reformatting the document. See
   [Preparing Markdown for package indexes](./docs/markdown.md).
 
+The end-to-end order for a Python project is in
+[Releasing a Python package](./docs/python-packages.md).
+
 Every command exits with `0` on success, `1` when a check or operation fails
 and `2` on invalid usage. Diagnostics go to stderr; stdout carries only
 generated output.

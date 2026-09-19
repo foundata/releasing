@@ -3,8 +3,8 @@
 A project states its version in more than one place: `pyproject.toml`, an
 `__version__` constant, a `galaxy.yml`, generated JSON. Each such line is a
 version site. The declaration's `version-files` lists the files; every listed
-file must contain exactly one site, so a file whose spelling drifted is an
-error rather than a silent skip.
+file must contain exactly one site, so a file whose spelling drifted fails the
+check instead of passing unnoticed.
 
 A site is a line whose key is `version`, `__version__`, `VERSION` or
 `"productVersion"`, followed by `=` or `:`, the version, optionally quoted, and

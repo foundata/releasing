@@ -1,8 +1,9 @@
 # Artifacts
 
 The `artifacts` commands inspect built distributions without extracting them:
-wheels, source distributions and Ansible collection tarballs. Their checks are
-the ones that caught real defects in published releases.
+wheels, source distributions and Ansible collection tarballs. The checks cover
+the defects these projects have shipped before: an index page whose relative
+links were never rewritten, and a wheel carrying a tool cache directory.
 
 ## `release artifacts check FILE...`
 

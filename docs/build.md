@@ -1,10 +1,9 @@
 # Building from an exported revision
 
-A release is a commit, not a working tree. `release build` exports the
-committed revision with `git archive`, prepares the package-index Markdown
-inside that export, builds there, checks the result and records a manifest.
-The working tree is never modified, so no `git restore` is needed afterwards
-and an uncommitted file can never reach an artifact.
+`release build` exports the committed revision with `git archive`, prepares the
+package-index Markdown inside that export, builds there, checks the result and
+records a manifest. The working tree stays untouched, so nothing has to be
+restored afterwards and an uncommitted file cannot reach an artifact.
 
 ```sh
 release build --out "../dist-${version}"
@@ -13,11 +12,11 @@ release build --out "../dist-${version}"
 ## What it does
 
 1. Resolves `--revision` (default `HEAD`) to a full commit and exports it.
-   `export-ignore` in `.gitattributes` is the one mechanism for keeping a
-   tracked file out of the artifacts.
+   `export-ignore` in `.gitattributes` keeps a tracked file out of the
+   artifacts.
 2. Loads the release declaration from the export and runs `version check`
    there, so the version that ships is the committed one. `--expect X.Y.Z`
-   additionally pins what that version must be.
+   pins what that version has to be.
 3. Runs the changelog check for that version.
 4. Prepares every declared document: relative destinations are validated
    against the exported tree, rewritten against the forge at the version's tag
