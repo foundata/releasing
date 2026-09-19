@@ -2,13 +2,48 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 [project]
-name = "foundata-releasing"
-version = "0.0.0"
+name = "releasing"
+version = "1.0.0.dev0"
+description = "Prepare, check and verify software releases: version sites, changelogs, package-index Markdown, artifacts and tags."
+keywords = ["release", "packaging", "pypi", "changelog", "markdown", "versioning"]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSES/*.txt"]
+readme = {file = "README.md", content-type = "text/markdown"}
+authors = [
+  { name = "foundata GmbH" },
+  { name = "Andreas Haerter", email = "ah@foundata.com" },
+]
+maintainers = [
+  { name = "Andreas Haerter", email = "ah@foundata.com" },
+]
 requires-python = ">=3.12"
 dependencies = ["markdown-it-py==4.2.0"]
 
-[tool.uv]
-package = false
+# https://pypi.org/classifiers/
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Build Tools",
+  "Topic :: System :: Software Distribution",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+
+[project.scripts]
+release = "releasing.cli:main"
+
+[project.urls]
+Repository = "https://github.com/foundata/releasing"
+Issues = "https://github.com/foundata/releasing/issues"
+Changelog = "https://github.com/foundata/releasing/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
@@ -37,7 +72,7 @@ docstring-code-format = true
 line-ending = "lf"
 
 [tool.mypy]
-files = ["release-prepare-markdown.py", "tests"]
+files = ["src", "tests"]
 python_version = "3.12"
 strict = true
 enable_error_code = ["explicit-override"]

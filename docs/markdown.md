@@ -1,31 +1,30 @@
 # Preparing Markdown for package indexes
 
-`release-prepare-markdown.py` rewrites repository-relative Markdown and HTML
+`release markdown prepare` rewrites repository-relative Markdown and HTML
 destinations to absolute URLs. It preserves the document around those
 destinations, including HTML image dimensions. Use it on a temporary copy or
-write a separate output file. The shell script remains available and unchanged.
+write a separate output file. The original shell script remains in the
+repository as the frozen baseline.
 
-## Running the script
+## Running the command
 
-The script supports Python 3.12 through 3.14. Its only direct runtime dependency
-is `markdown-it-py`, declared in inline script metadata. `uv` manages the
-environment; no package installation into the system Python is needed.
+The command is part of the `releasing` package; see the
+[README](../README.md) for installation. Its only runtime dependency is
+`markdown-it-py`.
 
 ```sh
-uv run --frozen --script ./release-prepare-markdown.py \
+release markdown prepare \
   -o foundata -r example --ref refs/tags/v1.0.0 \
   --strict --output /tmp/example-pypi.md ./README.md
 ```
 
-Keep the script's adjacent `.py.lock` file for frozen execution. Dependency
-setup may need network access on the first run. Transformation itself is
-offline, non-interactive and deterministic for the same input and arguments. It
-never invokes Git or consults `.git`.
+Transformation is offline, non-interactive and deterministic for the same
+input and arguments. It never invokes Git or consults `.git`.
 
 Write Markdown to stdout instead:
 
 ```sh
-uv run --frozen --script ./release-prepare-markdown.py \
+release markdown prepare \
   -o foundata -r example --ref refs/tags/v1.0.0 \
   --strict --stdout ./README.md
 ```
@@ -42,7 +41,7 @@ Use `--dry-run` to validate the inputs and show a unified diff without writing
 any files:
 
 ```sh
-uv run --frozen --script ./release-prepare-markdown.py \
+release markdown prepare \
   -o foundata -r example --ref refs/tags/v1.0.0 \
   --strict --dry-run ./README.md
 ```
@@ -65,7 +64,7 @@ does not change the line endings retained in the generated Markdown.
 The old positional-file interface remains available, including multiple files:
 
 ```sh
-uv run --frozen --script ./release-prepare-markdown.py \
+release markdown prepare \
   -b main -o foundata -r example ./README.md ./CHANGELOG.md
 ```
 
@@ -110,7 +109,7 @@ defaults to `README.md`, regardless of the input or output filesystem location.
 Set it when transforming a document from a subdirectory:
 
 ```sh
-uv run --frozen --script ./release-prepare-markdown.py \
+release markdown prepare \
   -o foundata -r example --ref refs/tags/v1.0.0 \
   --source-path docs/README.md --strict \
   --output /tmp/example-docs.md ./docs/README.md
@@ -124,7 +123,7 @@ For another forge or custom routing, supply both bases. Trailing slashes are
 normalized:
 
 ```sh
-uv run --frozen --script ./release-prepare-markdown.py \
+release markdown prepare \
   -a https://gitlab.example/org/repo/-/raw/v1.0.0/ \
   -u https://gitlab.example/org/repo/-/blob/v1.0.0/ \
   --strict --output /tmp/example.md ./README.md
@@ -185,7 +184,7 @@ against an explicit local directory. This can be a plain exported tree with no
 Git metadata. The input itself may be a temporary file elsewhere:
 
 ```sh
-uv run --frozen --script ./release-prepare-markdown.py \
+release markdown prepare \
   -o foundata -r example --ref refs/tags/v1.0.0 \
   --repo-root /tmp/exported-project --source-path docs/README.md \
   --strict --dry-run /tmp/input-readme.md
@@ -212,8 +211,8 @@ Unsupported syntax such as `srcset` still requires `--strict` to be rejected.
 Local-check errors fail even without `--strict` and include original source
 locations. All batch inputs are checked before writing anything. Without
 `--repo-root`, transformation does not inspect destination files. The reusable
-`prepare_markdown()` function remains filesystem-free; `validate_local_files()`
-provides the separate optional check.
+`releasing.markdown.prepare_markdown()` function remains filesystem-free;
+`validate_local_files()` provides the separate optional check.
 
 ## Optional HTML simplification
 
@@ -232,7 +231,7 @@ individual flag is harmless. For example, keep a centered header but replace
 its linked Markdown badges with text links:
 
 ```sh
-uv run --frozen --script ./release-prepare-markdown.py \
+release markdown prepare \
   -o foundata -r example --simplify-badges --dry-run ./README.md
 ```
 
@@ -260,7 +259,7 @@ extensions; reference definitions; titled links; nested image links; path
 normalization; and preservation of HTML formatting, file permissions and line
 endings. These cases are intentional corrections, not a general formatting pass.
 
-The [development guide](./DEVELOPMENT.md) describes the fixture suite, shell
+The [development guide](../DEVELOPMENT.md) describes the fixture suite, shell
 comparison, rendering checks, licensing and repeatable `uv` commands. These
 checks use temporary files. No project build, release gate, upload or committed
 README rewrite is part of this tool's verification.

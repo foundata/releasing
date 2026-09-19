@@ -10,7 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from tests.support import ROOT, SCRIPT, TRANSFORMER
+from releasing import cli
+from tests.support import ROOT
 
 pytestmark = pytest.mark.integration
 BASE = ["-o", "foundata", "-r", "example"]
@@ -18,7 +19,7 @@ BASE = ["-o", "foundata", "-r", "example"]
 
 def invoke(cwd: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
-        [sys.executable, "-I", str(SCRIPT), *arguments],
+        [sys.executable, "-I", "-m", "releasing", "markdown", "prepare", *arguments],
         cwd=cwd,
         env={**os.environ, "PATH": str(cwd / "no-programs")},
         capture_output=True,
@@ -252,7 +253,10 @@ def test_failed_atomic_replace_cleans_temporary_output(
         raise OSError("injected replacement failure")
 
     monkeypatch.setattr(os, "replace", fail_replace)
-    assert TRANSFORMER.main([*BASE, "--output", str(output), str(path)]) == 1
+    assert (
+        cli.main(["markdown", "prepare", *BASE, "--output", str(output), str(path)])
+        == 1
+    )
     assert output.read_bytes() == b"existing output"
     assert path.read_bytes() == b"[guide](./docs.md#start)\n"
     assert sorted(item.name for item in tmp_path.iterdir()) == [
@@ -314,18 +318,10 @@ def test_missing_input_and_output_parent_fail_cleanly(tmp_path: Path) -> None:
     assert path.read_bytes() == b"[guide](./docs.md#start)\n"
 
 
-def test_script_and_project_declare_the_same_runtime_dependency() -> None:
+def test_release_command_is_the_declared_console_script() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    metadata = (
-        SCRIPT.read_text(encoding="utf-8")
-        .split("# /// script\n", 1)[1]
-        .split("# ///", 1)[0]
-    )
-    script = tomllib.loads(
-        "\n".join(line.removeprefix("# ") for line in metadata.splitlines())
-    )
-    assert script["dependencies"] == project["project"]["dependencies"]
-    assert script["requires-python"] == project["project"]["requires-python"]
+    assert project["project"]["scripts"] == {"release": "releasing.cli:main"}
+    assert cli.build_parser().prog == "release"
 
 
 @pytest.mark.parametrize("mode", [[], ["--in-place"], ["--output", "prepared.md"]])

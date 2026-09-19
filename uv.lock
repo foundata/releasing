@@ -127,35 +127,6 @@ wheels = [
 ]
 
 [[package]]
-name = "foundata-releasing"
-version = "0.0.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "markdown-it-py" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "readme-renderer", extra = ["md"] },
-    { name = "ruff" },
-    { name = "rumdl" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "markdown-it-py", specifier = "==4.2.0" }]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1.17.1" },
-    { name = "pytest", specifier = ">=9.0" },
-    { name = "readme-renderer", extras = ["md"], specifier = ">=44" },
-    { name = "ruff", specifier = ">=0.12.11" },
-    { name = "rumdl", specifier = ">=0.2.66" },
-]
-
-[[package]]
 name = "iniconfig"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -452,6 +423,35 @@ wheels = [
 [package.optional-dependencies]
 md = [
     { name = "comrak" },
+]
+
+[[package]]
+name = "releasing"
+version = "1.0.0.dev0"
+source = { editable = "." }
+dependencies = [
+    { name = "markdown-it-py" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "readme-renderer", extra = ["md"] },
+    { name = "ruff" },
+    { name = "rumdl" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "markdown-it-py", specifier = "==4.2.0" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.17.1" },
+    { name = "pytest", specifier = ">=9.0" },
+    { name = "readme-renderer", extras = ["md"], specifier = ">=44" },
+    { name = "ruff", specifier = ">=0.12.11" },
+    { name = "rumdl", specifier = ">=0.2.66" },
 ]
 
 [[package]]

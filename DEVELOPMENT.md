@@ -1,9 +1,9 @@
 # Developing release helpers
 
-The repository keeps its standalone release helpers. The Markdown transformer is
-one Python script with inline dependency metadata; this repository is not
-published as a Python package. Python 3.12, 3.13 and 3.14 are supported. Use
-`uv` for development environments and script execution.
+The repository is the `releasing` Python package: the `release` command and
+the `releasing` import package under `src/`. The Markdown transformer is its
+first module. Python 3.12, 3.13 and 3.14 are supported. Use `uv` for
+development environments and for running the command.
 
 ## Setup and checks
 
@@ -32,7 +32,8 @@ uv run --frozen python tests/check_markdown.py --format
 ```
 
 The Markdown check uses the exact foundata guide flags, with no local
-configuration. It targets the transformer and commit-review documentation.
+configuration. It targets the README, the command documentation under `docs/`
+and the commit-review documentation.
 Corpus snapshots and expected output are deliberately excluded: formatting them
 would invalidate the comparison. Other legacy helpers and their documentation
 are not checked.
@@ -66,18 +67,9 @@ small adapter records source positions through its parsing rules; edits replace
 destinations in the original source. The document is never serialized from its
 syntax tree.
 
-The parser is pinned because the adapter uses its rule API. Its version appears
-in both `pyproject.toml` and the script's inline metadata; a test checks that
-they agree. Review parser changes and run the complete suite when updating it.
-Update both lockfiles explicitly:
-
-```sh
-uv lock
-uv lock --script release-prepare-markdown.py
-```
-
-`uv.lock` pins development tools. `release-prepare-markdown.py.lock` pins
-standalone script execution. The development-only `readme-renderer[md]`
+The parser is pinned because the adapter uses its rule API. Review parser
+changes and run the complete suite when updating it, then update the lockfile
+explicitly with `uv lock`. The development-only `readme-renderer[md]`
 dependency supplies an independent publishing renderer. Twine is neither
 required nor installed.
 
@@ -93,7 +85,8 @@ required nor installed.
 - `tests/fixtures/corpus/`: 21 project README snapshots, both shell outputs and
   provenance.
 
-Tests use temporary directories and never edit checked-in fixtures. The complete
+Tests import the installed package (`uv sync` installs it in editable mode)
+and use temporary directories; they never edit checked-in fixtures. The complete
 suite requires Git, Bash and the shell baseline's Unix tools, but no network,
 existing Git checkout or sibling repository. Dash is also needed for the full
 commit-review compatibility matrix. Pure transformation tests can run
@@ -103,8 +96,9 @@ separately:
 uv run --frozen pytest tests/unit
 ```
 
-CLI tests run with an empty program search path, proving that transformation
-does not invoke Git or external programs. They cover input preservation, strict
+CLI tests run `python -I -m releasing markdown prepare` with an empty program
+search path, proving that transformation does not invoke Git or external
+programs. They cover input preservation, strict
 failure before any write, stdout purity, encoding failures, aliases, atomic
 replacement and permission preservation. Renderer tests examine actual HTML link
 and image destinations, including screenshot dimensions; successful parsing
