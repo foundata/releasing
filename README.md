@@ -51,6 +51,9 @@ Every command reads the project's release declaration, one table in
 - `release tag create`, `check` and `delete`: a guarded annotated tag, and a
   deletion that stays legal only while no release exists. See
   [Release tags](./docs/tag.md).
+- `release verify`: the index serves the validated files, an isolated install
+  reports the version and the forge reports the tag as latest. See
+  [Verifying a published release](./docs/verify.md).
 - `release artifacts check`, `manifest` and `verify`: distributions carry
   the right version, a description without relative links and no litter; their
   digests are recorded and later compared. See [Artifacts](./docs/artifacts.md).

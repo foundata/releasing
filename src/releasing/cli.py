@@ -30,6 +30,9 @@ from releasing import (
 from releasing import (
     tag as tagging,
 )
+from releasing import (
+    verify as verification,
+)
 
 Runner = Callable[[argparse.Namespace], int]
 
@@ -589,6 +592,7 @@ _RELEASE_ERRORS = (
     artifacts.ArtifactError,
     build.BuildError,
     tagging.TagError,
+    verification.VerificationError,
     forge_api.ForgeError,
     processes.ProcessError,
     ValueError,
@@ -651,6 +655,54 @@ def _run_tag_delete(args: argparse.Namespace) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     print(f"{loaded.tag(args.version)}: deleted ({', '.join(deleted)})")
+    return 0
+
+
+def _run_verify(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        forge = forges.forge_for(loaded)
+        manifest = artifacts.load_manifest(cast(Path, args.manifest))
+        found = manifest.version or args.version
+        if args.version is not None and found != args.version:
+            raise ValueError(f"the manifest records {found}, not {args.version}")
+        names = sorted(
+            {
+                entry.filename.split("-")[0].replace("_", "-")
+                for entry in manifest.artifacts
+            }
+        )
+        distribution = args.distribution or (names[0] if len(names) == 1 else None)
+        if distribution is None:
+            raise ValueError(
+                "cannot tell which distribution to verify; pass --distribution"
+            )
+        problems = verification.compare_with_manifest(
+            manifest, verification.index_files(loaded.index, distribution, found)
+        )
+        if problems:
+            raise verification.VerificationError(
+                f"{loaded.index} serves other files than were validated:\n  "
+                + "\n  ".join(problems)
+            )
+        print(f"{loaded.index}: serves the validated files for {found}")
+        if loaded.index == "pypi" and not args.no_install:
+            reported = verification.installed_version(distribution, found)
+            if reported != found:
+                raise verification.VerificationError(
+                    f"an isolated install of {distribution} reports {reported}, not {found}"
+                )
+            print(f"install: {distribution} {reported}")
+        expected = loaded.tag(found)
+        latest = verification.latest_tag(forge)
+        if latest != expected:
+            raise verification.VerificationError(
+                f"{loaded.forge} reports {latest or 'no release'} as latest, not {expected}"
+            )
+        print(f"{loaded.forge}: {expected} is the latest release")
+    except _RELEASE_ERRORS as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -872,6 +924,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--local", action="store_true", help="do not delete the tag on the remote"
     )
     tag_delete.set_defaults(run=_run_tag_delete)
+    verify_parser = commands.add_parser(
+        "verify",
+        help="the index serves the validated files and the forge reports the tag",
+        description=verification.__doc__,
+    )
+    _add_project(verify_parser)
+    verify_parser.add_argument(
+        "manifest", type=Path, help="the manifest written by release build"
+    )
+    verify_parser.add_argument(
+        "--version", metavar="X.Y.Z", help="the version the manifest must record"
+    )
+    verify_parser.add_argument(
+        "--distribution", metavar="NAME", help="which distribution to install and query"
+    )
+    verify_parser.add_argument(
+        "--no-install", action="store_true", help="skip the isolated install"
+    )
+    verify_parser.set_defaults(run=_run_verify)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )
