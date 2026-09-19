@@ -21,10 +21,14 @@ from releasing import (
     build,
     changelog,
     config,
+    forge_api,
     forges,
     markdown,
     processes,
     version,
+)
+from releasing import (
+    tag as tagging,
 )
 
 Runner = Callable[[argparse.Namespace], int]
@@ -578,6 +582,78 @@ def _run_build(args: argparse.Namespace) -> int:
     return 0
 
 
+_RELEASE_ERRORS = (
+    config.ConfigError,
+    version.VersionError,
+    changelog.ChangelogError,
+    artifacts.ArtifactError,
+    build.BuildError,
+    tagging.TagError,
+    forge_api.ForgeError,
+    processes.ProcessError,
+    ValueError,
+)
+
+
+def _run_tag_create(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        created = tagging.create(
+            loaded.root,
+            loaded,
+            forges.forge_for(loaded),
+            args.version,
+            revision=args.revision,
+            offline=args.offline,
+        )
+    except _RELEASE_ERRORS as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    print(created)
+    return 0
+
+
+def _run_tag_check(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        problems = tagging.check(
+            loaded.root,
+            loaded,
+            forges.forge_for(loaded),
+            args.version,
+            revision=args.revision,
+            offline=args.offline,
+        )
+    except _RELEASE_ERRORS as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    if problems:
+        print("Error: the release tag is not usable:", file=sys.stderr)
+        for problem in problems:
+            print(f"  {problem}", file=sys.stderr)
+        return 1
+    print(f"{loaded.tag(args.version)}: ok")
+    return 0
+
+
+def _run_tag_delete(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        deleted = tagging.delete(
+            loaded.root,
+            loaded,
+            forges.forge_for(loaded),
+            args.version,
+            remote=not args.local,
+            offline=args.offline,
+        )
+    except _RELEASE_ERRORS as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    print(f"{loaded.tag(args.version)}: deleted ({', '.join(deleted)})")
+    return 0
+
+
 def _add_artifact_arguments(parser: argparse.ArgumentParser) -> None:
     _add_project(parser)
     parser.add_argument(
@@ -587,6 +663,16 @@ def _add_artifact_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "files", nargs="+", type=Path, help="wheels, sdists or collection tarballs"
+    )
+
+
+def _add_tag_arguments(parser: argparse.ArgumentParser) -> None:
+    _add_project(parser)
+    parser.add_argument("version", metavar="X.Y.Z", help="the release version")
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="do not ask the forge whether a release exists",
     )
 
 
@@ -754,6 +840,38 @@ def build_parser() -> argparse.ArgumentParser:
         "--expect", metavar="X.Y.Z", help="the version the revision must state"
     )
     build_parser.set_defaults(run=_run_build)
+    tag_parser = commands.add_parser(
+        "tag", help="create, check or delete a release tag"
+    )
+    tag_commands = tag_parser.add_subparsers(
+        dest="subcommand", required=True, metavar="SUBCOMMAND", title="subcommands"
+    )
+    tag_create = tag_commands.add_parser(
+        "create",
+        help="annotated tag on a clean tree whose version sites agree",
+        description=tagging.__doc__,
+    )
+    _add_tag_arguments(tag_create)
+    tag_create.add_argument(
+        "--revision", default="HEAD", metavar="REV", help="what to tag (default: HEAD)"
+    )
+    tag_create.set_defaults(run=_run_tag_create)
+    tag_check = tag_commands.add_parser(
+        "check", help="the tag is annotated, worded and placed as a release tag"
+    )
+    _add_tag_arguments(tag_check)
+    tag_check.add_argument(
+        "--revision", default="HEAD", metavar="REV", help="where it must point"
+    )
+    tag_check.set_defaults(run=_run_tag_check)
+    tag_delete = tag_commands.add_parser(
+        "delete", help="delete the tag while no release exists for it"
+    )
+    _add_tag_arguments(tag_delete)
+    tag_delete.add_argument(
+        "--local", action="store_true", help="do not delete the tag on the remote"
+    )
+    tag_delete.set_defaults(run=_run_tag_delete)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )

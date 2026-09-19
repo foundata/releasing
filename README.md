@@ -48,6 +48,9 @@ Every command reads the project's release declaration, one table in
 - `release build`: export a committed revision, prepare the index Markdown
   inside that export, build, check and record a manifest. See
   [Building from an exported revision](./docs/build.md).
+- `release tag create`, `check` and `delete`: a guarded annotated tag, and a
+  deletion that stays legal only while no release exists. See
+  [Release tags](./docs/tag.md).
 - `release artifacts check`, `manifest` and `verify`: distributions carry
   the right version, a description without relative links and no litter; their
   digests are recorded and later compared. See [Artifacts](./docs/artifacts.md).

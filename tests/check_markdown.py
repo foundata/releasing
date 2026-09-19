@@ -67,6 +67,7 @@ def main() -> int:
             "docs/changelog.md",
             "docs/config.md",
             "docs/markdown.md",
+            "docs/tag.md",
             "docs/version.md",
             "git-review-unpushed-README.md",
         ],
