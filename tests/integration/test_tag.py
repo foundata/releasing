@@ -224,6 +224,33 @@ def test_check_reports_a_lightweight_or_misplaced_tag(repository: Path) -> None:
     assert b"points at" in result.stderr
 
 
+@pytest.mark.parametrize("remote", ["identical", "annotation", "commit", "lightweight"])
+def test_check_compares_remote_tag_objects(repository: Path, remote: str) -> None:
+    git(repository, "commit", "-q", "--allow-empty", "-m", "repository: add a commit")
+    assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
+    source = "refs/tags/v1.0.0"
+    if remote in {"annotation", "commit"}:
+        git(
+            repository,
+            "tag",
+            "-a",
+            "remote-copy",
+            "HEAD~1" if remote == "commit" else "HEAD",
+            "-m",
+            "version 1.0.0\n\nA different annotation.",
+        )
+        source = "refs/tags/remote-copy"
+    elif remote == "lightweight":
+        source = "HEAD"
+    git(repository, "push", "-q", "origin", f"{source}:refs/tags/v1.0.0")
+    result = release(repository, "tag", "check", "1.0.0", "--offline")
+    assert result.returncode == (0 if remote == "identical" else 1), result.stderr
+    if remote == "identical":
+        assert result.stdout == b"v1.0.0: ok\n"
+    else:
+        assert b"differs between the remote and this repository" in result.stderr
+
+
 def test_delete_refuses_while_the_remote_still_has_the_tag_pushed(
     repository: Path,
 ) -> None:

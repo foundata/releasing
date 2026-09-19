@@ -185,9 +185,9 @@ def check(
         problems.append(
             f"tag {tag} points at {current.revision[:12]}, not {target[:12]}"
         )
-    if (
-        current.remote_revision is not None
-        and current.remote_revision != current.revision
-    ):
-        problems.append(f"tag {tag} differs between the remote and this repository")
+    if current.remote_revision is not None:
+        # ls-remote reports the tag object, not its peeled target commit.
+        local_object = processes.git(root, "rev-parse", f"refs/tags/{tag}").strip()
+        if current.remote_revision != local_object:
+            problems.append(f"tag {tag} differs between the remote and this repository")
     return problems
