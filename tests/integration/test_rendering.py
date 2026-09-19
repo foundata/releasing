@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from html.parser import HTMLParser
-from typing import override
 from urllib.parse import urlsplit
 
 import pytest
 from readme_renderer.markdown import render
+from typing_extensions import override
 
 from tests.support import FIXTURES, RAW, TRANSFORMER, UI, prepare
 

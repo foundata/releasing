@@ -25,7 +25,9 @@ Run it without installing anything into the project:
 uvx --from git+https://github.com/foundata/releasing release --help
 ```
 
-Python 3.12, 3.13 and 3.14 are supported.
+Python 3.11 to 3.14 are supported. The minimum is 3.11 rather than the 3.12
+baseline of the foundata Python guide because the package is a development
+dependency of projects that target Debian 12, which ships Python 3.11.
 
 
 ## Commands

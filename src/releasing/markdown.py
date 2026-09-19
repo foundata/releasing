@@ -10,13 +10,14 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
-from typing import cast, override
+from typing import cast
 from urllib.parse import quote, unquote, urlsplit
 
 from markdown_it import MarkdownIt
 from markdown_it.rules_block import StateBlock, reference
 from markdown_it.rules_inline import StateInline, html_inline, image, link
 from markdown_it.token import Token
+from typing_extensions import override
 
 _ATTRIBUTE = re.compile(
     r"(?P<name>[^\s=/>]+)(?:\s*=\s*(?:"

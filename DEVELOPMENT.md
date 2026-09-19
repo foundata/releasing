@@ -2,17 +2,19 @@
 
 The repository is the `releasing` Python package: the `release` command and
 the `releasing` import package under `src/`. The Markdown transformer is its
-first module. Python 3.12, 3.13 and 3.14 are supported. Use `uv` for
+first module. Python 3.11 to 3.14 are supported; the 3.11 floor exists for
+consumers that target Debian 12. Use `uv` for
 development environments and for running the command.
 
 ## Setup and checks
 
 ```sh
-uv sync --frozen --python 3.12
+uv sync --frozen --python 3.11
 uv run --frozen ruff format --check .
 uv run --frozen ruff check .
 uv run --frozen mypy
 uv run --frozen python tests/check_markdown.py
+uv run --frozen --python 3.11 pytest
 uv run --frozen --python 3.12 pytest
 uv run --frozen --python 3.13 pytest
 uv run --frozen --python 3.14 pytest
@@ -67,11 +69,13 @@ small adapter records source positions through its parsing rules; edits replace
 destinations in the original source. The document is never serialized from its
 syntax tree.
 
-The parser is pinned because the adapter uses its rule API. Review parser
-changes and run the complete suite when updating it, then update the lockfile
-explicitly with `uv lock`. The development-only `readme-renderer[md]`
-dependency supplies an independent publishing renderer. Twine is neither
-required nor installed.
+The adapter uses the parser's rule API, so the dependency is bounded below the
+next major version and a test checks that the installed parser satisfies the
+declared range. The suite passes against `markdown-it-py` 3.0.0 and every 4.x
+release; run it against the oldest and newest supported parser after changing
+the range, then update the lockfile explicitly with `uv lock`. The
+development-only `readme-renderer[md]` dependency supplies an independent
+publishing renderer. Twine is neither required nor installed.
 
 ## Test layout
 
