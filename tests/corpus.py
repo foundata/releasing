@@ -51,9 +51,9 @@ def main() -> None:
                 simplify=simplify,
                 strict=True,
             )
-            (target / ("shell-simplified.md" if simplify else "shell.md")).write_text(
-                prepared, encoding="utf-8", newline=""
-            )
+            (
+                target / ("expected-simplified.md" if simplify else "expected.md")
+            ).write_text(prepared, encoding="utf-8", newline="")
         entries.append(
             {
                 "repository": repository.name,

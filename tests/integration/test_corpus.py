@@ -23,7 +23,7 @@ def test_output_matches_the_frozen_expectations(
     directory = CORPUS / repository
     source = (directory / "README.md").read_text(encoding="utf-8")
     expected = (
-        directory / ("shell-simplified.md" if simplify else "shell.md")
+        directory / ("expected-simplified.md" if simplify else "expected.md")
     ).read_text(encoding="utf-8")
     output = TRANSFORMER.prepare_markdown(
         source,

@@ -89,8 +89,8 @@ publishing renderer. Twine is neither required nor installed.
 - `tests/fixtures/cases.json`: small reviewed inputs and exact expected output.
 - `tests/fixtures/mixed-content*.md`: nested containers, references, tables,
   HTML, code and comments with exact expected Markdown and renderer assertions.
-- `tests/fixtures/corpus/`: 21 project README snapshots, the expected output of
-  both modes and their provenance.
+- `tests/fixtures/corpus/`: 21 project README snapshots, the reviewed expected
+  output of both modes and their provenance.
 
 Tests import the installed package (`uv sync` installs it in editable mode)
 and use temporary directories; they never edit checked-in fixtures. The complete
@@ -127,9 +127,18 @@ Snapshots cover `conclear`, `ansible-docsmith`, `scanmole` and all 18 local
 `oci-*-itt` repositories. `manifest.json` records each repository's source
 revision, the README SHA-256 and whether it matches that revision. The current
 output matches every frozen expectation in both modes, with no corpus
-exceptions. The shell script that produced those expectations has been retired;
-changing one is now a deliberate fixture change, reviewed in the commit that
-changes the behaviour.
+exceptions.
+
+The expectations are a change detector, not the authority on correctness. They
+were first produced by the shell script this package replaces, then audited
+against the current rules: none of the 42 files contains a repository-relative
+destination, and the current implementation reproduces each one exactly. What
+establishes correctness is separate. `tests/fixtures/cases.json` and the
+mixed-content fixtures cover the behaviour that deliberately departs from the
+old shell script, and the renderer tests prepare each corpus README afresh and
+assert on the rendered HTML without consulting the frozen files. Changing an
+expectation is therefore a deliberate fixture change, reviewed in the commit
+that changes the behaviour.
 
 To deliberately refresh the snapshots from a directory containing those
 repositories:
