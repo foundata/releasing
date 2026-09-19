@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import cast
 from urllib.parse import quote
 
-from releasing import markdown
+from releasing import config, markdown
 
 Runner = Callable[[argparse.Namespace], int]
 
@@ -246,6 +246,23 @@ def _run_markdown_prepare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_config_check(args: argparse.Namespace) -> int:
+    try:
+        loaded = config.load_release_config(cast(Path, args.project))
+    except config.ConfigError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    print(f"{loaded.source.relative_to(loaded.root)}: valid release declaration")
+    print(f"repository: {loaded.repository} ({loaded.forge})")
+    print(f"ecosystem: {loaded.ecosystem}, index: {loaded.index}")
+    print(f"version files: {', '.join(loaded.version_files) or 'none'}")
+    print(f"changelog: {loaded.changelog}")
+    print(f"tag: {loaded.tag('X.Y.Z')}")
+    for readme in loaded.readmes:
+        print(f"readme: {readme.source_path} -> {readme.ref}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the `release` parser with every subcommand registered."""
     parser = argparse.ArgumentParser(
@@ -254,6 +271,24 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(
         dest="command", required=True, metavar="COMMAND", title="commands"
     )
+    config_parser = commands.add_parser(
+        "config", help="inspect the release declaration"
+    )
+    config_commands = config_parser.add_subparsers(
+        dest="subcommand", required=True, metavar="SUBCOMMAND", title="subcommands"
+    )
+    config_check = config_commands.add_parser(
+        "check",
+        help="validate the declaration and every file it names",
+        description=config.__doc__,
+    )
+    config_check.add_argument(
+        "--project",
+        type=Path,
+        default=Path.cwd(),
+        help="project root holding pyproject.toml or releasing.toml (default: .)",
+    )
+    config_check.set_defaults(run=_run_config_check)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )

@@ -32,6 +32,12 @@ dependency of projects that target Debian 12, which ships Python 3.11.
 
 ## Commands
 
+Every command reads the project's release declaration, one table in
+`pyproject.toml` or `releasing.toml`; see
+[The release declaration](./docs/config.md).
+
+- `release config check`: validate the declaration and every file it names,
+  and print the effective values.
 - `release markdown prepare`: rewrite repository-relative link and image
   destinations to absolute URLs without reformatting the document. See
   [Preparing Markdown for package indexes](./docs/markdown.md).

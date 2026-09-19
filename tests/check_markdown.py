@@ -62,6 +62,7 @@ def main() -> int:
             "--no-cache",
             "README.md",
             "DEVELOPMENT.md",
+            "docs/config.md",
             "docs/markdown.md",
             "git-review-unpushed-README.md",
         ],
