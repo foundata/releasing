@@ -4,6 +4,7 @@
 import io
 import json
 import urllib.error
+from dataclasses import replace
 from email.message import Message
 from typing import Any
 
@@ -114,6 +115,44 @@ def test_compare_reports_missing_altered_and_unexpected_files() -> None:
     )
     assert "example-1.0.0-py3-none-any.whl: not published" in problems
     assert "example-1.0.0-py3.11.whl: published but not in the manifest" in problems
+
+
+@pytest.mark.parametrize(
+    "index, filename, version, expected",
+    [
+        ("pypi", "example_pkg-1.0.0.tar.gz", "1.0.0", "example-pkg"),
+        ("pypi", "example-pkg-1.0.0-rc.1.tar.gz", "1.0.0-rc.1", "example-pkg"),
+        ("pypi", "example_pkg-1.0.0-1-py3-none-any.whl", "1.0.0", "example-pkg"),
+        (
+            "galaxy",
+            "foundata-example_pkg-1.0.0.tar.gz",
+            "1.0.0",
+            "foundata.example_pkg",
+        ),
+    ],
+)
+def test_distribution_selection_preserves_manifest_metadata(
+    index: str, filename: str, version: str, expected: str
+) -> None:
+    manifest = replace(
+        MANIFEST,
+        version=version,
+        artifacts=(ManifestEntry(filename, "1" * 64, 10),),
+    )
+    name, selected = verify.select_distribution(manifest, index=index, version=version)
+    assert name == expected
+    assert selected == manifest
+
+
+def test_distribution_selection_supports_a_minimal_compatible_manifest() -> None:
+    manifest = replace(
+        MANIFEST, repository="", version="", source_revision=None, created=""
+    )
+    name, selected = verify.select_distribution(manifest, index="pypi", version="1.0.0")
+    assert name == "example"
+    assert selected == manifest
+    with pytest.raises(verify.VerificationError, match="pass --version"):
+        verify.select_distribution(manifest, index="pypi", version="")
 
 
 def test_unpublished_version_and_unknown_index(monkeypatch: pytest.MonkeyPatch) -> None:

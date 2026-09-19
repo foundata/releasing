@@ -673,19 +673,11 @@ def _run_verify(args: argparse.Namespace) -> int:
         found = manifest.version or args.version
         if args.version is not None and found != args.version:
             raise ValueError(f"the manifest records {found}, not {args.version}")
-        names = sorted(
-            {
-                entry.filename.split("-")[0].replace("_", "-")
-                for entry in manifest.artifacts
-            }
+        distribution, selected = verification.select_distribution(
+            manifest, index=loaded.index, version=found, distribution=args.distribution
         )
-        distribution = args.distribution or (names[0] if len(names) == 1 else None)
-        if distribution is None:
-            raise ValueError(
-                "cannot tell which distribution to verify; pass --distribution"
-            )
         problems = verification.compare_with_manifest(
-            manifest, verification.index_files(loaded.index, distribution, found)
+            selected, verification.index_files(loaded.index, distribution, found)
         )
         if problems:
             raise verification.VerificationError(

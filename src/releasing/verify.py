@@ -9,13 +9,14 @@ latest release? A release that cannot answer all three is not finished.
 """
 
 import json
+import re
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from releasing import forge_api, processes
-from releasing.artifacts import Manifest
+from releasing.artifacts import Manifest, ManifestEntry
 from releasing.forges import Forge
 
 TIMEOUT = 30.0
@@ -78,6 +79,52 @@ def index_files(index: str, name: str, version: str) -> list[IndexFile]:
     if index == "galaxy":
         return galaxy_files(name, version)
     raise VerificationError(f"the {index} index publishes nothing to verify")
+
+
+def select_distribution(
+    manifest: Manifest, *, index: str, version: str, distribution: str | None = None
+) -> tuple[str, Manifest]:
+    """Select one distribution's entries without changing the manifest schema.
+
+    Infer the name only for a single distribution. Python names compare with
+    case, hyphens, underscores and dots normalized; Galaxy names retain their
+    namespace and collection spelling. No local artifact files are required.
+    """
+    if index not in {"pypi", "galaxy"}:
+        raise VerificationError(f"the {index} index publishes nothing to verify")
+    if not version:
+        raise VerificationError("the manifest has no version; pass --version")
+    grouped: dict[str, list[ManifestEntry]] = {}
+    for entry in manifest.artifacts:
+        name = _distribution_name(entry.filename, index, version)
+        grouped.setdefault(name, []).append(entry)
+    if distribution is None:
+        if len(grouped) != 1:
+            raise VerificationError(
+                "cannot tell which distribution to verify; pass --distribution"
+            )
+        distribution = next(iter(grouped))
+    elif index == "pypi":
+        distribution = re.sub(r"[-_.]+", "-", distribution).lower()
+    if distribution not in grouped:
+        raise VerificationError(f"no artifacts for {distribution} in the manifest")
+    return distribution, replace(manifest, artifacts=tuple(grouped[distribution]))
+
+
+def _distribution_name(filename: str, index: str, version: str) -> str:
+    suffix = f"-{version}.tar.gz"
+    if index == "pypi" and filename.endswith(".whl") and "-" in filename:
+        name = filename.partition("-")[0]
+    elif filename.endswith(suffix):
+        name = filename.removesuffix(suffix)
+        if index == "galaxy":
+            namespace, separator, collection = name.partition("-")
+            if not separator or not namespace or not collection:
+                raise VerificationError(f"cannot identify collection from {filename!r}")
+            return f"{namespace}.{collection}"
+    else:
+        raise VerificationError(f"cannot identify distribution from {filename!r}")
+    return re.sub(r"[-_.]+", "-", name).lower()
 
 
 def compare_with_manifest(manifest: Manifest, published: list[IndexFile]) -> list[str]:
