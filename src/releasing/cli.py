@@ -561,6 +561,7 @@ def _run_build(args: argparse.Namespace) -> int:
             revision=args.revision,
             out=cast(Path, args.out),
             expect=args.expect,
+            allow_local_sources=args.allow_local_sources,
         )
     except (
         config.ConfigError,
@@ -573,6 +574,12 @@ def _run_build(args: argparse.Namespace) -> int:
     ) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
+    for source in result.local_sources:
+        print(
+            f"WARNING: built with a local dependency source ({source}); "
+            "these artifacts must never be uploaded",
+            file=sys.stderr,
+        )
     for prepared in result.prepared:
         print(f"prepared: {prepared}", file=sys.stderr)
     for path in result.files:
@@ -890,6 +897,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_parser.add_argument(
         "--expect", metavar="X.Y.Z", help="the version the revision must state"
+    )
+    build_parser.add_argument(
+        "--allow-local-sources",
+        action="store_true",
+        help="build although a dependency resolves from a local directory",
     )
     build_parser.set_defaults(run=_run_build)
     tag_parser = commands.add_parser(

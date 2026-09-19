@@ -14,6 +14,7 @@ can be published and later compared with what the index serves.
 import shutil
 import tarfile
 import tempfile
+import tomllib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -39,6 +40,36 @@ class BuildResult:
     revision: str
     version: str
     prepared: tuple[str, ...]
+    local_sources: tuple[str, ...] = ()
+
+
+def local_path_sources(root: Path, config: ReleaseConfig) -> list[str]:
+    """Dependencies this tree resolves from a local directory.
+
+    A ``[tool.uv.sources]`` entry with a ``path`` records an absolute or
+    relative directory in ``pyproject.toml`` and in the lockfile. Both ship in
+    a source distribution, so a release built from such a tree publishes a
+    path from the machine that built it. Workspace sources name no directory
+    and are not reported.
+    """
+    found: list[str] = []
+    for relative in dict.fromkeys(["pyproject.toml", *config.version_files]):
+        path = root / relative
+        if path.name != "pyproject.toml" or not path.is_file():
+            continue
+        try:
+            data = tomllib.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
+            raise BuildError(f"cannot read {relative}: {exc}") from exc
+        sources = data.get("tool", {}).get("uv", {}).get("sources", {})
+        if not isinstance(sources, dict):
+            continue
+        found.extend(
+            f"{relative}: {name} = {entry['path']}"
+            for name, entry in sources.items()
+            if isinstance(entry, dict) and isinstance(entry.get("path"), str)
+        )
+    return found
 
 
 def export(root: Path, revision: str, destination: Path) -> None:
@@ -112,6 +143,7 @@ def build(
     revision: str = "HEAD",
     out: Path,
     expect: str | None = None,
+    allow_local_sources: bool = False,
 ) -> BuildResult:
     """Export, prepare, build, check and record one revision's distributions."""
     root = root.resolve()
@@ -123,6 +155,16 @@ def build(
         exported = workspace / "source"
         export(root, resolved, exported)
         config = load_release_config(exported)
+        local = local_path_sources(exported, config)
+        if local and not allow_local_sources:
+            raise BuildError(
+                "this revision resolves dependencies from local directories, so "
+                "its artifacts would publish a path from this machine:\n  "
+                + "\n  ".join(local)
+                + "\nReplace them with published requirements. Pass "
+                "--allow-local-sources to build anyway, for a throwaway build "
+                "that must never be uploaded."
+            )
         found = version.check(exported, config, expect=expect)
         _check_changelog(exported, config, found)
         prepared = prepare_readmes(
@@ -150,6 +192,7 @@ def build(
         revision=resolved,
         version=found,
         prepared=tuple(prepared),
+        local_sources=tuple(local),
     )
 
 

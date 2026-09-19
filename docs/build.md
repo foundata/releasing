@@ -29,6 +29,22 @@ release build --out "../dist-${version}"
    `--out`, which must not exist yet. The directory appears complete or not at
    all.
 
+## Local dependency sources
+
+A `[tool.uv.sources]` entry with a `path` records a directory from the machine
+that wrote it, in `pyproject.toml` and in the lockfile. Both can ship inside a
+source distribution, so the build refuses a revision that has one:
+
+```text
+Error: this revision resolves dependencies from local directories, so its
+artifacts would publish a path from this machine:
+  pyproject.toml: releasing = /home/user/dev/releasing
+```
+
+`--allow-local-sources` builds anyway and prints a warning on every run, for a
+throwaway build while a dependency is not published yet. Those artifacts must
+never be uploaded. Workspace sources name no directory and are not affected.
+
 ## Output
 
 ```text

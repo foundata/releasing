@@ -214,3 +214,37 @@ def test_build_stops_on_a_broken_link_and_a_stale_changelog(repository: Path) ->
     result = release(repository, "build", "--out", str(repository.parent / "d2"))
     assert result.returncode == 1
     assert b"latest released section must be [1.1.0]" in result.stderr
+
+
+def test_build_refuses_a_local_dependency_source(repository: Path) -> None:
+    (repository / "pyproject.toml").write_text(
+        PYPROJECT
+        + '\n[tool.uv.sources]\nhelper = { path = "/home/someone/dev/helper" }\n',
+        encoding="utf-8",
+    )
+    git(repository, "commit", "-qam", "dependencies: resolve the helper locally")
+    out = repository.parent / "dist"
+    result = release(repository, "build", "--out", str(out))
+    assert result.returncode == 1
+    assert b"publish a path from this machine" in result.stderr
+    assert b"helper = /home/someone/dev/helper" in result.stderr
+    assert not out.exists()
+
+    # The escape exists for a throwaway build and says so on every run.
+    result = release(repository, "build", "--out", str(out), "--allow-local-sources")
+    assert result.returncode == 0, result.stderr
+    assert b"WARNING: built with a local dependency source" in result.stderr
+    assert b"must never be uploaded" in result.stderr
+    assert (out / "sample-1.0.0.tar.gz").is_file()
+
+
+def test_workspace_sources_are_not_local_paths(repository: Path) -> None:
+    (repository / "pyproject.toml").write_text(
+        PYPROJECT + "\n[tool.uv.sources]\nmember = { workspace = true }\n",
+        encoding="utf-8",
+    )
+    git(
+        repository, "commit", "-qam", "dependencies: take the member from the workspace"
+    )
+    result = release(repository, "build", "--out", str(repository.parent / "dist"))
+    assert result.returncode == 0, result.stderr
