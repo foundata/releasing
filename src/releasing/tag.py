@@ -107,7 +107,7 @@ def create(
     target = processes.git(
         root, "rev-parse", "--verify", f"{revision}^{{commit}}"
     ).strip()
-    found = _check_revision(root, target, version_string)
+    found = check_revision(root, target, version_string)
     current = state(root, config, forge, tag, offline=offline)
     if current.revision is not None:
         raise TagError(f"tag {tag} already exists locally at {current.revision[:12]}")
@@ -117,7 +117,13 @@ def create(
     return tag
 
 
-def _check_revision(root: Path, revision: str, expected: str) -> str:
+def check_revision(root: Path, revision: str, expected: str) -> str:
+    """Return the version a committed revision states, or raise TagError.
+
+    Exports the revision and checks its declaration, version sites, lockfile,
+    pins and changelog there, so the answer describes what was committed
+    rather than what the working tree happens to hold.
+    """
     with tempfile.TemporaryDirectory(prefix="releasing-tag-") as value:
         exported = Path(value)
         _source_export.export(root, revision, exported)

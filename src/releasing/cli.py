@@ -28,6 +28,9 @@ from releasing import (
     version,
 )
 from releasing import (
+    push as publication,
+)
+from releasing import (
     status as reporting,
 )
 from releasing import (
@@ -602,6 +605,7 @@ _RELEASE_ERRORS = (
     artifacts.ArtifactError,
     build.BuildError,
     tagging.TagError,
+    publication.PushError,
     verification.VerificationError,
     forge_api.ForgeError,
     processes.ProcessError,
@@ -738,6 +742,26 @@ def _run_status(args: argparse.Namespace) -> int:
     else:
         print(f"{report.tag}: incomplete", file=sys.stderr)
     return 1
+
+
+def _run_push(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        prepared = publication.plan(
+            loaded.root,
+            loaded,
+            forges.forge_for(loaded),
+            args.version,
+            remote=args.remote,
+        )
+        sent = publication.execute(loaded.root, prepared, dry_run=args.dry_run)
+    except _RELEASE_ERRORS as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    what = "would push" if args.dry_run else "pushed"
+    for reference in sent:
+        print(f"{what} {reference} to {prepared.remote}")
+    return 0
 
 
 def _add_artifact_arguments(parser: argparse.ArgumentParser) -> None:
@@ -998,6 +1022,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--offline", action="store_true", help="do not query the index or the forge"
     )
     status_parser.set_defaults(run=_run_status)
+    push_parser = commands.add_parser(
+        "push",
+        help="publish the release branch and its tag together",
+        description=publication.__doc__,
+    )
+    _add_project(push_parser)
+    push_parser.add_argument("version", metavar="X.Y.Z", help="the release version")
+    push_parser.add_argument(
+        "--remote",
+        default=publication.DEFAULT_REMOTE,
+        help=f"where to push (default: {publication.DEFAULT_REMOTE})",
+    )
+    push_parser.add_argument(
+        "--dry-run", action="store_true", help="ask the remote without sending anything"
+    )
+    push_parser.set_defaults(run=_run_push)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )

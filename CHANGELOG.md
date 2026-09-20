@@ -13,6 +13,8 @@ and this project adheres to
 
 - `release status X.Y.Z` reports which steps of a release are done, pending or
   broken, and exits non-zero until every one is done.
+- `release push X.Y.Z` publishes the release branch and its tag together,
+  refusing a tag the branch does not contain.
 
 ### Fixed
 
