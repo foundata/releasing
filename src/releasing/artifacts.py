@@ -17,7 +17,7 @@ import re
 import stat
 import tarfile
 import zipfile
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
@@ -154,30 +154,52 @@ def build_manifest(
     )
 
 
-def dump_manifest(manifest: Manifest) -> str:
-    """The manifest as stable, indented JSON."""
-    return (
-        json.dumps(
-            {
-                "schemaVersion": SCHEMA_VERSION,
-                "generator": "releasing",
-                "repository": manifest.repository,
-                "version": manifest.version,
-                "sourceRevision": manifest.source_revision,
-                "created": manifest.created,
-                "artifacts": [
-                    {
-                        "filename": entry.filename,
-                        "sha256": entry.sha256,
-                        "size": entry.size,
-                    }
-                    for entry in manifest.artifacts
-                ],
-            },
-            indent=2,
-        )
-        + "\n"
-    )
+_RESERVED_KEYS = frozenset(
+    {
+        "schemaVersion",
+        "generator",
+        "repository",
+        "version",
+        "sourceRevision",
+        "created",
+        "artifacts",
+    }
+)
+
+
+def dump_manifest(
+    manifest: Manifest, *, extra: Mapping[str, object] | None = None
+) -> str:
+    """The manifest as stable, indented JSON.
+
+    ``extra`` adds producer-specific top-level keys, such as the revision of a
+    guide a gate implements. They may not shadow the standard keys and must
+    be JSON-serializable. Readers of the standard shape ignore them.
+    """
+    document: dict[str, object] = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generator": "releasing",
+        "repository": manifest.repository,
+        "version": manifest.version,
+        "sourceRevision": manifest.source_revision,
+        "created": manifest.created,
+    }
+    for key, value in (extra or {}).items():
+        if key in _RESERVED_KEYS:
+            raise ArtifactError(f"extra manifest key {key!r} shadows a standard key")
+        if not key or not isinstance(key, str):
+            raise ArtifactError("extra manifest keys must be non-empty strings")
+        document[key] = value
+    document["artifacts"] = [
+        {"filename": entry.filename, "sha256": entry.sha256, "size": entry.size}
+        for entry in manifest.artifacts
+    ]
+    try:
+        return json.dumps(document, indent=2) + "\n"
+    except (TypeError, ValueError) as exc:
+        raise ArtifactError(
+            f"extra manifest keys must be JSON-serializable: {exc}"
+        ) from exc
 
 
 def load_manifest(path: Path) -> Manifest:

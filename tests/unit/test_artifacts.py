@@ -252,3 +252,24 @@ def test_prefixed_and_bare_digests_verify_the_same_files(tmp_path: Path) -> None
         encoding="utf-8",
     )
     assert verify_manifest(load_manifest(manifest), tmp_path) == []
+
+
+def test_manifest_carries_producer_specific_keys(tmp_path: Path) -> None:
+    # A gate that implements a versioned guide records which guide revision
+    # its evidence belongs to; readers of the standard shape ignore the key.
+    files = [wheel(tmp_path)]
+    manifest = build_manifest(
+        files, repository="foundata/example", version="1.2.3", source_revision="a" * 40
+    )
+    text = dump_manifest(manifest, extra={"guideRevision": "b" * 40})
+    data = json.loads(text)
+    assert data["guideRevision"] == "b" * 40
+    assert list(data)[-1] == "artifacts"
+    (tmp_path / "artifacts.json").write_text(text, encoding="utf-8")
+    assert load_manifest(tmp_path / "artifacts.json").artifacts == manifest.artifacts
+    with pytest.raises(ArtifactError, match="shadows a standard key"):
+        dump_manifest(manifest, extra={"version": "9.9.9"})
+    with pytest.raises(ArtifactError, match="JSON-serializable"):
+        dump_manifest(manifest, extra={"when": object()})
+    with pytest.raises(ArtifactError, match="non-empty strings"):
+        dump_manifest(manifest, extra={"": "x"})

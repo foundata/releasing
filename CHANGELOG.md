@@ -9,6 +9,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `releasing.artifacts.dump_manifest()` accepts `extra` top-level keys, so a
+  gate can record producer-specific facts such as the revision of a guide it
+  implements without keeping a manifest format of its own.
+
 ### Fixed
 
 - `release verify` installs the version it is verifying instead of failing
