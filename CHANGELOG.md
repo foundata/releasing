@@ -9,6 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [1.0.1] - 2026-09-20
+
 ### Fixed
 
 - `release verify` reads a manifest whose digests are written as
@@ -21,5 +26,6 @@ and this project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/foundata/releasing/releases/tag/v1.0.1
 [1.0.0]: https://github.com/foundata/releasing/releases/tag/v1.0.0
