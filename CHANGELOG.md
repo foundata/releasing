@@ -15,6 +15,8 @@ and this project adheres to
   broken, and exits non-zero until every one is done.
 - `release push X.Y.Z` publishes the release branch and its tag together,
   refusing a tag the branch does not contain.
+- `release publish MANIFEST` uploads exactly the files a manifest names,
+  refusing a stale or altered file beside them.
 
 ### Fixed
 

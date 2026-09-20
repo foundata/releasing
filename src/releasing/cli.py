@@ -28,6 +28,9 @@ from releasing import (
     version,
 )
 from releasing import (
+    publish as uploading,
+)
+from releasing import (
     push as publication,
 )
 from releasing import (
@@ -606,6 +609,7 @@ _RELEASE_ERRORS = (
     build.BuildError,
     tagging.TagError,
     publication.PushError,
+    uploading.PublishError,
     verification.VerificationError,
     forge_api.ForgeError,
     processes.ProcessError,
@@ -761,6 +765,34 @@ def _run_push(args: argparse.Namespace) -> int:
     what = "would push" if args.dry_run else "pushed"
     for reference in sent:
         print(f"{what} {reference} to {prepared.remote}")
+    return 0
+
+
+def _run_publish(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        manifest_path = cast(Path, args.manifest)
+        manifest = artifacts.load_manifest(manifest_path)
+        prepared = uploading.plan(manifest, manifest_path.parent, index=loaded.index)
+        variable = uploading.token_variable(loaded.index)
+        if not args.dry_run and not os.environ.get(variable):
+            print(
+                f"note: {variable} is unset; {loaded.index} may use a configured "
+                "credential instead",
+                file=sys.stderr,
+            )
+        sent = uploading.execute(prepared, dry_run=args.dry_run)
+    except _RELEASE_ERRORS as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    what = "would upload" if args.dry_run else "uploaded"
+    for name in sent:
+        print(f"{what} {name}")
+    print(
+        f"release: {prepared.version} to {prepared.index}"
+        + (" (nothing sent)" if args.dry_run else ""),
+        file=sys.stderr,
+    )
     return 0
 
 
@@ -1038,6 +1070,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run", action="store_true", help="ask the remote without sending anything"
     )
     push_parser.set_defaults(run=_run_push)
+    publish_parser = commands.add_parser(
+        "publish",
+        help="upload exactly the files a manifest names",
+        description=uploading.__doc__,
+    )
+    _add_project(publish_parser)
+    publish_parser.add_argument(
+        "manifest", type=Path, help="the manifest written by release build"
+    )
+    publish_parser.add_argument(
+        "--dry-run", action="store_true", help="list the files without uploading"
+    )
+    publish_parser.set_defaults(run=_run_publish)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )
