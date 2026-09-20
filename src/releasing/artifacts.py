@@ -195,17 +195,24 @@ def load_manifest(path: Path) -> Manifest:
         raise ArtifactError(f"{path}: manifest needs a non-empty artifacts list")
     artifacts = []
     for entry in entries:
+        # Some gates write the digest prefixed with its algorithm, as
+        # "sha256:<hex>". Both spellings name the same digest; keep the hex.
+        digest = (
+            re.fullmatch(r"(?:sha256:)?([0-9a-f]{64})", str(entry.get("sha256", "")))
+            if isinstance(entry, dict)
+            else None
+        )
         if (
             not isinstance(entry, dict)
             or not isinstance(entry.get("filename"), str)
-            or not re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256", "")))
+            or digest is None
         ):
             raise ArtifactError(f"{path}: every artifact needs filename and sha256")
         size = entry.get("size", -1)
         artifacts.append(
             ManifestEntry(
                 str(entry["filename"]),
-                str(entry["sha256"]),
+                digest.group(1),
                 int(size) if isinstance(size, int) else -1,
             )
         )

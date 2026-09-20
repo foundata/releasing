@@ -214,3 +214,41 @@ def test_manifest_accepts_the_minimal_compatible_shape(tmp_path: Path) -> None:
         load_manifest(path)
     with pytest.raises(ArtifactError, match="at least one artifact"):
         build_manifest([], repository="", version="1.0.0", source_revision=None)
+
+
+def test_manifest_accepts_an_algorithm_prefixed_digest(tmp_path: Path) -> None:
+    # ConClear's release gate writes "sha256:<hex>"; both spellings name the
+    # same digest, and verification compares against the bare hex.
+    path = tmp_path / "artifacts.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "artifacts": [{"filename": "x.whl", "sha256": "sha256:" + "a" * 64}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert load_manifest(path).artifacts[0].sha256 == "a" * 64
+    path.write_text(
+        json.dumps({"artifacts": [{"filename": "x.whl", "sha256": "md5:" + "a" * 64}]}),
+        encoding="utf-8",
+    )
+    with pytest.raises(ArtifactError, match="filename and sha256"):
+        load_manifest(path)
+
+
+def test_prefixed_and_bare_digests_verify_the_same_files(tmp_path: Path) -> None:
+    built = sdist(tmp_path)
+    manifest = tmp_path / "artifacts.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "artifacts": [
+                    {"filename": built.name, "sha256": "sha256:" + sha256_file(built)}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert verify_manifest(load_manifest(manifest), tmp_path) == []
