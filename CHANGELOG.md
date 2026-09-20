@@ -9,7 +9,12 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Fixed
+
+- `release verify` installs the version it is verifying instead of failing
+  with "no solution found". The isolated install resolved from the local
+  index cache, which still predates a version published moments earlier, so
+  verifying a fresh release reported it as nonexistent.
 
 
 ## [1.0.1] - 2026-09-20

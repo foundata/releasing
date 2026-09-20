@@ -6,12 +6,13 @@ import json
 import urllib.error
 from dataclasses import replace
 from email.message import Message
+from pathlib import Path
 from typing import Any
 
 import pytest
 from typing_extensions import override
 
-from releasing import forge_api, verify
+from releasing import forge_api, processes, verify
 from releasing.artifacts import Manifest, ManifestEntry
 from releasing.forges import Forge
 
@@ -177,3 +178,27 @@ def test_latest_release_tag_and_missing_release(
     answer(monkeypatch, forge_api, None, status=500)
     with pytest.raises(forge_api.ForgeError, match="HTTP 500"):
         verify.latest_tag(FORGE)
+
+
+def test_isolated_install_refreshes_the_index_listing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Verification runs moments after an upload, when a cached index listing
+    # still predates the version and uv reports it as nonexistent.
+    seen: list[list[str]] = []
+
+    def fake(argv: list[str], **_: object) -> str:
+        seen.append(argv)
+        return "1.0.1\n"
+
+    monkeypatch.setattr(processes, "executable", lambda name: Path("/usr/bin") / name)
+    monkeypatch.setattr(processes, "run", fake)
+    assert verify.installed_version("example", "1.0.1") == "1.0.1"
+    assert seen[0][seen[0].index("--refresh-package") + 1] == "example"
+    assert "example==1.0.1" in seen[0]
+    assert seen[0][-2:] == ["-c", seen[0][-1]]
+
+    seen.clear()
+    assert verify.installed_version("example", "1.0.1", command="example") == "1.0.1"
+    assert "--refresh-package" in seen[0]
+    assert seen[0][-2:] == ["example", "--version"]

@@ -146,38 +146,31 @@ def compare_with_manifest(manifest: Manifest, published: list[IndexFile]) -> lis
 
 
 def installed_version(name: str, version: str, command: str | None = None) -> str:
-    """Install the published version in an isolated environment and ask its version."""
+    """Install the published version in an isolated environment and ask its version.
+
+    The package's index metadata is refreshed rather than taken from the local
+    cache. This check runs moments after an upload, which is exactly when a
+    cached index listing still predates the version being verified and would
+    report it as nonexistent.
+    """
     uv = str(processes.executable("uv"))
-    argument = f"{name}=={version}"
-    script = f"from importlib.metadata import version; print(version({name!r}))"
-    output = processes.run(
-        [
-            uv,
-            "run",
-            "--isolated",
-            "--no-project",
-            "--with",
-            argument,
-            "--",
-            "python",
-            "-c",
-            script,
-        ]
-        if command is None
-        else [
-            uv,
-            "run",
-            "--isolated",
-            "--no-project",
-            "--with",
-            argument,
-            "--",
-            command,
-            "--version",
-        ],
-        timeout=900,
-    )
-    return output.strip()
+    invocation = [
+        uv,
+        "run",
+        "--isolated",
+        "--no-project",
+        "--refresh-package",
+        name,
+        "--with",
+        f"{name}=={version}",
+        "--",
+    ]
+    if command is None:
+        script = f"from importlib.metadata import version; print(version({name!r}))"
+        invocation += ["python", "-c", script]
+    else:
+        invocation += [command, "--version"]
+    return processes.run(invocation, timeout=900).strip()
 
 
 def latest_tag(forge: Forge) -> str | None:

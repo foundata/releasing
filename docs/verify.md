@@ -16,9 +16,13 @@ PyPI reports a digest per file; Ansible Galaxy reports one for the collection
 artifact.
 
 Second, an isolated install has to report the version. `uv run --isolated
---no-project --with NAME==VERSION` installs the published distribution into a
-throwaway environment and reads its installed metadata. `--no-install` skips
-this, for example on a machine without access to the index.
+--no-project --refresh-package NAME --with NAME==VERSION` installs the
+published distribution into a throwaway environment and reads its installed
+metadata. The index listing is refreshed rather than taken from the local
+cache, because this check runs moments after an upload, when a cached listing
+still predates the version and the resolver would report it as nonexistent.
+`--no-install` skips the step, for example on a machine without access to the
+index.
 
 Third, the forge has to report the version's tag as its latest release. That
 catches a release someone forgot to create, or left as a draft.
