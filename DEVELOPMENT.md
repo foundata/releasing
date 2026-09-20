@@ -204,9 +204,10 @@ because the version lives in `pyproject.toml` alone and `releasing.__version__`
 reads it from the installed distribution metadata. There is no second version
 site to edit.
 
-Release only a clean, committed revision. `../dist-${version}` below is outside
-the repository on purpose: build output is never tracked and never left beside
-the sources.
+Release only a clean, committed revision. The build output goes to a temporary
+directory. Step 7 attaches the manifest and both distributions to the GitHub
+release and PyPI serves the same bytes, so nothing in that directory needs
+keeping once step 8 passes.
 
 1. **Run the checks and decide the version.** Everything under "Setup and
    checks" and "Shell checks" must pass on all supported Python versions
@@ -263,7 +264,10 @@ the sources.
 4. **Build from the committed revision.**
 
    ```sh
-   uv run --frozen release build --out "../dist-${version}" --expect "${version}"
+   dist="${TMPDIR:-/tmp}/releasing-${version}/dist"
+   mkdir -p "$(dirname "${dist}")"
+
+   uv run --frozen release build --out "${dist}" --expect "${version}"
    ```
 
    The build exports the commit with `git archive` and prepares `README.md`
@@ -271,8 +275,9 @@ the sources.
    work on GitHub and the working tree is never modified. The source
    distribution is built from the export and the wheel from that source
    distribution; both are checked, and their SHA-256 digests are recorded in
-   `artifacts.json`. The destination must not exist beforehand, so a repeat
-   needs the previous directory deleted or a new path.
+   `artifacts.json`. The destination itself must not exist beforehand, so a
+   repeat needs `rm -rf "${dist}"` first. The path is predictable rather than
+   random, so the remaining steps can be retyped in another shell.
 
 5. **Tag the revision that was built, then publish branch and tag.**
 
@@ -305,7 +310,7 @@ the sources.
    printf '\n'
    export UV_PUBLISH_TOKEN
 
-   uv run --frozen release publish "../dist-${version}/artifacts.json"
+   uv run --frozen release publish "${dist}/artifacts.json"
 
    unset UV_PUBLISH_TOKEN
    ```
@@ -320,7 +325,7 @@ the sources.
 
    ```sh
    uv run --frozen release forge release-create "${version}" \
-     --manifest "../dist-${version}/artifacts.json"
+     --manifest "${dist}/artifacts.json"
    ```
 
    The notes are the changelog section for the version and the attached files
@@ -331,11 +336,13 @@ the sources.
 8. **Verify what PyPI and GitHub now serve.**
 
    ```sh
-   uv run --frozen release verify "../dist-${version}/artifacts.json" \
+   uv run --frozen release verify "${dist}/artifacts.json" \
      --version "${version}"
 
    uv run --frozen release status "${version}" \
-     --manifest "../dist-${version}/artifacts.json"
+     --manifest "${dist}/artifacts.json"
+
+   rm -rf "${TMPDIR:-/tmp}/releasing-${version}"
    ```
 
    `verify` answers three questions: does PyPI serve files for this version
@@ -344,6 +351,16 @@ the sources.
    reports the same release as six separate steps and exits non-zero while any
    of them is unfinished, which is also how to resume after an interruption at
    any point above.
+
+If the temporary directory is lost mid-release, repeat step 4 while nothing has
+been uploaded yet. After the upload, fetch the published files into `${dist}`
+and record them there instead, then continue with step 7:
+
+```sh
+uv run --frozen release artifacts manifest \
+  "${dist}"/*.tar.gz "${dist}"/*.whl \
+  --revision "${revision}" --out "${dist}/artifacts.json"
+```
 
 Consuming projects pin `releasing` in a development dependency group and pick
 the new version up with `uv lock --upgrade-package releasing`. A major version
