@@ -35,9 +35,21 @@ class TagState:
 
 
 def state(
-    root: Path, config: ReleaseConfig, forge: Forge, tag: str, *, offline: bool = False
+    root: Path,
+    config: ReleaseConfig,
+    forge: Forge,
+    tag: str,
+    *,
+    offline: bool = False,
+    remote: bool = True,
 ) -> TagState:
-    """Collect the local and remote facts about ``tag``."""
+    """Collect the local and remote facts about ``tag``.
+
+    ``remote`` queries the configured remote for the tag; without it the
+    remote revision is reported as absent. A caller that must not act on an
+    unverified remote leaves it on, so an unreachable remote is an error
+    rather than a silent "not there".
+    """
     listed = processes.git(root, "tag", "--list", tag).strip()
     revision = annotated_message = None
     annotated = False
@@ -52,8 +64,14 @@ def state(
             if annotated
             else ""
         )
-    remote = processes.git(root, "ls-remote", "--tags", "origin", f"refs/tags/{tag}")
-    remote_revision = remote.split("\t")[0].strip() if remote.strip() else None
+    listing = (
+        processes.git(
+            root, "ls-remote", "--tags", "origin", f"refs/tags/{tag}", remote=True
+        )
+        if remote
+        else ""
+    )
+    remote_revision = listing.split("\t")[0].strip() if listing.strip() else None
     return TagState(
         tag=tag,
         revision=revision,
@@ -153,7 +171,7 @@ def delete(
         processes.git(root, "tag", "-d", tag)
         deleted.append("local")
     if remote and current.remote_revision is not None:
-        processes.git(root, "push", "origin", f":refs/tags/{tag}")
+        processes.git(root, "push", "origin", f":refs/tags/{tag}", remote=True)
         deleted.append("remote")
     return deleted
 

@@ -14,6 +14,10 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 TIMEOUT = 600.0
+# A command that contacts a remote waits on a network and possibly on
+# credentials. Without a bound it blocks for the full local timeout, which
+# turns an unreachable forge into a ten-minute hang.
+REMOTE_TIMEOUT = 60.0
 
 
 class ProcessError(RuntimeError):
@@ -81,12 +85,31 @@ def run(
 
 
 def git(
-    root: Path, *arguments: str, timeout: float = TIMEOUT, stdout: Path | None = None
+    root: Path,
+    *arguments: str,
+    timeout: float | None = None,
+    stdout: Path | None = None,
+    remote: bool = False,
 ) -> str:
-    """Run a Git command in ``root`` with the caller's configuration untouched."""
+    """Run a Git command in ``root`` with the caller's configuration untouched.
+
+    ``remote`` marks a command that contacts the configured remote. Such a
+    command runs under a shorter timeout and may not ask for credentials: an
+    unreachable or unauthenticated remote has to fail rather than wait for an
+    answer nobody is there to give.
+    """
+    environment = None
+    if remote:
+        environment = {"GIT_TERMINAL_PROMPT": "0"}
+        if "GIT_SSH_COMMAND" not in os.environ:
+            # Leave a configured command alone; only supply a batch default.
+            environment["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
+    if timeout is None:
+        timeout = REMOTE_TIMEOUT if remote else TIMEOUT
     return run(
         [str(executable("git")), "-C", str(root), *arguments],
         timeout=timeout,
+        environment=environment,
         stdout=stdout,
     )
 
