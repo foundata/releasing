@@ -50,7 +50,9 @@ require an artifact for every declared distribution:
 `--revision` records the commit the files were built from. The manifest is
 never overwritten. `release build` writes it as part of every build; other
 gates that produce a JSON file with the same `artifacts` list can be verified
-with the same tools.
+with the same tools. A digest written as `sha256:<hex>` is accepted beside the
+bare hex, since gates differ on that spelling. A manifest without a `version`
+needs `--version` when verifying.
 
 ## `release artifacts verify artifacts.json`
 

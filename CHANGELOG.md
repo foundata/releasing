@@ -9,7 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Fixed
+
+- `release verify` reads a manifest whose digests are written as
+  `sha256:<hex>`. Only the bare hexadecimal spelling was accepted, so a
+  manifest from another gate was rejected as malformed.
 
 
 ## [1.0.0] - 2026-09-20
