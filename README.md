@@ -14,6 +14,19 @@ Components and tools:
   step is one subcommand; the order of steps stays in each project's own
   procedure.
 
+<!-- rumdl-disable MD033 -->
+<!-- HTML for consistent rendering across limited platform parsers -->
+<div align="center" id="project-readme-header">
+<br>
+<br>
+
+**⭐ Found this useful? Support open-source and star this project:**
+
+[![GitHub repository](https://img.shields.io/github/stars/foundata/releasing.svg)](https://github.com/foundata/releasing)
+
+<br>
+</div>
+<!-- rumdl-enable MD033 -->
 
 
 ## Installation
@@ -107,6 +120,8 @@ components. The repository conforms to the
 create a
 [SPDX software bill of materials (SBOM)](https://en.wikipedia.org/wiki/Software_Package_Data_Exchange).
 <!--REUSE-IgnoreEnd-->
+
+[![REUSE status](https://api.reuse.software/badge/github.com/foundata/releasing)](https://api.reuse.software/info/github.com/foundata/releasing)
 
 
 ## Author information<a id="author-information"></a>
