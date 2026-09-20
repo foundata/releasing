@@ -35,26 +35,27 @@ git status --short
 #    export, so the working tree keeps its relative links.
 uv run release build --out "../dist-${version}" --expect "${version}"
 
-# 4. Tag the revision that was built, then push the branch and the tag.
+# 4. Tag the revision that was built, then publish branch and tag together.
 uv run release tag create "${version}"
-git push origin main
-git push origin "refs/tags/v${version}"
+uv run release push "${version}"
 
 # 5. Publish exactly the files that were validated.
-uv run release artifacts verify "../dist-${version}/artifacts.json"
 printf 'PyPI API token: '
 read -rs UV_PUBLISH_TOKEN
 printf '\n'
 export UV_PUBLISH_TOKEN
-uv publish "../dist-${version}"/*.whl "../dist-${version}"/*.tar.gz
+uv run release publish "../dist-${version}/artifacts.json"
 unset UV_PUBLISH_TOKEN
 
-# 6. Create the forge release from the changelog section.
-gh release create "v${version}" --title "v${version}" \
-  --notes-file <(uv run release changelog show "${version}")
+# 6. Create the forge release entry from the changelog and the manifest.
+uv run release forge release-create "${version}" \
+  --manifest "../dist-${version}/artifacts.json"
 
 # 7. Verify what the index and the forge now serve.
 uv run release verify "../dist-${version}/artifacts.json"
+
+# At any point, ask where the release stands.
+uv run release status "${version}" --manifest "../dist-${version}/artifacts.json"
 ```
 
 ## Why this order
