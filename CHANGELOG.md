@@ -9,7 +9,16 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Added
+
+- `release status X.Y.Z` reports which steps of a release are done, pending or
+  broken, and exits non-zero until every one is done.
+
+### Fixed
+
+- A command that contacts the configured remote is bounded and may not ask for
+  credentials. An unreachable remote failed after the full local timeout, ten
+  minutes, instead of promptly.
 
 
 ## [2.0.0] - 2026-09-20

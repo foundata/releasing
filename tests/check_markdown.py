@@ -68,6 +68,7 @@ def main() -> int:
             "docs/config.md",
             "docs/markdown.md",
             "docs/python-packages.md",
+            "docs/status.md",
             "docs/tag.md",
             "docs/verify.md",
             "docs/version.md",

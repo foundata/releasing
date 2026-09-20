@@ -28,6 +28,9 @@ from releasing import (
     version,
 )
 from releasing import (
+    status as reporting,
+)
+from releasing import (
     tag as tagging,
 )
 from releasing import (
@@ -705,6 +708,38 @@ def _run_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_status(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        manifest = (
+            None
+            if args.manifest is None
+            else artifacts.load_manifest(cast(Path, args.manifest))
+        )
+        report = reporting.collect(
+            loaded.root,
+            loaded,
+            forges.forge_for(loaded),
+            args.version,
+            manifest=manifest,
+            offline=args.offline,
+        )
+    except _RELEASE_ERRORS as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    width = max(len(step.name) for step in report.steps)
+    for step in report.steps:
+        print(f"{step.state:<8} {step.name:<{width}}  {step.detail}")
+    if report.complete:
+        print(f"{report.tag}: released")
+        return 0
+    if report.broken:
+        print(f"{report.tag}: needs attention, not continuation", file=sys.stderr)
+    else:
+        print(f"{report.tag}: incomplete", file=sys.stderr)
+    return 1
+
+
 def _add_artifact_arguments(parser: argparse.ArgumentParser) -> None:
     _add_project(parser)
     parser.add_argument(
@@ -947,6 +982,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-install", action="store_true", help="skip the isolated install"
     )
     verify_parser.set_defaults(run=_run_verify)
+    status_parser = commands.add_parser(
+        "status",
+        help="report which steps of a release are done, pending or broken",
+        description=reporting.__doc__,
+    )
+    _add_project(status_parser)
+    status_parser.add_argument("version", metavar="X.Y.Z", help="the release version")
+    status_parser.add_argument(
+        "--manifest",
+        type=Path,
+        help="the manifest written by release build, for digest comparison",
+    )
+    status_parser.add_argument(
+        "--offline", action="store_true", help="do not query the index or the forge"
+    )
+    status_parser.set_defaults(run=_run_status)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )

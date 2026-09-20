@@ -71,6 +71,8 @@ artifact operations also work independently; see
 - `release tag create`, `check` and `delete`: a guarded annotated tag, and a
   deletion that stays legal only while no release exists. See
   [Release tags](./docs/tag.md).
+- `release status`: report which steps of a release are done, pending or
+  broken. See [Where a release stands](./docs/status.md).
 - `release verify`: the index serves the validated files, an isolated install
   reports the version and the forge reports the tag as latest. See
   [Verifying a published release](./docs/verify.md).
