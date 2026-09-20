@@ -53,9 +53,10 @@ top-level keys through its `extra` argument, for example the revision of a guide
 the gate implements; they may not shadow the standard keys, and readers of the
 standard shape ignore them. The manifest is never overwritten. `release build`
 writes it as part of every build; other gates that produce a JSON file with the
-same `artifacts` list can be verified with the same tools. A digest written as
-`sha256:<hex>` is accepted beside the bare hex, since gates differ on that
-spelling. A manifest without a `version` needs `--version` when verifying.
+same `artifacts` list can be verified with the same tools. Digests are bare
+hexadecimal, the spelling package indexes serve; an algorithm prefix such as
+`sha256:<hex>` is refused. A manifest without a `version` needs `--version`
+when verifying.
 
 ## `release artifacts verify artifacts.json`
 

@@ -9,7 +9,19 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Removed
+
+- `load_manifest()` no longer accepts a digest written as `sha256:<hex>`, only
+  the bare hexadecimal spelling that package indexes serve. Versions 1.0.1 and
+  1.0.2 accepted both. The tolerance existed for one producer, ConClear's
+  release gate, which now writes the shared format through `build_manifest()`
+  and `dump_manifest()`.
+
+  Retained release evidence written by that gate before the change, under
+  `~/.local/share/conclear/distributions/<revision>/artifacts.json` for
+  ConClear 1.0.0 and 1.0.1, carries prefixed digests and no longer passes
+  `release artifacts verify`. The recorded files and digests remain valid;
+  only this reader refuses them.
 
 
 ## [1.0.2] - 2026-09-20
