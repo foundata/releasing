@@ -66,6 +66,7 @@ def main() -> int:
             "docs/build.md",
             "docs/changelog.md",
             "docs/config.md",
+            "docs/forge-release.md",
             "docs/markdown.md",
             "docs/publish.md",
             "docs/push.md",

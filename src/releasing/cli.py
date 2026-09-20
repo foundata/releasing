@@ -22,6 +22,7 @@ from releasing import (
     changelog,
     config,
     forge_api,
+    forge_release,
     forges,
     markdown,
     processes,
@@ -610,6 +611,7 @@ _RELEASE_ERRORS = (
     tagging.TagError,
     publication.PushError,
     uploading.PublishError,
+    forge_release.ForgeReleaseError,
     verification.VerificationError,
     forge_api.ForgeError,
     processes.ProcessError,
@@ -793,6 +795,35 @@ def _run_publish(args: argparse.Namespace) -> int:
         + (" (nothing sent)" if args.dry_run else ""),
         file=sys.stderr,
     )
+    return 0
+
+
+def _run_forge_release_create(args: argparse.Namespace) -> int:
+    try:
+        loaded = _load_config(args)
+        manifest_path = None if args.manifest is None else cast(Path, args.manifest)
+        manifest = (
+            None if manifest_path is None else artifacts.load_manifest(manifest_path)
+        )
+        prepared = forge_release.plan(
+            loaded.root,
+            loaded,
+            forges.forge_for(loaded),
+            args.version,
+            manifest=manifest,
+            manifest_path=manifest_path,
+            offline=args.offline,
+        )
+        argv = forge_release.execute(loaded.root, prepared, dry_run=args.dry_run)
+    except _RELEASE_ERRORS as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    if args.dry_run:
+        print(" ".join(argv))
+        return 0
+    print(f"{prepared.forge}: created the release entry for {prepared.tag}")
+    for path in prepared.assets:
+        print(f"attached {path.name}")
     return 0
 
 
@@ -1083,6 +1114,27 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run", action="store_true", help="list the files without uploading"
     )
     publish_parser.set_defaults(run=_run_publish)
+    forge_parser = commands.add_parser("forge", help="the forge's own release entry")
+    forge_commands = forge_parser.add_subparsers(
+        dest="subcommand", required=True, metavar="SUBCOMMAND", title="subcommands"
+    )
+    forge_create = forge_commands.add_parser(
+        "release-create",
+        help="create the release entry from the changelog and the manifest",
+        description=forge_release.__doc__,
+    )
+    _add_project(forge_create)
+    forge_create.add_argument("version", metavar="X.Y.Z", help="the release version")
+    forge_create.add_argument(
+        "--manifest", type=Path, help="attach these validated files to the entry"
+    )
+    forge_create.add_argument(
+        "--offline", action="store_true", help="do not ask whether a release exists"
+    )
+    forge_create.add_argument(
+        "--dry-run", action="store_true", help="print the command without running it"
+    )
+    forge_create.set_defaults(run=_run_forge_release_create)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )

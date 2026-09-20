@@ -77,6 +77,9 @@ artifact operations also work independently; see
   re-checking both. See [Publishing the branch and the tag](./docs/push.md).
 - `release publish`: upload exactly the files a manifest names, refusing any
   other file beside them. See [Uploading what was validated](./docs/publish.md).
+- `release forge release-create`: create the forge's release entry from the
+  changelog and the manifest. See
+  [The forge's release entry](./docs/forge-release.md).
 - `release verify`: the index serves the validated files, an isolated install
   reports the version and the forge reports the tag as latest. See
   [Verifying a published release](./docs/verify.md).

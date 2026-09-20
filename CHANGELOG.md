@@ -17,6 +17,9 @@ and this project adheres to
   refusing a tag the branch does not contain.
 - `release publish MANIFEST` uploads exactly the files a manifest names,
   refusing a stale or altered file beside them.
+- `release forge release-create X.Y.Z` creates the forge's release entry from
+  the changelog section and the manifest's files, through the forge's own
+  command-line tool.
 
 ### Fixed
 
