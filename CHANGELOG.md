@@ -9,6 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [2.2.0] - 2026-09-20
+
 ### Added
 
 - `release tag create X.Y.Z --manifest PATH` refuses to tag a revision the
@@ -77,7 +82,8 @@ and this project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v2.1.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/foundata/releasing/releases/tag/v2.2.0
 [2.1.0]: https://github.com/foundata/releasing/releases/tag/v2.1.0
 [2.0.0]: https://github.com/foundata/releasing/releases/tag/v2.0.0
 [1.0.2]: https://github.com/foundata/releasing/releases/tag/v1.0.2
