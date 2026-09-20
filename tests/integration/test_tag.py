@@ -101,6 +101,27 @@ def test_create_check_and_delete_round_trip(repository: Path) -> None:
     assert git(repository, "tag", "--list") == ""
 
 
+def test_create_reports_export_failure_and_cleans_its_workspace(
+    repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scratch = tmp_path / "temporary"
+    scratch.mkdir()
+    monkeypatch.setenv("TMPDIR", str(scratch))
+    unsafe = r"bad\name"
+    (repository / unsafe).write_bytes(b"unsafe")
+    git(repository, "add", ".")
+    git(repository, "commit", "-qm", "repository: add an unsupported filename")
+
+    result = release(repository, "tag", "create", "1.0.0", "--offline")
+
+    assert result.returncode == 1
+    assert result.stdout == b""
+    assert result.stderr == f"Error: unsafe archive member {unsafe!r}\n".encode()
+    assert list(scratch.iterdir()) == []
+    assert git(repository, "tag", "--list") == ""
+    assert git(repository, "status", "--porcelain") == ""
+
+
 def test_create_refuses_a_dirty_tree_or_a_disagreeing_version(repository: Path) -> None:
     (repository / "untracked.txt").write_text("x\n", encoding="utf-8")
     result = release(repository, "tag", "create", "1.0.0", "--offline")

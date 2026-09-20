@@ -6,11 +6,13 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import zipfile
 from pathlib import Path
 
 import pytest
 
+from releasing import build, processes
 from releasing.artifacts import load_manifest, sha256_file
 
 pytestmark = pytest.mark.integration
@@ -104,6 +106,68 @@ def repository(tmp_path: Path) -> Path:
     git(root, "add", ".")
     git(root, "commit", "-q", "-m", "project: establish the sample")
     return root
+
+
+def test_export_uses_the_selected_commit_and_its_export_ignore(
+    repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scratch = tmp_path / "temporary"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+    revision = git(repository, "rev-parse", "HEAD").strip()
+    (repository / "README.md").write_text("changed\n", encoding="utf-8")
+    (repository / ".gitattributes").write_text("", encoding="utf-8")
+    git(repository, "commit", "-qam", "repository: change the source")
+    (repository / "untracked").write_bytes(b"not committed")
+    destination = tmp_path / "exported"
+
+    build.export(repository, revision, destination)
+
+    assert (destination / "README.md").read_text(encoding="utf-8") == README
+    assert not (destination / "notes.txt").exists()
+    assert not (destination / "untracked").exists()
+    assert not (destination / ".git").exists()
+    assert (repository / "README.md").read_text(encoding="utf-8") == "changed\n"
+    assert list(scratch.iterdir()) == []
+
+
+def test_export_preserves_the_git_error_for_an_unknown_revision(
+    repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scratch = tmp_path / "temporary"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+    destination = tmp_path / "exported"
+    with pytest.raises(
+        processes.ProcessError, match="failed with status 128"
+    ) as caught:
+        build.export(repository, "nonexistent-revision", destination)
+    assert "not a valid object name" in str(caught.value)
+    assert destination.is_dir()
+    assert list(destination.iterdir()) == []
+    assert list(scratch.iterdir()) == []
+
+
+def test_build_reports_export_failure_and_cleans_its_workspace(
+    repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scratch = tmp_path / "temporary"
+    scratch.mkdir()
+    monkeypatch.setenv("TMPDIR", str(scratch))
+    unsafe = r"bad\name"
+    (repository / unsafe).write_bytes(b"unsafe")
+    git(repository, "add", ".")
+    git(repository, "commit", "-qm", "repository: add an unsupported filename")
+    out = tmp_path / "dist"
+
+    result = release(repository, "build", "--out", str(out))
+
+    assert result.returncode == 1
+    assert result.stdout == b""
+    assert result.stderr == f"Error: unsafe archive member {unsafe!r}\n".encode()
+    assert not out.exists()
+    assert list(scratch.iterdir()) == []
+    assert git(repository, "status", "--porcelain") == ""
 
 
 def test_build_prepares_the_readme_inside_the_export_only(repository: Path) -> None:
