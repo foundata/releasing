@@ -9,6 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [1.0.2] - 2026-09-20
+
 ### Added
 
 - `releasing.artifacts.dump_manifest()` accepts `extra` top-level keys, so a
@@ -37,6 +42,7 @@ and this project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v1.0.1...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/foundata/releasing/releases/tag/v1.0.2
 [1.0.1]: https://github.com/foundata/releasing/releases/tag/v1.0.1
 [1.0.0]: https://github.com/foundata/releasing/releases/tag/v1.0.0
