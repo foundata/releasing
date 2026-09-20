@@ -184,6 +184,171 @@ differs from its recorded commit is identified in the manifest rather than
 presented as committed content. Changes in corpus membership require updating
 the coverage assertion.
 
+## Releases
+
+A release of this package consists of:
+
+- one Semantic Versioning `X.Y.Z` version
+- one annotated `vX.Y.Z` Git tag
+- one GitHub release for that tag
+- the source distribution and the wheel published on PyPI for that version.
+
+The maintainer performing a release needs an authenticated `gh` installation,
+an authorized PyPI publishing identity and push access to `origin`.
+
+The package releases itself: every `release` command below runs this working
+tree's own code through its editable install, so a defect in the release path
+shows up here before it reaches a consumer. The declaration is the
+`[tool.releasing]` table in `pyproject.toml`; it names the repository only,
+because the version lives in `pyproject.toml` alone and `releasing.__version__`
+reads it from the installed distribution metadata. There is no second version
+site to edit.
+
+Release only a clean, committed revision. `../dist-${version}` below is outside
+the repository on purpose: build output is never tracked and never left beside
+the sources.
+
+1. **Run the checks and decide the version.** Everything under "Setup and
+   checks" and "Shell checks" must pass on all supported Python versions
+   before a release starts.
+
+   ```sh
+   version="<FIXME version>" # major.minor.patch
+
+   git status --short
+   uv run --frozen release config check
+   uv run --frozen release version check
+   uv run --frozen release changelog check
+   ```
+
+   Follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) against
+   what consumers depend on: the command surface, the exit statuses, the
+   manifest format and the release declaration. A check that starts rejecting
+   input it used to accept is a major version, even when the rejection is the
+   fix.
+
+2. **Move the version and the changelog to the new release.**
+
+   ```sh
+   uv run --frozen release version bump "${version}"
+   uv run --frozen release changelog release "${version}"
+
+   uv run --frozen release version check --expect "${version}"
+   uv run --frozen release changelog check
+   ```
+
+   `version bump` rewrites the version in [`pyproject.toml`](./pyproject.toml)
+   and runs `uv lock`, so the lockfile records it too. `changelog release`
+   turns the entries under `Unreleased` in [`CHANGELOG.md`](./CHANGELOG.md)
+   into a dated section and updates the comparison links at the end of the
+   file.
+
+   Then review the documentation the release changes: the command list in
+   [`README.md`](./README.md), the page under `docs/` for each new or changed
+   command, and this procedure when it moved.
+
+3. **Review and commit the release preparation.** The tag will name this
+   commit.
+
+   ```sh
+   git diff --check
+   git diff
+   git add --all
+   git commit -m "release: prepare ${version}"
+
+   revision="$(git rev-parse --verify HEAD)"
+   git status --short # must print nothing
+   ```
+
+4. **Build from the committed revision.**
+
+   ```sh
+   uv run --frozen release build --out "../dist-${version}" --expect "${version}"
+   ```
+
+   The build exports the commit with `git archive` and prepares `README.md`
+   inside that export, so the committed README keeps the relative links that
+   work on GitHub and the working tree is never modified. The source
+   distribution is built from the export and the wheel from that source
+   distribution; both are checked, and their SHA-256 digests are recorded in
+   `artifacts.json`. The destination must not exist beforehand, so a repeat
+   needs the previous directory deleted or a new path.
+
+5. **Tag the revision that was built, then publish branch and tag.**
+
+   ```sh
+   test "$(git rev-parse --verify HEAD)" = "${revision}"
+
+   uv run --frozen release tag create "${version}"
+   git show "v${version}"
+   uv run --frozen release push "${version}"
+   ```
+
+   `tag create` refuses a dirty working tree, or a version that the
+   declaration, the lockfile and the changelog do not all state. `push` sends
+   the branch first and the tag second, and refuses when the branch does not
+   contain the tagged commit.
+
+   While no GitHub release exists, a tag that named the wrong revision can
+   still be removed and the procedure restarted from step 3:
+
+   ```sh
+   uv run --frozen release tag delete "${version}"
+   ```
+
+6. **Publish the validated files to PyPI.** Keep a token out of shell history
+   and process arguments:
+
+   ```sh
+   printf 'PyPI API token: '
+   read -rs UV_PUBLISH_TOKEN
+   printf '\n'
+   export UV_PUBLISH_TOKEN
+
+   uv run --frozen release publish "../dist-${version}/artifacts.json"
+
+   unset UV_PUBLISH_TOKEN
+   ```
+
+   `publish` re-checks every digest against the bytes on disk and uploads
+   exactly the files the manifest names, so an unvalidated file beside them is
+   a refusal rather than an extra upload. A version can be uploaded only once.
+   A broken release cannot be replaced, only
+   [yanked](https://pypi.org/help/#yanked), and the fix needs a new version.
+
+7. **Create the GitHub release.**
+
+   ```sh
+   uv run --frozen release forge release-create "${version}" \
+     --manifest "../dist-${version}/artifacts.json"
+   ```
+
+   The notes are the changelog section for the version and the attached files
+   are the ones already published, both taken from sources that cannot drift
+   from what was validated. The write goes through `gh`, which owns the
+   authenticated session.
+
+8. **Verify what PyPI and GitHub now serve.**
+
+   ```sh
+   uv run --frozen release verify "../dist-${version}/artifacts.json" \
+     --version "${version}"
+
+   uv run --frozen release status "${version}" \
+     --manifest "../dist-${version}/artifacts.json"
+   ```
+
+   `verify` answers three questions: does PyPI serve files for this version
+   whose digests match the manifest, does an isolated install of that version
+   report it, and does GitHub report the tag as the latest release. `status`
+   reports the same release as six separate steps and exits non-zero while any
+   of them is unfinished, which is also how to resume after an interruption at
+   any point above.
+
+Consuming projects pin `releasing` in a development dependency group and pick
+the new version up with `uv lock --upgrade-package releasing`. A major version
+additionally needs their declared upper bound raised by hand.
+
 ## Licensing and commits
 
 New Python files use the foundata copyright and `GPL-3.0-or-later` SPDX headers.

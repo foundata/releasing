@@ -100,7 +100,8 @@ generated output.
 
 ## Releasing this package
 
-`releasing` releases itself with its own commands; see
+`releasing` releases itself with its own commands. The procedure is in the
+[development guide](./DEVELOPMENT.md#releases); the recipe it follows is
 [Releasing a Python package](./docs/python-packages.md). The declaration is
 the `[tool.releasing]` table in `pyproject.toml`.
 
