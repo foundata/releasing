@@ -17,6 +17,7 @@ from typing import cast
 from urllib.parse import quote
 
 from releasing import (
+    antsibull,
     artifacts,
     build,
     changelog,
@@ -425,9 +426,11 @@ def _run_changelog_check(args: argparse.Namespace) -> int:
 def _run_changelog_show(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
-        if loaded.changelog_format == "antsibull":
-            raise ValueError("antsibull-changelog owns this changelog; nothing to show")
-        body = changelog.show(_read(loaded.root / loaded.changelog), args.version)
+        body = (
+            antsibull.notes(loaded.root, args.version)
+            if loaded.changelog_format == "antsibull"
+            else changelog.show(_read(loaded.root / loaded.changelog), args.version)
+        )
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -612,6 +615,7 @@ _RELEASE_ERRORS = (
     publication.PushError,
     uploading.PublishError,
     forge_release.ForgeReleaseError,
+    antsibull.AntsibullError,
     verification.VerificationError,
     forge_api.ForgeError,
     processes.ProcessError,

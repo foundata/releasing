@@ -25,5 +25,9 @@ and none is read here.
 
 ## Collections
 
-`antsibull-changelog` owns a collection's changelog, and `changelog show` does
-not read that format. Supply the notes to `gh` directly for those projects.
+A collection's notes come from `changelogs/changelog.yaml`, rendered as
+Markdown with the section titles set in `changelogs/config.yaml`.
+`release changelog show` prints the same text.
+
+reStructuredText inline literals become Markdown code spans. Other markup is
+passed through unchanged.

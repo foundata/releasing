@@ -30,6 +30,9 @@ dependencies = [
   # excluded until its rule API has been reviewed.
   "markdown-it-py>=3.0,<5",
   "typing-extensions>=4.4",  # `override` backport for Python 3.11.
+  # Reads a collection's changelog data, which antsibull-changelog writes as
+  # YAML. Imported only when such a project is released.
+  "pyyaml>=6",
 ]
 
 # https://pypi.org/classifiers/
@@ -75,6 +78,7 @@ dev = [
   "pytest-cov>=6.2.1",
   "readme-renderer[md]>=44",
   "ruff>=0.12.11",
+  "types-pyyaml>=6",
   "rumdl>=0.2.66",
 ]
 

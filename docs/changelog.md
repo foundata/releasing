@@ -26,8 +26,9 @@ sections newest first, and at the end one link definition per version plus
 Edits are line based; nothing else in the file is reformatted, and headings
 inside fenced code blocks are ignored. The link URLs come from the declared
 forge and repository. For `changelog = "antsibull"`, antsibull-changelog owns
-the file: `release` runs `antsibull-changelog release`, and `check --version`
-confirms the version is recorded in `changelogs/changelog.yaml`.
+the file: `release` runs `antsibull-changelog release`, `check --version`
+confirms the version is recorded in `changelogs/changelog.yaml`, and `show`
+renders that version's changes as Markdown.
 
 ## `release changelog check [--version X.Y.Z]`
 

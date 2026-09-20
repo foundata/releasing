@@ -20,6 +20,8 @@ and this project adheres to
 - `release forge release-create X.Y.Z` creates the forge's release entry from
   the changelog section and the manifest's files, through the forge's own
   command-line tool.
+- `release changelog show` and the forge release entry render a collection's
+  notes from `changelogs/changelog.yaml`, which antsibull-changelog owns.
 
 ### Fixed
 

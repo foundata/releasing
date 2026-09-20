@@ -128,14 +128,39 @@ def test_an_unknown_forge_is_refused(project: ReleaseConfig) -> None:
         forge_release.plan(project.root, project, other, "1.0.0")
 
 
-def test_an_antsibull_changelog_is_refused(project: ReleaseConfig) -> None:
+def test_a_collection_takes_its_notes_from_the_collection_changelog(
+    project: ReleaseConfig,
+) -> None:
+    (project.root / "changelogs").mkdir()
+    (project.root / "changelogs" / "changelog.yaml").write_text(
+        "releases:\n  1.0.0:\n    changes:\n      bugfixes:\n"
+        "        - 'The thing that was broken.'\n",
+        encoding="utf-8",
+    )
     collection = ReleaseConfig(
         root=project.root,
         source=project.source,
         repository="foundata/example",
         changelog="antsibull",
     )
-    with pytest.raises(forge_release.ForgeReleaseError, match="antsibull-changelog"):
+    prepared = forge_release.plan(project.root, collection, FORGE, "1.0.0")
+    assert prepared.notes == "### Bugfixes\n\n- The thing that was broken.\n"
+
+
+def test_a_collection_without_that_version_is_refused(
+    project: ReleaseConfig,
+) -> None:
+    (project.root / "changelogs").mkdir()
+    (project.root / "changelogs" / "changelog.yaml").write_text(
+        "releases: {}\n", encoding="utf-8"
+    )
+    collection = ReleaseConfig(
+        root=project.root,
+        source=project.source,
+        repository="foundata/example",
+        changelog="antsibull",
+    )
+    with pytest.raises(forge_release.ForgeReleaseError, match=r"no release 1\.0\.0"):
         forge_release.plan(project.root, collection, FORGE, "1.0.0")
 
 

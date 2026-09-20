@@ -12,7 +12,7 @@ credential that can write to a repository.
 from dataclasses import dataclass
 from pathlib import Path
 
-from releasing import artifacts, changelog, forge_api, processes
+from releasing import antsibull, artifacts, changelog, forge_api, processes
 from releasing.artifacts import Manifest
 from releasing.config import ReleaseConfig
 from releasing.forges import Forge
@@ -111,9 +111,10 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> list
 
 def _notes(root: Path, config: ReleaseConfig, version_string: str) -> str:
     if config.changelog_format == "antsibull":
-        raise ForgeReleaseError(
-            "antsibull-changelog owns this changelog; supply --notes-file yourself"
-        )
+        try:
+            return antsibull.notes(root, version_string)
+        except antsibull.AntsibullError as exc:
+            raise ForgeReleaseError(str(exc)) from exc
     path = root / config.changelog
     try:
         text = path.read_text(encoding="utf-8")
