@@ -1,13 +1,19 @@
 # releasing
 
-Release helpers for projects that publish from a Git-tracked source tree. The
-`release` command covers the error-prone steps around a release: preparing
-repository Markdown for package indexes, and, as the package grows, version
-sites, changelogs, artifacts, tags and post-publish verification. Each step is
-one subcommand; the order of steps stays in each project's own procedure.
+Release helpers for projects that publish from a Git-tracked source tree.
 
-The package is under development towards its first release, `1.0.0`, and is
-not on PyPI yet.
+> **Important:** This tooling is built for foundata's release process(es). You
+> are welcome to use it but Pull Requests to adapt our toolset to different
+> release policies or processes are out of scope.
+
+Components and tools:
+
+- `release`: command that covers the error-prone steps around a release:
+  preparing repository Markdown for package indexes, and, as the package grows,
+  version sites, changelogs, artifacts, tags and post-publish verification. Each
+  step is one subcommand; the order of steps stays in each project's own
+  procedure.
+
 
 
 ## Installation

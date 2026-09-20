@@ -12,7 +12,7 @@ another program.
 
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from releasing.forges import Forge
 from releasing.version import is_prerelease, is_version
@@ -185,7 +185,7 @@ def release(
             f"{version} is not newer than the latest release {released[0].label}"
         )
     tag = tag_format.format(version=version)
-    day = (when or date.today()).isoformat()
+    day = (when or datetime.now().astimezone().date()).isoformat()
     gap = _trailing_blank_lines(unreleased.body) or 2
     lines = list(changelog.lines)
     heading = unreleased.line - 1

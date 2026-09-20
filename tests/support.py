@@ -3,8 +3,9 @@
 
 from pathlib import Path
 
-from releasing import markdown as TRANSFORMER
+from releasing import markdown
 
+TRANSFORMER = markdown
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 RAW = "https://raw.example/repo/ref"

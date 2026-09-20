@@ -4,8 +4,15 @@
 [project]
 name = "releasing"
 version = "1.0.0.dev0"
-description = "Prepare, check and verify software releases: version sites, changelogs, package-index Markdown, artifacts and tags."
-keywords = ["release", "packaging", "pypi", "changelog", "markdown", "versioning"]
+description = "Release helpers for projects that publish from a Git-tracked source tree"
+keywords = [
+  "release",
+  "packaging",
+  "pypi",
+  "changelog",
+  "markdown",
+  "versioning"
+]
 license = "GPL-3.0-or-later"
 license-files = ["LICENSES/*.txt"]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -27,11 +34,15 @@ dependencies = [
 
 # https://pypi.org/classifiers/
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
+
+  # Indication for whom the project is for
   "Environment :: Console",
   "Intended Audience :: Developers",
   "Topic :: Software Development :: Build Tools",
   "Topic :: System :: Software Distribution",
+
+  # Supported Python versions
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.11",
@@ -44,9 +55,11 @@ classifiers = [
 release = "releasing.cli:main"
 
 [project.urls]
-Repository = "https://github.com/foundata/releasing"
-Issues = "https://github.com/foundata/releasing/issues"
-Changelog = "https://github.com/foundata/releasing/blob/main/CHANGELOG.md"
+Homepage = "https://foundata.com/en/projects/releasing/"
+Documentation = "https://foundata.com/en/projects/releasing/#doc"
+Repository = "https://foundata.com/en/projects/releasing/#source"
+Issues = "https://foundata.com/en/projects/releasing/#issues"
+Changelog = "https://foundata.com/en/projects/releasing/#changelog"
 
 [tool.releasing]
 repository = "foundata/releasing"
@@ -69,24 +82,48 @@ line-length = 88
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "B", "C4", "UP", "RUF", "A", "D"]
+# https://docs.astral.sh/ruff/settings/#lint_select
+select = [
+  "E4",  # pycodestyle import errors
+  "E7",  # pycodestyle statement errors
+  "E9",  # pycodestyle runtime errors
+  "F",   # Pyflakes
+  "I",   # import sorting
+  "B",   # flake8-bugbear
+  "C4",  # flake8-comprehensions
+  "UP",  # pyupgrade
+  "RUF", # Ruff-specific rules
+  "A",   # flake8-builtins: no shadowing of Python builtins
+  "D",   # pydocstyle: docstrings on public modules, classes and functions
+  "DTZ", # flake8-datetimez: timezone-aware datetime handling only
+  "G",   # flake8-logging-format: lazy logging arguments, no eager formatting
+  "LOG", # flake8-logging: correct use of the logging module
+  "N",   # pep8-naming: PEP 8 naming conventions
+  "PTH", # flake8-use-pathlib: pathlib instead of os.path
+]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["D"]
+"tests/**/*.py" = [
+  "D", # tests need no docstrings; their names describe the behavior
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.format]
-docstring-code-format = true
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
 line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = 88
 
 [tool.mypy]
 files = ["src", "tests"]
 python_version = "3.11"
 strict = true
-enable_error_code = ["explicit-override"]
-warn_unreachable = true
+enable_error_code = ["explicit-override"] # Extends strict mode.
+warn_unreachable = true                   # Extends strict mode.
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
@@ -94,3 +131,12 @@ filterwarnings = ["error"]
 strict = true
 testpaths = ["tests"]
 markers = ["integration: local subprocess and renderer checks; no network"]
+
+[tool.coverage.run]
+branch = true
+source = ["releasing"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true

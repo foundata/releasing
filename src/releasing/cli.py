@@ -96,7 +96,7 @@ def _write(path: Path, data: bytes, mode: int) -> None:
             stream.flush()
             os.fchmod(stream.fileno(), mode)
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        temporary.replace(path)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
