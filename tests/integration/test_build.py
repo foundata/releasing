@@ -85,6 +85,22 @@ def release(cwd: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:
     )
 
 
+@pytest.mark.parametrize("module", ["_source_export", "tag"])
+def test_source_export_and_tag_do_not_import_the_build_step(module: str) -> None:
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            f"import releasing.{module}; import sys; "
+            "assert 'releasing.build' not in sys.modules",
+        ],
+        capture_output=True,
+        timeout=30,
+        check=True,
+    )
+
+
 @pytest.fixture
 def repository(tmp_path: Path) -> Path:
     if shutil.which("uv") is None:

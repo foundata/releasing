@@ -12,22 +12,19 @@ can be published and later compared with what the index serves.
 """
 
 import shutil
-import tarfile
 import tempfile
 import tomllib
 from collections.abc import Sequence
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from releasing import artifacts, changelog, markdown, processes, version
+from releasing._source_export import BuildError as BuildError
+from releasing._source_export import export as export
 from releasing.config import ReleaseConfig, load_release_config
 from releasing.forges import Forge, forge_for
 
 MANIFEST = "artifacts.json"
-
-
-class BuildError(RuntimeError):
-    """The revision cannot be exported, prepared or built."""
 
 
 @dataclass(frozen=True)
@@ -70,26 +67,6 @@ def local_path_sources(root: Path, config: ReleaseConfig) -> list[str]:
             if isinstance(entry, dict) and isinstance(entry.get("path"), str)
         )
     return found
-
-
-def export(root: Path, revision: str, destination: Path) -> None:
-    """Extract ``revision`` of the repository at ``root`` into ``destination``."""
-    destination.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="releasing-export-") as value:
-        archive = Path(value) / "source.tar"
-        processes.git(root, "archive", "--format=tar", revision, stdout=archive)
-        try:
-            with tarfile.open(archive, mode="r:") as stream:
-                members = stream.getmembers()
-                for member in members:
-                    _safe_member(member.name)
-                    if member.issym() or member.islnk():
-                        continue
-                    if not (member.isfile() or member.isdir()):
-                        raise BuildError(f"unsupported archive member {member.name}")
-                stream.extractall(destination, members=members, filter="tar")
-        except (OSError, tarfile.TarError) as exc:
-            raise BuildError(f"cannot extract the exported revision: {exc}") from exc
 
 
 def prepare_readmes(
@@ -311,14 +288,3 @@ def _one(directory: Path, pattern: str) -> Path:
     if len(matches) != 1:
         raise BuildError(f"expected exactly one {pattern}, found {len(matches)}")
     return matches[0]
-
-
-def _safe_member(name: str) -> None:
-    member = PurePosixPath(name)
-    if (
-        "\x00" in name
-        or "\\" in name
-        or member.is_absolute()
-        or any(part in {"", ".", ".."} for part in member.parts)
-    ):
-        raise BuildError(f"unsafe archive member {name!r}")

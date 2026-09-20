@@ -9,8 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from releasing import processes
+from releasing import _source_export, processes
 from releasing.build import BuildError, export
+
+
+def test_build_reexports_the_shared_export_interface() -> None:
+    assert export is _source_export.export
+    assert BuildError is _source_export.BuildError
 
 
 def test_build_error_preserves_its_public_exception_identity() -> None:

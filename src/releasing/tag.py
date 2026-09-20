@@ -13,7 +13,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from releasing import build, changelog, forge_api, processes, version
+from releasing import _source_export, changelog, forge_api, processes, version
 from releasing.config import ReleaseConfig, load_release_config
 from releasing.forges import Forge, forge_for
 
@@ -102,7 +102,7 @@ def create(
 def _check_revision(root: Path, revision: str, expected: str) -> str:
     with tempfile.TemporaryDirectory(prefix="releasing-tag-") as value:
         exported = Path(value)
-        build.export(root, revision, exported)
+        _source_export.export(root, revision, exported)
         config = load_release_config(exported)
         found = version.check(exported, config, expect=expected)
         path = exported / (
