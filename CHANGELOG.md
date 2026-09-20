@@ -9,7 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Added
+
+- `release tag create X.Y.Z --manifest PATH` refuses to tag a revision the
+  manifest's artifacts were not built from, which no other check can notice
+  once the working tree is clean again.
 
 
 ## [2.1.0] - 2026-09-20

@@ -632,6 +632,11 @@ def _run_tag_create(args: argparse.Namespace) -> int:
             forges.forge_for(loaded),
             args.version,
             revision=args.revision,
+            manifest=(
+                None
+                if args.manifest is None
+                else artifacts.load_manifest(cast(Path, args.manifest))
+            ),
             offline=args.offline,
         )
     except _RELEASE_ERRORS as exc:
@@ -1036,6 +1041,11 @@ def build_parser() -> argparse.ArgumentParser:
     _add_tag_arguments(tag_create)
     tag_create.add_argument(
         "--revision", default="HEAD", metavar="REV", help="what to tag (default: HEAD)"
+    )
+    tag_create.add_argument(
+        "--manifest",
+        type=Path,
+        help="refuse unless the revision is the one these artifacts were built from",
     )
     tag_create.set_defaults(run=_run_tag_create)
     tag_check = tag_commands.add_parser(

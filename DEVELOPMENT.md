@@ -282,15 +282,15 @@ keeping once step 8 passes.
 5. **Tag the revision that was built, then publish branch and tag.**
 
    ```sh
-   test "$(git rev-parse --verify HEAD)" = "${revision}"
-
-   uv run --frozen release tag create "${version}"
+   uv run --frozen release tag create "${version}" \
+     --manifest "${dist}/artifacts.json"
    git show "v${version}"
    uv run --frozen release push "${version}"
    ```
 
-   `tag create` refuses a dirty working tree, or a version that the
-   declaration, the lockfile and the changelog do not all state. `push` sends
+   `tag create` refuses a dirty working tree, a version that the declaration,
+   the lockfile and the changelog do not all state, or a revision other than
+   the one the manifest's artifacts were built from. `push` sends
    the branch first and the tag second, and refuses when the branch does not
    contain the tagged commit.
 

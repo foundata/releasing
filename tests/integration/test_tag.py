@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import json
 import os
 import subprocess
 import sys
@@ -284,3 +285,86 @@ def test_delete_refuses_while_the_remote_still_has_the_tag_pushed(
     missing = release(repository, "tag", "delete", "1.0.0", "--offline")
     assert missing.returncode == 1
     assert b"exists neither locally nor on the remote" in missing.stderr
+
+
+def manifest(path: Path, *, revision: str, version: str = "1.0.0") -> Path:
+    document = {
+        "repository": "foundata/example",
+        "version": version,
+        "sourceRevision": revision,
+        "artifacts": [{"filename": f"example-{version}.tar.gz", "sha256": "a" * 64}],
+    }
+    path.write_text(json.dumps(document), encoding="utf-8")
+    return path
+
+
+def test_create_accepts_the_revision_the_artifacts_were_built_from(
+    repository: Path, tmp_path: Path
+) -> None:
+    built = git(repository, "rev-parse", "--verify", "HEAD").strip()
+    path = manifest(tmp_path / "artifacts.json", revision=built)
+
+    result = release(
+        repository, "tag", "create", "1.0.0", "--manifest", str(path), "--offline"
+    )
+
+    assert (result.returncode, result.stdout) == (0, b"v1.0.0\n"), result.stderr
+    assert git(repository, "rev-parse", "v1.0.0^{commit}").strip() == built
+
+
+def test_create_refuses_a_commit_made_after_the_build(
+    repository: Path, tmp_path: Path
+) -> None:
+    built = git(repository, "rev-parse", "--verify", "HEAD").strip()
+    path = manifest(tmp_path / "artifacts.json", revision=built)
+    # The tree stays clean and every version site keeps stating 1.0.0, so
+    # nothing but the manifest can tell that the artifacts predate this commit.
+    (repository / "README.md").write_text("# Example\n\nMore.\n", encoding="utf-8")
+    git(repository, "commit", "-qam", "readme: expand the description")
+
+    result = release(
+        repository, "tag", "create", "1.0.0", "--manifest", str(path), "--offline"
+    )
+
+    assert result.returncode == 1
+    assert b"artifacts were built from " + built[:12].encode() in result.stderr
+    assert git(repository, "tag", "--list") == ""
+    assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
+
+
+def test_create_refuses_a_manifest_that_cannot_answer_the_question(
+    repository: Path, tmp_path: Path
+) -> None:
+    path = tmp_path / "artifacts.json"
+    path.write_text(
+        json.dumps(
+            {
+                "version": "1.0.0",
+                "artifacts": [{"filename": "example-1.0.0.tar.gz", "sha256": "a" * 64}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = release(
+        repository, "tag", "create", "1.0.0", "--manifest", str(path), "--offline"
+    )
+
+    assert result.returncode == 1
+    assert b"records no source revision" in result.stderr
+    assert git(repository, "tag", "--list") == ""
+
+
+def test_create_refuses_another_version_s_manifest(
+    repository: Path, tmp_path: Path
+) -> None:
+    built = git(repository, "rev-parse", "--verify", "HEAD").strip()
+    path = manifest(tmp_path / "artifacts.json", revision=built, version="0.9.0")
+
+    result = release(
+        repository, "tag", "create", "1.0.0", "--manifest", str(path), "--offline"
+    )
+
+    assert result.returncode == 1
+    assert b"manifest records version 0.9.0" in result.stderr
+    assert git(repository, "tag", "--list") == ""

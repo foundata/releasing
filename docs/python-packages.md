@@ -36,7 +36,8 @@ git status --short
 uv run release build --out "../dist-${version}" --expect "${version}"
 
 # 4. Tag the revision that was built, then publish branch and tag together.
-uv run release tag create "${version}"
+uv run release tag create "${version}" \
+  --manifest "../dist-${version}/artifacts.json"
 uv run release push "${version}"
 
 # 5. Publish exactly the files that were validated.
@@ -65,10 +66,15 @@ means the artifacts cannot contain an uncommitted file, and the README
 preparation happens inside the export, so the committed README keeps the
 relative links that work on the forge.
 
-Tagging after the build means a build that fails leaves no tag to delete. While
-no forge release exists, `release tag delete` can still remove a tag that named
-the wrong revision; after the release is created, the version is spent and the
-fix needs a new one.
+Tagging after the build means a build that fails leaves no tag to delete.
+Passing the manifest to `tag create` closes the window between the two: a
+commit made in it leaves the tree clean and the version sites correct, so only
+the manifest's source revision can tell that the tag would name something no
+artifact came from.
+
+While no forge release exists, `release tag delete` can still remove a tag
+that named the wrong revision; after the release is created, the version is
+spent and the fix needs a new one.
 
 A version can be uploaded to PyPI only once. A broken release cannot be
 replaced, only [yanked](https://pypi.org/help/#yanked), so step 5 uploads the

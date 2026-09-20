@@ -13,7 +13,19 @@ Creates the annotated tag, by default `vX.Y.Z` with the message
   a committed state;
 - a version site, the lockfile, a lockstep pin or the changelog disagrees with
   the version;
-- the tag already exists locally or on the remote.
+- the tag already exists locally or on the remote;
+- with `--manifest`, the revision is not the one those artifacts were built
+  from.
+
+`--manifest` takes the manifest `release build` wrote and refuses a tag for a
+revision nothing validated. A commit made between the build and the tag leaves
+the working tree clean and every version site correct, so no other check
+notices it. The manifest must also record the version being tagged, and one
+without a source revision is refused rather than accepted.
+
+```sh
+release tag create "${version}" --manifest "${dist}/artifacts.json"
+```
 
 `--revision` tags something other than `HEAD`. The version and changelog
 checks read that committed revision's declaration and files in a temporary

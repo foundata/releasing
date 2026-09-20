@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from releasing import _source_export, changelog, forge_api, processes, version
+from releasing.artifacts import Manifest
 from releasing.config import ReleaseConfig, load_release_config
 from releasing.forges import Forge, forge_for
 
@@ -89,13 +90,16 @@ def create(
     version_string: str,
     *,
     revision: str = "HEAD",
+    manifest: Manifest | None = None,
     offline: bool = False,
 ) -> str:
     """Create the annotated release tag for ``version_string`` under guard.
 
     The working tree must be clean. The selected revision's declaration,
     version sites, lockfile, pins and changelog must agree with the version,
-    and the tag must exist neither locally nor on the remote.
+    and the tag must exist neither locally nor on the remote. With a
+    ``manifest``, the revision must also be the one its artifacts were built
+    from.
     """
     tag = config.tag(version_string)
     status = processes.git(root, "status", "--porcelain", "--untracked-files=all")
@@ -107,6 +111,8 @@ def create(
     target = processes.git(
         root, "rev-parse", "--verify", f"{revision}^{{commit}}"
     ).strip()
+    if manifest is not None:
+        check_built_revision(manifest, target, version_string)
     found = check_revision(root, target, version_string)
     current = state(root, config, forge, tag, offline=offline)
     if current.revision is not None:
@@ -115,6 +121,31 @@ def create(
         raise TagError(f"tag {tag} already exists on the remote")
     processes.git(root, "tag", "-a", tag, target, "-m", config.tag_message_for(found))
     return tag
+
+
+def check_built_revision(manifest: Manifest, revision: str, expected: str) -> str:
+    """Return the revision a manifest was built from, or raise TagError.
+
+    A commit made between the build and the tag leaves the working tree clean
+    and every version site correct, so nothing else in ``create`` can tell that
+    the tag would name a revision no artifact came from.
+    """
+    if manifest.version and manifest.version != expected:
+        raise TagError(
+            f"the manifest records version {manifest.version}, not {expected}"
+        )
+    if manifest.source_revision is None:
+        raise TagError(
+            "the manifest records no source revision, so it cannot say which "
+            "revision was built"
+        )
+    if manifest.source_revision != revision:
+        raise TagError(
+            f"the artifacts were built from {manifest.source_revision[:12]}, but "
+            f"the revision to tag is {revision[:12]}; tag the revision that was "
+            "built, or build the one you mean to tag"
+        )
+    return manifest.source_revision
 
 
 def check_revision(root: Path, revision: str, expected: str) -> str:
