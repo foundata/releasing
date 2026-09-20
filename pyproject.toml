@@ -72,6 +72,7 @@ build-backend = "uv_build"
 dev = [
   "mypy>=1.17.1",
   "pytest>=9.0",
+  "pytest-cov>=6.2.1",
   "readme-renderer[md]>=44",
   "ruff>=0.12.11",
   "rumdl>=0.2.66",
@@ -132,11 +133,24 @@ strict = true
 testpaths = ["tests"]
 markers = ["integration: local subprocess and renderer checks; no network"]
 
+# Coverage is measured only for the modules whose tests exercise them in this
+# process. The command-line layer and everything that drives Git, uv or a forge
+# is tested by running the real command in a subprocess, which coverage cannot
+# observe; counting those files would report a number that says nothing about
+# how well they are tested. See DEVELOPMENT.md.
 [tool.coverage.run]
 branch = true
-source = ["releasing"]
+source = ["src/releasing"]
+omit = [
+  "src/releasing/__main__.py",
+  "src/releasing/build.py",
+  "src/releasing/cli.py",
+  "src/releasing/processes.py",
+  "src/releasing/tag.py",
+  "src/releasing/verify.py",
+]
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 90
 show_missing = true
 skip_covered = true

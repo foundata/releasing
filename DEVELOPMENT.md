@@ -15,6 +15,7 @@ uv run --frozen ruff format --check .
 uv run --frozen ruff check .
 uv run --frozen mypy
 uv run --frozen python tests/check_markdown.py
+uv run --frozen pytest --cov --cov-report=term-missing
 uv run --frozen --python 3.11 pytest
 uv run --frozen --python 3.12 pytest
 uv run --frozen --python 3.13 pytest
@@ -87,6 +88,27 @@ release; run it against the oldest and newest supported parser after changing
 the range, then update the lockfile explicitly with `uv lock`. The
 development-only `readme-renderer[md]` dependency supplies an independent
 publishing renderer. Twine is neither required nor installed.
+
+## Coverage
+
+```sh
+uv run --frozen pytest --cov --cov-report=term-missing
+```
+
+Coverage is measured only for the modules whose tests exercise them in the same
+process, and the threshold is 90%. The command-line layer and everything that
+drives Git, uv or a forge is tested by running the real command in a
+subprocess, which coverage cannot observe: `build.py` reports 17% although
+`tests/integration/test_build.py` performs real exports, real builds and real
+manifest checks. Counting those files would produce a number that says nothing
+about how well they are tested, and a threshold on it would reward replacing
+end-to-end tests with weaker in-process ones. `pyproject.toml` lists the
+excluded files.
+
+Measuring the subprocesses is possible in principle, with coverage's parallel
+mode and its start-up hook, but the child processes then write `.coverage`
+files into the trees under test, which breaks the assertions that a build
+leaves the working tree untouched. That trade is not worth a metric.
 
 ## Test layout
 
