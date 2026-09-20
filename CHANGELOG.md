@@ -9,7 +9,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [1.0.0] - 2026-09-20
+
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v0.0.0-dev...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/foundata/releasing/releases/tag/v1.0.0
