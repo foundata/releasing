@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from releasing import cli
-from tests.support import ROOT
+from tests.support import POSIX_ONLY, ROOT, captured
 
 pytestmark = pytest.mark.integration
 BASE = ["-o", "foundata", "-r", "example"]
@@ -64,6 +64,7 @@ def test_stdout_is_only_markdown_and_never_changes_input(
     assert snapshot(path) == before
 
 
+@POSIX_ONLY
 def test_separate_file_output_preserves_existing_destination_permissions(
     tmp_path: Path,
 ) -> None:
@@ -80,6 +81,7 @@ def test_separate_file_output_preserves_existing_destination_permissions(
     assert not list(tmp_path.glob(".prepared.md.*"))
 
 
+@POSIX_ONLY
 def test_in_place_preserves_permissions_and_is_noop_on_second_run(
     tmp_path: Path,
 ) -> None:
@@ -178,6 +180,8 @@ def test_out_of_place_refuses_aliases_of_input(
     elif alias == "hardlink":
         output.hardlink_to(path)
     else:
+        if sys.platform == "win32":
+            pytest.skip("symbolic links need privileges on Windows")
         output.symlink_to(path)
     result = invoke(
         tmp_path,
@@ -192,6 +196,7 @@ def test_out_of_place_refuses_aliases_of_input(
     assert path.read_bytes() == b"[guide](./docs.md#start)\n"
 
 
+@POSIX_ONLY
 def test_in_place_refuses_symlink(tmp_path: Path) -> None:
     path = source(tmp_path)
     alias = tmp_path / "alias.md"
@@ -265,6 +270,7 @@ def test_failed_atomic_replace_cleans_temporary_output(
     ]
 
 
+@POSIX_ONLY
 def test_fifo_input_is_rejected_without_reading(tmp_path: Path) -> None:
     path = tmp_path / "input.md"
     os.mkfifo(path)
@@ -354,7 +360,7 @@ def test_dry_run_unchanged_file_is_successful(tmp_path: Path) -> None:
     result = invoke(tmp_path, *BASE, "--dry-run", str(path))
     assert result.returncode == 0
     assert result.stdout == b""
-    assert result.stderr == f"Unchanged: {path}\n".encode()
+    assert captured(result.stderr) == f"Unchanged: {path}\n"
     assert snapshot(path) == before
 
 

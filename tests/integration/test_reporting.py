@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support import captured
+
 pytestmark = pytest.mark.integration
 GIT_ENV = {
     "GIT_CONFIG_NOSYSTEM": "1",
@@ -90,8 +92,8 @@ def test_the_story_goes_to_stderr_and_the_product_to_stdout(repository: Path) ->
 
     assert result.returncode == 0, result.stderr
     # The product: exactly what the command made, nothing else.
-    assert result.stdout == b"v1.0.0\n"
-    story = result.stderr.decode()
+    assert captured(result.stdout) == "v1.0.0\n"
+    story = captured(result.stderr)
     assert "» Verified the working tree is clean" in story
     assert "» Exporting " in story
     assert "$ git -C " in story
@@ -101,7 +103,7 @@ def test_the_story_goes_to_stderr_and_the_product_to_stdout(repository: Path) ->
 def test_an_echoed_command_names_the_program_not_its_path(repository: Path) -> None:
     # The line is for a reader and stays runnable: the program was found in
     # PATH, so its plain name is what belongs on screen.
-    story = release(repository, "tag", "create", "1.0.0", "--offline").stderr.decode()
+    story = captured(release(repository, "tag", "create", "1.0.0", "--offline").stderr)
 
     echoed = [line for line in story.splitlines() if line.startswith("$ ")]
     assert echoed, story
@@ -121,7 +123,7 @@ def test_quiet_keeps_the_product_and_drops_the_story(
     result = release(repository, *arguments)
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout == b"v1.0.0\n"
+    assert captured(result.stdout) == "v1.0.0\n"
     assert result.stderr == b""
 
 
@@ -189,9 +191,11 @@ def test_a_dry_run_changes_nothing(
 
 
 def test_a_dry_run_reports_what_it_would_run(repository: Path) -> None:
-    story = release(
-        repository, "build", "--out", "dist", "--expect", "1.0.0", "--dry-run"
-    ).stderr.decode()
+    story = captured(
+        release(
+            repository, "build", "--out", "dist", "--expect", "1.0.0", "--dry-run"
+        ).stderr
+    )
 
     assert "» Would run: uv build --sdist" in story
     # A dry run may not invent what it cannot know.
@@ -279,7 +283,7 @@ def test_tagging_refuses_a_commit_that_credits_a_tool(repository: Path) -> None:
 
     assert result.returncode == 1
     assert git(repository, "tag", "--list") == ""
-    story = result.stderr.decode()
+    story = captured(result.stderr)
     assert "would publish a tool attribution" in story
     assert "co-authored-by: Claude Opus 5 (1M context)" in story
     assert "--allow-tool-attribution" in story
@@ -293,7 +297,7 @@ def test_the_flag_publishes_it_anyway_and_says_so(repository: Path) -> None:
     )
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout == b"v1.0.0\n"
+    assert captured(result.stdout) == "v1.0.0\n"
     assert b"WARNING: publishing 1 tool attribution(s)" in result.stderr
     # The refusal that would have named it never appeared, so the bypass has to.
     assert b"co-authored-by: Claude Opus 5 (1M context)" in result.stderr
@@ -309,7 +313,7 @@ def test_pushing_checks_every_commit_it_would_send(repository: Path) -> None:
     result = release(repository, "push", "1.0.0")
 
     assert result.returncode == 1
-    assert "would publish a tool attribution" in result.stderr.decode()
+    assert "would publish a tool attribution" in captured(result.stderr)
     assert git(repository, "log", "--oneline", "origin/main..main").count("\n") == 2
 
 

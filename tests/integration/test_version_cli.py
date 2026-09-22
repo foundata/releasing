@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support import captured
+
 pytestmark = pytest.mark.integration
 CHANGELOG = """# Changelog
 
@@ -113,4 +115,4 @@ def test_version_bump_prints_diffs_and_refuses_dirty_sites(repository: Path) -> 
     assert result.returncode == 1
     assert b"latest released section must be [1.4.0]" in result.stderr
     assert release(repository, "changelog", "release", "1.4.0").returncode == 0
-    assert release(repository, "version", "check").stdout == b"1.4.0\n"
+    assert captured(release(repository, "version", "check").stdout) == "1.4.0\n"

@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support import captured
+
 pytestmark = pytest.mark.integration
 GIT_ENV = {
     "GIT_CONFIG_NOSYSTEM": "1",
@@ -89,7 +91,7 @@ def test_status_reports_progress_and_exits_non_zero_until_complete(
 ) -> None:
     result = release(repository, "status", "1.0.0", "--offline")
     assert result.returncode == 1
-    report = result.stdout.decode()
+    report = captured(result.stdout)
     assert "ok       changelog" in report
     assert "pending  tag            v1.0.0 does not exist locally" in report
     assert "unknown  index          not queried" in report
@@ -97,7 +99,7 @@ def test_status_reports_progress_and_exits_non_zero_until_complete(
     assert b"needs attention" not in result.stdout
 
     assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
-    report = release(repository, "status", "1.0.0", "--offline").stdout.decode()
+    report = captured(release(repository, "status", "1.0.0", "--offline").stdout)
     assert "ok       tag " in report
     # Offline says "not queried" rather than "pending": the remote was never
     # asked, which is not the same as knowing the tag is absent there.

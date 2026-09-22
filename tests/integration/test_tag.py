@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support import POSIX_ONLY, captured
+
 pytestmark = pytest.mark.integration
 GIT_ENV = {
     "GIT_CONFIG_NOSYSTEM": "1",
@@ -102,6 +104,7 @@ def test_create_check_and_delete_round_trip(repository: Path) -> None:
     assert git(repository, "tag", "--list") == ""
 
 
+@POSIX_ONLY
 def test_create_reports_export_failure_and_cleans_its_workspace(
     repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -117,7 +120,7 @@ def test_create_reports_export_failure_and_cleans_its_workspace(
 
     assert result.returncode == 1
     assert result.stdout == b""
-    assert result.stderr == f"Error: unsafe archive member {unsafe!r}\n".encode()
+    assert captured(result.stderr) == f"Error: unsafe archive member {unsafe!r}\n"
     assert list(scratch.iterdir()) == []
     assert git(repository, "tag", "--list") == ""
     assert git(repository, "status", "--porcelain") == ""

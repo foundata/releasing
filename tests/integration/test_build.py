@@ -14,6 +14,7 @@ import pytest
 
 from releasing import build, processes
 from releasing.artifacts import load_manifest, sha256_file
+from tests.support import POSIX_ONLY, captured
 
 pytestmark = pytest.mark.integration
 GIT_ENV = {
@@ -189,6 +190,7 @@ def test_export_preserves_the_git_error_for_an_unknown_revision(
     assert list(scratch.iterdir()) == []
 
 
+@POSIX_ONLY
 def test_build_reports_export_failure_and_cleans_its_workspace(
     repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -205,7 +207,7 @@ def test_build_reports_export_failure_and_cleans_its_workspace(
 
     assert result.returncode == 1
     assert result.stdout == b""
-    assert result.stderr == f"Error: unsafe archive member {unsafe!r}\n".encode()
+    assert captured(result.stderr) == f"Error: unsafe archive member {unsafe!r}\n"
     assert not out.exists()
     assert list(scratch.iterdir()) == []
     assert git(repository, "status", "--porcelain") == ""

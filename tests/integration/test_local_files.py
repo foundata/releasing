@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.support import FIXTURES, TRANSFORMER, prepare
+from tests.support import FIXTURES, POSIX_ONLY, TRANSFORMER, prepare
 
 pytestmark = pytest.mark.integration
 
@@ -113,6 +113,7 @@ def test_encoded_control_characters_and_backslashes_are_refused(
     assert prepare(source, strict=False) == source
 
 
+@POSIX_ONLY
 def test_internal_symlinks_are_accepted(tmp_path: Path) -> None:
     make_file(tmp_path, "docs/guide.md")
     (tmp_path / "guide.md").symlink_to("docs/guide.md")
@@ -123,6 +124,7 @@ def test_internal_symlinks_are_accepted(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("kind", ["outside", "broken", "loop"])
+@POSIX_ONLY
 def test_invalid_symlinks_are_refused(tmp_path: Path, kind: str) -> None:
     root = tmp_path / "repository"
     root.mkdir()
@@ -140,6 +142,7 @@ def test_invalid_symlinks_are_refused(tmp_path: Path, kind: str) -> None:
         assert "does not exist" in str(raised.value)
 
 
+@POSIX_ONLY
 def test_root_may_be_a_symlink_to_a_directory(tmp_path: Path) -> None:
     root = tmp_path / "repository"
     make_file(root, "guide.md")
@@ -167,6 +170,7 @@ def test_images_must_be_files_and_trailing_slashes_must_name_directories(
         TRANSFORMER.validate_local_files("[guide](docs/guide.md/)", repo_root=tmp_path)
 
 
+@POSIX_ONLY
 def test_special_files_are_refused_without_opening_them(tmp_path: Path) -> None:
     os.mkfifo(tmp_path / "pipe")
     with pytest.raises(ValueError, match="regular file or directory"):

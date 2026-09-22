@@ -11,6 +11,7 @@ import pytest
 
 from releasing import _source_export, processes
 from releasing.build import BuildError, export
+from tests.support import POSIX_ONLY
 
 
 def test_build_reexports_the_shared_export_interface() -> None:
@@ -67,6 +68,7 @@ def archive_git(
     return archives
 
 
+@POSIX_ONLY
 def test_export_preserves_files_links_and_the_caller_directory(
     tmp_path: Path, scratch: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

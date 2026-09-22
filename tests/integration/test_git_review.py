@@ -3,7 +3,6 @@
 
 import errno
 import os
-import pty
 import select
 import shlex
 import shutil
@@ -15,6 +14,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+
+# The script under test is POSIX shell driven through a pseudo-terminal, so
+# the module has nothing to run where that does not exist.
+pty = pytest.importorskip("pty", reason="POSIX pseudo-terminal")
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "tools" / "git-review-unpushed.sh"

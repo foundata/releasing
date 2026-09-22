@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support import captured
+
 pytestmark = pytest.mark.integration
 
 
@@ -33,7 +35,7 @@ def test_config_check_reports_the_effective_declaration(tmp_path: Path) -> None:
     result = invoke(tmp_path)
     assert result.returncode == 0, result.stderr
     assert result.stderr == b""
-    assert result.stdout.decode() == (
+    assert captured(result.stdout) == (
         "pyproject.toml: valid release declaration\n"
         "repository: foundata/example (github)\n"
         "ecosystem: python, index: pypi\n"
@@ -62,8 +64,8 @@ def test_config_check_reports_the_keys_a_project_declares(tmp_path: Path) -> Non
     result = invoke(tmp_path)
 
     assert result.returncode == 0, result.stderr
-    assert "dependency pins: example in pyproject.toml\n" in result.stdout.decode()
-    assert "allowed attribution: assisted-by: ^[^<]*$\n" in result.stdout.decode()
+    assert "dependency pins: example in pyproject.toml\n" in captured(result.stdout)
+    assert "allowed attribution: assisted-by: ^[^<]*$\n" in captured(result.stdout)
 
 
 def test_config_check_fails_with_a_reason_and_no_traceback(tmp_path: Path) -> None:

@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support import captured
+
 pytestmark = pytest.mark.integration
 CHANGELOG = """# Changelog
 
@@ -53,7 +55,7 @@ def test_check_show_and_release_without_git_or_network(project: Path) -> None:
     checked = release(project, "check")
     assert checked.stdout == b""
     assert b"Checked CHANGELOG.md" in checked.stderr
-    assert release(project, "show", "1.2.3").stdout == b"- Initial.\n"
+    assert captured(release(project, "show", "1.2.3").stdout) == "- Initial.\n"
     result = release(project, "release", "1.3.0", "--date", "2026-09-20")
     assert (result.returncode, result.stdout) == (0, b"")
     assert b"Released 1.3.0 in CHANGELOG.md" in result.stderr

@@ -127,6 +127,13 @@ leaves the working tree untouched. That trade is not worth a metric.
 - `tests/fixtures/corpus/`: 21 project README snapshots, the reviewed expected
   output of both modes and their provenance.
 
+Tests that need a symbolic link, a device file, a permission bit or a path
+Windows cannot name carry `POSIX_ONLY` from `tests/support.py` and skip
+elsewhere. Output is compared through `captured()`, which reads a captured
+stream as text with the platform's line endings normalized, because Python
+ends a line with CRLF on Windows; the paths whose exact bytes are the contract
+are still compared as bytes.
+
 Tests import the installed package (`uv sync` installs it in editable mode)
 and use temporary directories; they never edit checked-in fixtures. The complete
 suite requires Git and `uv`, but no network, existing Git checkout or sibling
