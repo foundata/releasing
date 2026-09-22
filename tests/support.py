@@ -27,7 +27,18 @@ __all__ = [
     "UI",
     "captured",
     "prepare",
+    "write_lf",
 ]
+
+
+def write_lf(path: Path, text: str) -> None:
+    """Write a fixture file with LF, whatever the platform would prefer.
+
+    Python ends a line with CRLF on Windows, and a fixture written that way
+    puts those bytes into the commit a test reads back. What these tests
+    assert on is the tool's own behaviour, not the platform's.
+    """
+    path.write_text(text, encoding="utf-8", newline="\n")
 
 
 def captured(data: bytes) -> str:

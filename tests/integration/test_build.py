@@ -14,7 +14,7 @@ import pytest
 
 from releasing import build, processes
 from releasing.artifacts import load_manifest, sha256_file
-from tests.support import POSIX_ONLY, captured
+from tests.support import POSIX_ONLY, captured, write_lf
 
 pytestmark = pytest.mark.integration
 GIT_ENV = {
@@ -109,16 +109,17 @@ def repository(tmp_path: Path) -> Path:
     root = tmp_path / "sample"
     (root / "src" / "sample").mkdir(parents=True)
     (root / "assets").mkdir()
-    (root / "src" / "sample" / "__init__.py").write_text(
-        '"""Sample."""\n\n__version__ = "1.0.0"\n', encoding="utf-8"
+    write_lf(
+        root / "src" / "sample" / "__init__.py",
+        '"""Sample."""\n\n__version__ = "1.0.0"\n',
     )
-    (root / "assets" / "logo.svg").write_text("<svg></svg>\n", encoding="utf-8")
-    (root / "README.md").write_text(README, encoding="utf-8")
-    (root / "DEVELOPMENT.md").write_text("# Development\n", encoding="utf-8")
-    (root / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
-    (root / "pyproject.toml").write_text(PYPROJECT, encoding="utf-8")
-    (root / "notes.txt").write_text("private\n", encoding="utf-8")
-    (root / ".gitattributes").write_text("notes.txt export-ignore\n", encoding="utf-8")
+    write_lf(root / "assets" / "logo.svg", "<svg></svg>\n")
+    write_lf(root / "README.md", README)
+    write_lf(root / "DEVELOPMENT.md", "# Development\n")
+    write_lf(root / "CHANGELOG.md", CHANGELOG)
+    write_lf(root / "pyproject.toml", PYPROJECT)
+    write_lf(root / "notes.txt", "private\n")
+    write_lf(root / ".gitattributes", "notes.txt export-ignore\n")
     git(root.parent, "init", "-q", "-b", "main", str(root))
     git(root, "add", ".")
     git(root, "commit", "-q", "-m", "project: establish the sample")
@@ -156,10 +157,10 @@ def test_export_ignores_a_line_ending_conversion_the_machine_asks_for(
     # repository decides through its attributes, not the machine.
     git(repository, "config", "core.autocrlf", "true")
     git(repository, "config", "core.eol", "crlf")
-    (repository / ".gitattributes").write_text(
-        "notes.txt export-ignore\n*.cmd text eol=crlf\n", encoding="utf-8"
+    write_lf(
+        repository / ".gitattributes", "notes.txt export-ignore\n*.cmd text eol=crlf\n"
     )
-    (repository / "run.cmd").write_text("echo hello\n", encoding="utf-8")
+    write_lf(repository / "run.cmd", "echo hello\n")
     git(repository, "add", ".")
     git(repository, "commit", "-q", "-m", "repository: declare line endings")
     revision = git(repository, "rev-parse", "HEAD").strip()

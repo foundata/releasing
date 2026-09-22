@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.support import captured
+from tests.support import captured, write_lf
 
 pytestmark = pytest.mark.integration
 CHANGELOG = """# Changelog
@@ -59,15 +59,6 @@ def release(
         timeout=60,
         check=False,
     )
-
-
-def write_lf(path: Path, text: str) -> None:
-    """Write a fixture file with LF, whatever the platform would prefer.
-
-    A bump prints the diff of what it read, so the endings in the file decide
-    the endings in the diff these tests assert on.
-    """
-    path.write_text(text, encoding="utf-8", newline="\n")
 
 
 @pytest.fixture
