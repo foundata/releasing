@@ -91,6 +91,43 @@ def test_ordinary_work_is_not_a_finding(message: str) -> None:
     assert attribution.findings([commit(message)]) == []
 
 
+def test_an_allowed_rule_covers_every_value_including_an_address() -> None:
+    # Allowing a rule allows it: a disclosure that also names an address is
+    # what the project asked for, not a loophole the check second-guesses.
+    addressed = commit("feat: add\n\nAssisted-by: Claude <noreply@anthropic.com>")
+
+    assert attribution.findings([addressed], allowed=["assisted-by"]) == []
+
+
+@pytest.mark.parametrize(
+    ("entry", "refused", "allowed_value"),
+    [
+        ("assisted-by: ^Claude Fable 5$", "Assisted-by: Claude Opus", "Claude Fable 5"),
+        ("assisted-by: ^[^<]*$", "Assisted-by: C <a@b.invalid>", "Claude Fable 5"),
+        ("co-authored-by: anthropic", "Assisted-by: anything", None),
+    ],
+    ids=["exact-value", "no-address", "another-rule-stays-refused"],
+)
+def test_a_pattern_narrows_an_allowance_to_the_values_it_finds(
+    entry: str, refused: str, allowed_value: str | None
+) -> None:
+    assert attribution.findings([commit(f"feat: add\n\n{refused}")], allowed=[entry])
+    if allowed_value is not None:
+        permitted = commit(f"feat: add\n\nAssisted-by: {allowed_value}")
+        assert attribution.findings([permitted], allowed=[entry]) == []
+
+
+@pytest.mark.parametrize(
+    "entry",
+    ["assited-by", "nonsense", "assisted-by: ([unclosed", ""],
+    ids=["typo", "unknown-rule", "broken-pattern", "empty"],
+)
+def test_an_unusable_entry_is_refused_rather_than_ignored(entry: str) -> None:
+    # A silently ignored allowance would look like the check is broken.
+    with pytest.raises(ValueError, match=r"known rule|unusable pattern"):
+        attribution.allowance(entry)
+
+
 def test_a_project_can_allow_one_rule_without_allowing_the_rest() -> None:
     # ansible-docsmith discloses under the Ansible Community Policy for
     # AI-Assisted Contributions and still must not publish the others.

@@ -222,22 +222,23 @@ def load_release_config(root: Path) -> ReleaseConfig:
 
 
 def _allowed_attribution(raw: Mapping[str, object], where: str) -> tuple[str, ...]:
-    """The attribution rules this project carries on purpose.
+    """The attributions this project carries on purpose.
 
     A project bound by a policy that requires the disclosure, such as the
-    Ansible Community Policy for AI-Assisted Contributions, names the one rule
-    it allows rather than turning the check off.
+    Ansible Community Policy for AI-Assisted Contributions, names what it
+    allows rather than turning the check off. An entry is a rule name, or a
+    rule name and a regular expression for the values it covers.
     """
-    values = _as_list(raw.get("allowed-attribution", []))
-    names = []
-    for value in values:
-        if not isinstance(value, str) or value not in attribution.RULES:
-            raise ConfigError(
-                f"{where}allowed-attribution must name known rules "
-                f"({', '.join(attribution.RULES)}): {value!r}"
-            )
-        names.append(value)
-    return tuple(dict.fromkeys(names))
+    entries = []
+    for value in _as_list(raw.get("allowed-attribution", [])):
+        if not isinstance(value, str):
+            raise ConfigError(f"{where}allowed-attribution must hold strings")
+        try:
+            attribution.allowance(value)
+        except ValueError as exc:
+            raise ConfigError(f"{where}allowed-attribution {exc}") from exc
+        entries.append(value)
+    return tuple(dict.fromkeys(entries))
 
 
 def _check_files(config: ReleaseConfig) -> None:

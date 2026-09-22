@@ -18,9 +18,9 @@ and this project adheres to
 ### Added
 
 - `tag create`, `push` and `forge release-create` refuse a commit that credits
-  a tool as its author; `--allow-tool-attribution` permits it, and
-  `allowed-attribution` in the declaration permits one named rule for a project
-  that carries it on purpose.
+  a tool as its author; `--allow-tool-attribution` permits it once, and
+  `allowed-attribution` in the declaration permits a named rule, or the values
+  a regular expression finds, for a project that carries one on purpose.
 - The narration is coloured on a terminal: the verb that opens a line, the
   answer to a request, and the `Error:` and `WARNING:` prefixes. Redirected
   output stays plain, so a captured story remains a clean record. `NO_COLOR`

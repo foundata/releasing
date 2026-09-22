@@ -76,16 +76,51 @@ class Finding:
     evidence: str
 
 
+@dataclass(frozen=True)
+class Allowance:
+    """One attribution a project carries on purpose."""
+
+    rule: str
+    pattern: re.Pattern[str] | None
+
+    def permits(self, rule: str, evidence: str) -> bool:
+        """Whether this allowance covers one finding."""
+        if rule != self.rule:
+            return False
+        return self.pattern is None or bool(self.pattern.search(evidence))
+
+
+def allowance(entry: str) -> Allowance:
+    """Read one ``allowed-attribution`` entry, raising ValueError on nonsense.
+
+    An entry is a rule name, which allows the whole rule, or a rule name and a
+    regular expression separated by a colon, which allows the values that
+    expression finds. The shape is the one an error prints, so a finding can be
+    copied into the declaration and narrowed there.
+    """
+    rule, separator, pattern = entry.partition(":")
+    rule = rule.strip()
+    if rule not in RULES:
+        raise ValueError(f"must name a known rule ({', '.join(RULES)}): {entry!r}")
+    if not separator or not pattern.strip():
+        return Allowance(rule, None)
+    try:
+        return Allowance(rule, re.compile(pattern.strip(), re.IGNORECASE))
+    except re.error as exc:
+        raise ValueError(f"has an unusable pattern ({exc}): {entry!r}") from exc
+
+
 def findings(
     commits: Iterable[Commit], *, allowed: Iterable[str] = ()
 ) -> list[Finding]:
-    """Every attribution in ``commits``, skipping the rules a project allows."""
-    permitted = frozenset(allowed)
+    """Every attribution in ``commits`` a project has not allowed."""
+    allowances = [allowance(entry) for entry in allowed]
     found: list[Finding] = []
     for commit in commits:
         for rule, evidence in _inspect(commit):
-            if rule not in permitted:
-                found.append(Finding(commit.revision, commit.subject, rule, evidence))
+            if any(item.permits(rule, evidence) for item in allowances):
+                continue
+            found.append(Finding(commit.revision, commit.subject, rule, evidence))
     return found
 
 
