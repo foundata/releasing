@@ -42,7 +42,9 @@ def archive_git(
 ) -> list[Path]:
     archives: list[Path] = []
 
-    def git(root: Path, *arguments: str, stdout: Path | None = None) -> str:
+    def git(
+        root: Path, *arguments: str, stdout: Path | None = None, **_: object
+    ) -> str:
         assert arguments == ("archive", "--format=tar", "revision")
         assert stdout is not None
         archives.append(stdout)
@@ -97,7 +99,9 @@ def test_export_preserves_a_git_failure_and_cleans_its_partial_archive(
     failure = processes.ProcessError("git failed with status 128:\narchive failed")
     archives: list[Path] = []
 
-    def git(root: Path, *arguments: str, stdout: Path | None = None) -> str:
+    def git(
+        root: Path, *arguments: str, stdout: Path | None = None, **_: object
+    ) -> str:
         assert stdout is not None
         archives.append(stdout)
         stdout.write_bytes(b"partial archive")
@@ -118,7 +122,9 @@ def test_export_preserves_a_git_failure_and_cleans_its_partial_archive(
 def test_export_wraps_an_unreadable_archive_and_removes_it(
     tmp_path: Path, scratch: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def git(root: Path, *arguments: str, stdout: Path | None = None) -> str:
+    def git(
+        root: Path, *arguments: str, stdout: Path | None = None, **_: object
+    ) -> str:
         assert stdout is not None
         stdout.write_bytes(b"not a tar archive")
         return ""

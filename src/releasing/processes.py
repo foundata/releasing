@@ -15,6 +15,8 @@ import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+from releasing import reporting
+
 TIMEOUT = 600.0
 # A command that contacts a remote waits on a network and possibly on
 # credentials. Without a bound it blocks for the full local timeout, which
@@ -73,6 +75,7 @@ def run(
     environment: Mapping[str, str] | None = None,
     stdout: Path | None = None,
     stream: bool = False,
+    echo: bool = False,
 ) -> str:
     """Run one program and return its standard output.
 
@@ -80,9 +83,13 @@ def run(
     for credentials. ``stdout`` writes the output to a file instead of
     capturing it, for archives and other binary output. ``stream`` lets a
     long-running program report to the terminal as it works; its output is
-    written to standard error and nothing is returned.
+    written to standard error and nothing is returned. ``echo`` narrates the
+    command line; set it where the program changes something, not for the
+    queries that only read the repository.
     """
     values = None if environment is None else {**os.environ, **environment}
+    if echo:
+        reporting.command(argv, cwd=cwd)
     try:
         if stream:
             subprocess.run(
@@ -124,9 +131,7 @@ def run(
             + (f":\n{detail}" if detail else "")
         ) from exc
     except subprocess.TimeoutExpired as exc:
-        raise ProcessError(
-            f"{describe(argv)} timed out after {timeout:.0f}s"
-        ) from exc
+        raise ProcessError(f"{describe(argv)} timed out after {timeout:.0f}s") from exc
     except OSError as exc:
         raise ProcessError(f"cannot run {describe(argv)}: {exc}") from exc
     return result.stdout
@@ -138,6 +143,7 @@ def git(
     timeout: float | None = None,
     stdout: Path | None = None,
     remote: bool = False,
+    echo: bool = False,
 ) -> str:
     """Run a Git command in ``root`` with the caller's configuration untouched.
 
@@ -159,6 +165,7 @@ def git(
         timeout=timeout,
         environment=environment,
         stdout=stdout,
+        echo=echo,
     )
 
 

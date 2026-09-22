@@ -176,7 +176,7 @@ def test_build_reports_export_failure_and_cleans_its_workspace(
     git(repository, "commit", "-qm", "repository: add an unsupported filename")
     out = tmp_path / "dist"
 
-    result = release(repository, "build", "--out", str(out))
+    result = release(repository, "build", "--out", str(out), "--quiet")
 
     assert result.returncode == 1
     assert result.stdout == b""

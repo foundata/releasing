@@ -18,7 +18,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from releasing import artifacts, changelog, markdown, processes, version
+from releasing import artifacts, changelog, markdown, processes, reporting, version
 from releasing._source_export import BuildError as BuildError
 from releasing._source_export import export as export
 from releasing.config import ReleaseConfig, load_release_config
@@ -144,6 +144,7 @@ def build(
             )
         found = version.check(exported, config, expect=expect)
         _check_changelog(exported, config, found)
+        reporting.phase(f"the export states {found}")
         prepared = prepare_readmes(
             exported, config, version_string=found, forge=forge_for(config)
         )
@@ -152,6 +153,7 @@ def build(
         files = _build_artifacts(exported, config, staged)
         inspected = [artifacts.inspect(path) for path in files]
         names = tuple(version.project_names(exported, config).values())
+        reporting.phase(f"checking {len(files)} built file(s)")
         problems = artifacts.check(inspected, version=found, names=names)
         if problems:
             raise BuildError(
@@ -187,14 +189,20 @@ def _build_python(exported: Path, staged: Path) -> list[Path]:
         # A virtual workspace root is not a distribution; its members are. uv
         # builds each member's source distribution and its wheel from that.
         processes.run(
-            [uv, "build", "--all-packages", "--out-dir", str(staged)], cwd=exported
+            [uv, "build", "--all-packages", "--out-dir", str(staged)],
+            cwd=exported,
+            echo=True,
         )
         return _distributions(staged)
-    processes.run([uv, "build", "--sdist", "--out-dir", str(staged), str(exported)])
+    processes.run(
+        [uv, "build", "--sdist", "--out-dir", str(staged), str(exported)], echo=True
+    )
     sdist = _one(staged, "*.tar.gz")
     # The wheel comes from the source distribution, so what is published is what
     # a consumer installing from source would get.
-    processes.run([uv, "build", "--wheel", "--out-dir", str(staged), str(sdist)])
+    processes.run(
+        [uv, "build", "--wheel", "--out-dir", str(staged), str(sdist)], echo=True
+    )
     return _distributions(staged)
 
 
@@ -211,7 +219,8 @@ def _is_workspace_root(exported: Path) -> bool:
 def _build_collection(exported: Path, staged: Path) -> list[Path]:
     galaxy = str(processes.executable("ansible-galaxy"))
     processes.run(
-        [galaxy, "collection", "build", "--output-path", str(staged), str(exported)]
+        [galaxy, "collection", "build", "--output-path", str(staged), str(exported)],
+        echo=True,
     )
     return _distributions(staged)
 

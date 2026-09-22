@@ -15,7 +15,7 @@ environment, from trusted publishing, or from its own configuration.
 from dataclasses import dataclass
 from pathlib import Path
 
-from releasing import artifacts, processes
+from releasing import artifacts, processes, reporting
 from releasing.artifacts import Manifest
 
 _TOKEN_VARIABLES = {
@@ -41,6 +41,9 @@ def plan(manifest: Manifest, directory: Path, *, index: str) -> PublishPlan:
     """Re-verify the manifest against the directory and list what to upload."""
     if index not in _TOKEN_VARIABLES:
         raise PublishError(f"the {index} index publishes nothing")
+    reporting.phase(
+        f"re-checking {len(manifest.artifacts)} file(s) against the manifest"
+    )
     problems = artifacts.verify_manifest(manifest, directory)
     if problems:
         raise PublishError(
@@ -58,12 +61,20 @@ def execute(prepared: PublishPlan, *, dry_run: bool = False) -> list[str]:
     if prepared.index == "pypi":
         uv = str(processes.executable("uv"))
         processes.run(
-            [uv, "publish", *[str(path) for path in prepared.files]], timeout=1800
+            [uv, "publish", *[str(path) for path in prepared.files]],
+            timeout=1800,
+            stream=True,
+            echo=True,
         )
     else:
         galaxy = str(processes.executable("ansible-galaxy"))
         for path in prepared.files:
-            processes.run([galaxy, "collection", "publish", str(path)], timeout=1800)
+            processes.run(
+                [galaxy, "collection", "publish", str(path)],
+                timeout=1800,
+                stream=True,
+                echo=True,
+            )
     return [path.name for path in prepared.files]
 
 

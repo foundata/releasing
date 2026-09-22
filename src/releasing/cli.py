@@ -26,6 +26,7 @@ from releasing import (
     forges,
     markdown,
     processes,
+    reporting,
     version,
 )
 from releasing import (
@@ -35,7 +36,7 @@ from releasing import (
     push as publication,
 )
 from releasing import (
-    status as reporting,
+    status as reports,
 )
 from releasing import (
     tag as tagging,
@@ -351,11 +352,11 @@ def _run_version_bump(args: argparse.Namespace) -> int:
                 )
             )
         if (loaded.root / "uv.lock").is_file() and not args.no_lock:
-            print("release: uv lock", file=sys.stderr)
             processes.run(
                 [str(processes.executable("uv")), "lock"],
                 cwd=loaded.root,
                 stream=True,
+                echo=True,
             )
     except (config.ConfigError, version.VersionError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -449,8 +450,7 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
             ]
             if when is not None:
                 command += ["--date", when.isoformat()]
-            print("release: antsibull-changelog release", file=sys.stderr)
-            processes.run(command, cwd=loaded.root, stream=True)
+            processes.run(command, cwd=loaded.root, stream=True, echo=True)
             return 0
         path = loaded.root / loaded.changelog
         result = changelog.release(
@@ -738,7 +738,7 @@ def _run_status(args: argparse.Namespace) -> int:
             if args.manifest is None
             else artifacts.load_manifest(cast(Path, args.manifest))
         )
-        report = reporting.collect(
+        report = reports.collect(
             loaded.root,
             loaded,
             forges.forge_for(loaded),
@@ -861,6 +861,43 @@ def _add_tag_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_quiet(parser: argparse.ArgumentParser) -> None:
+    """Accept --quiet here as well as before the command.
+
+    ``SUPPRESS`` keeps the subcommand's default out of the namespace, so
+    ``release --quiet tag create`` is not overwritten by the inner parser.
+    """
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="print the result only, without narrating the work",
+    )
+
+
+def _accept_quiet_everywhere(parser: argparse.ArgumentParser) -> None:
+    """Add --quiet to every command that runs something.
+
+    Walking the tree instead of naming each subparser means a command added
+    later cannot forget the flag.
+    """
+    pending = [parser]
+    while pending:
+        current = pending.pop()
+        groups = [
+            action
+            for action in current._actions
+            if isinstance(action, argparse._SubParsersAction)
+        ]
+        if not groups:
+            if current is not parser:
+                _add_quiet(current)
+            continue
+        for group in groups:
+            pending.extend(group.choices.values())
+
+
 def _add_project(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--project",
@@ -874,6 +911,12 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the `release` parser with every subcommand registered."""
     parser = argparse.ArgumentParser(
         prog="release", description="Prepare, check and verify software releases."
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="print the result only, without narrating the work",
     )
     commands = parser.add_subparsers(
         dest="command", required=True, metavar="COMMAND", title="commands"
@@ -1089,7 +1132,7 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser = commands.add_parser(
         "status",
         help="report which steps of a release are done, pending or broken",
-        description=reporting.__doc__,
+        description=reports.__doc__,
     )
     _add_project(status_parser)
     status_parser.add_argument("version", metavar="X.Y.Z", help="the release version")
@@ -1165,10 +1208,21 @@ def build_parser() -> argparse.ArgumentParser:
             description=markdown.__doc__,
         )
     )
+    _accept_quiet_everywhere(parser)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the non-interactive CLI; reserve stdout for generated output."""
+    """Run the non-interactive CLI; reserve stdout for generated output.
+
+    Stdout carries the product, stderr the story: what is being done, every
+    command that changes something and every request to a forge. ``--quiet``
+    keeps the product and drops the story; errors are never dropped.
+    """
     args = build_parser().parse_args(argv)
-    return cast(Runner, args.run)(args)
+    run = cast(Runner, args.run)
+    if getattr(args, "quiet", False):
+        return run(args)
+    root = cast("Path | None", getattr(args, "project", None))
+    with reporting.to(sys.stderr, root=root):
+        return run(args)

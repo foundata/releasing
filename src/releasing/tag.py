@@ -13,7 +13,14 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from releasing import _source_export, changelog, forge_api, processes, version
+from releasing import (
+    _source_export,
+    changelog,
+    forge_api,
+    processes,
+    reporting,
+    version,
+)
 from releasing.artifacts import Manifest
 from releasing.config import ReleaseConfig, load_release_config
 from releasing.forges import Forge, forge_for
@@ -113,13 +120,17 @@ def create(
     ).strip()
     if manifest is not None:
         check_built_revision(manifest, target, version_string)
+        reporting.phase(f"the manifest records artifacts built from {target[:12]}")
+    reporting.phase("the working tree is clean")
     found = check_revision(root, target, version_string)
     current = state(root, config, forge, tag, offline=offline)
     if current.revision is not None:
         raise TagError(f"tag {tag} already exists locally at {current.revision[:12]}")
     if current.remote_revision is not None:
         raise TagError(f"tag {tag} already exists on the remote")
-    processes.git(root, "tag", "-a", tag, target, "-m", config.tag_message_for(found))
+    processes.git(
+        root, "tag", "-a", tag, target, "-m", config.tag_message_for(found), echo=True
+    )
     return tag
 
 
@@ -158,6 +169,9 @@ def check_revision(root: Path, revision: str, expected: str) -> str:
     with tempfile.TemporaryDirectory(prefix="releasing-tag-") as value:
         exported = Path(value)
         _source_export.export(root, revision, exported)
+        reporting.phase(
+            "checking version sites, lockfile, pins and changelog in the export"
+        )
         config = load_release_config(exported)
         found = version.check(exported, config, expect=expected)
         path = exported / (
@@ -205,10 +219,12 @@ def delete(
         raise TagError(f"tag {tag} exists neither locally nor on the remote")
     deleted = []
     if current.revision is not None:
-        processes.git(root, "tag", "-d", tag)
+        processes.git(root, "tag", "-d", tag, echo=True)
         deleted.append("local")
     if remote and current.remote_revision is not None:
-        processes.git(root, "push", "origin", f":refs/tags/{tag}", remote=True)
+        processes.git(
+            root, "push", "origin", f":refs/tags/{tag}", remote=True, echo=True
+        )
         deleted.append("remote")
     return deleted
 

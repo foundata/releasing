@@ -14,6 +14,8 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+from releasing import reporting
+
 TIMEOUT = 30.0
 _USER_AGENT = "foundata-releasing"
 
@@ -31,14 +33,18 @@ def _request(url: str) -> Any | None:
     request = urllib.request.Request(url, headers=headers, method="GET")
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            return json.loads(response.read().decode("utf-8"))
+            document = json.loads(response.read().decode("utf-8"))
+            reporting.request("GET", url, response.status)
+            return document
     except urllib.error.HTTPError as exc:
         # The error carries an open response body; release it either way.
         exc.close()
+        reporting.request("GET", url, exc.code)
         if exc.code == 404:
             return None
         raise ForgeError(f"{url}: HTTP {exc.code} {exc.reason}") from exc
     except (urllib.error.URLError, OSError, ValueError) as exc:
+        reporting.request("GET", url, "failed")
         raise ForgeError(f"{url}: {exc}") from exc
 
 

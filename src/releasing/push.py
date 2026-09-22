@@ -13,7 +13,7 @@ branch being pushed actually contains it.
 from dataclasses import dataclass
 from pathlib import Path
 
-from releasing import processes
+from releasing import processes, reporting
 from releasing import tag as tagging
 from releasing.config import ReleaseConfig
 from releasing.forges import Forge
@@ -60,6 +60,7 @@ def plan(
             f"{branch} does not contain {tag} ({revision[:12]}); pushing the tag "
             "would publish a commit that is on no branch"
         )
+    reporting.phase(f"{branch} contains {tag} ({revision[:12]})")
     found = tagging.check_revision(root, revision, version_string)
     return PushPlan(
         remote=remote, branch=branch, tag=tag, revision=revision, version=found
@@ -71,7 +72,9 @@ def execute(root: Path, prepared: PushPlan, *, dry_run: bool = False) -> list[st
     options = ["--dry-run"] if dry_run else []
     sent = []
     # The branch first: until it lands, the tag would name an unreachable commit.
-    processes.git(root, "push", *options, prepared.remote, prepared.branch, remote=True)
+    processes.git(
+        root, "push", *options, prepared.remote, prepared.branch, remote=True, echo=True
+    )
     sent.append(prepared.branch)
     processes.git(
         root,
@@ -80,6 +83,7 @@ def execute(root: Path, prepared: PushPlan, *, dry_run: bool = False) -> list[st
         prepared.remote,
         f"refs/tags/{prepared.tag}",
         remote=True,
+        echo=True,
     )
     sent.append(prepared.tag)
     return sent

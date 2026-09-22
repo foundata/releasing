@@ -36,6 +36,8 @@ MANIFEST = Manifest(
 
 
 class Response(io.BytesIO):
+    status = 200
+
     @override
     def __enter__(self) -> "Response":
         return self

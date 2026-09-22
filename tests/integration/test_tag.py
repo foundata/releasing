@@ -113,7 +113,7 @@ def test_create_reports_export_failure_and_cleans_its_workspace(
     git(repository, "add", ".")
     git(repository, "commit", "-qm", "repository: add an unsupported filename")
 
-    result = release(repository, "tag", "create", "1.0.0", "--offline")
+    result = release(repository, "tag", "create", "1.0.0", "--offline", "--quiet")
 
     assert result.returncode == 1
     assert result.stdout == b""

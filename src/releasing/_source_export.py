@@ -6,7 +6,7 @@ import tarfile
 import tempfile
 from pathlib import Path, PurePosixPath
 
-from releasing import processes
+from releasing import processes, reporting
 
 
 class BuildError(RuntimeError):
@@ -25,7 +25,10 @@ def export(root: Path, revision: str, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="releasing-export-") as value:
         archive = Path(value) / "source.tar"
-        processes.git(root, "archive", "--format=tar", revision, stdout=archive)
+        reporting.phase(f"exporting {revision[:12]} into a temporary directory")
+        processes.git(
+            root, "archive", "--format=tar", revision, stdout=archive, echo=True
+        )
         try:
             with tarfile.open(archive, mode="r:") as stream:
                 members = stream.getmembers()

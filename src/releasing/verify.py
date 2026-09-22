@@ -15,7 +15,7 @@ import urllib.request
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from releasing import forge_api, processes
+from releasing import forge_api, processes, reporting
 from releasing.artifacts import Manifest, ManifestEntry
 from releasing.forges import Forge
 
@@ -170,7 +170,7 @@ def installed_version(name: str, version: str, command: str | None = None) -> st
         invocation += ["python", "-c", script]
     else:
         invocation += [command, "--version"]
-    return processes.run(invocation, timeout=900).strip()
+    return processes.run(invocation, timeout=900, echo=True).strip()
 
 
 def latest_tag(forge: Forge) -> str | None:
@@ -184,14 +184,18 @@ def _get(url: str) -> object:
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            return json.loads(response.read().decode("utf-8"))
+            document = json.loads(response.read().decode("utf-8"))
+            reporting.request("GET", url, response.status)
+            return document
     except urllib.error.HTTPError as exc:
         # The error carries an open response body; release it either way.
         exc.close()
+        reporting.request("GET", url, exc.code)
         if exc.code == 404:
             raise VerificationError(f"{url}: not published (HTTP 404)") from exc
         raise VerificationError(f"{url}: HTTP {exc.code} {exc.reason}") from exc
     except (urllib.error.URLError, OSError, ValueError) as exc:
+        reporting.request("GET", url, "failed")
         raise VerificationError(f"{url}: {exc}") from exc
 
 

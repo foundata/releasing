@@ -101,7 +101,7 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> list
         return argv
     try:
         notes_file.write_text(prepared.notes, encoding="utf-8")
-        processes.run(argv, cwd=root, timeout=600)
+        processes.run(argv, cwd=root, timeout=600, echo=True)
     except (OSError, UnicodeError) as exc:
         raise ForgeReleaseError(f"cannot stage the release notes: {exc}") from exc
     finally:
