@@ -24,7 +24,8 @@ from releasing._source_export import export as export
 from releasing.config import ReleaseConfig, load_release_config
 from releasing.forges import Forge, forge_for
 
-MANIFEST = "artifacts.json"
+# The manifest belongs to the artifacts it lists; this is where a build puts it.
+MANIFEST = artifacts.MANIFEST
 
 
 @dataclass(frozen=True)

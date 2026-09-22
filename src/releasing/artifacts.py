@@ -25,6 +25,7 @@ from pathlib import Path, PurePosixPath
 from releasing import markdown
 
 SCHEMA_VERSION = 1
+MANIFEST = "artifacts.json"
 _FORBIDDEN_PARTS = frozenset(
     {
         ".git",
@@ -257,7 +258,7 @@ def verify_manifest(manifest: Manifest, directory: Path) -> list[str]:
     for path in sorted(directory.iterdir()):
         if (
             path.name not in listed
-            and path.name != "artifacts.json"
+            and path.name != MANIFEST
             and (path.suffix == ".whl" or path.name.endswith(".tar.gz"))
         ):
             problems.append(f"{path.name}: not in the manifest")
