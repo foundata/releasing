@@ -11,6 +11,11 @@ and this project adheres to
 
 ### Fixed
 
+- The product and the story are the same bytes on every platform and in every
+  locale: UTF-8, with LF line endings. A Windows console encodes in its
+  codepage, where the narration marker is one byte or not encodable at all, and
+  a command could stop mid-sentence over a character the codepage lacks.
+- An echoed command and a failure name the program as `git`, not as `git.EXE`.
 - `changelog check` on a collection said it had checked `antsibull` instead of
   naming `changelogs/changelog.yaml`. Every command now names the file the
   changelog is kept in, whichever format owns it.

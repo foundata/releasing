@@ -127,12 +127,20 @@ leaves the working tree untouched. That trade is not worth a metric.
 - `tests/fixtures/corpus/`: 21 project README snapshots, the reviewed expected
   output of both modes and their provenance.
 
+The suite passes on Windows as well: 714 passed and 19 skipped on Windows
+Server 2025 with Python 3.14, measured on 2026-09-23. Python 3.11 to 3.13
+cannot create the development environment there, because `readme-renderer[md]`
+pulls `comrak`, which publishes Windows wheels for cp314 only; the package
+itself supports every declared version on that platform.
+
 Tests that need a symbolic link, a device file, a permission bit or a path
 Windows cannot name carry `POSIX_ONLY` from `tests/support.py` and skip
-elsewhere. Output is compared through `captured()`, which reads a captured
-stream as text with the platform's line endings normalized, because Python
-ends a line with CRLF on Windows; the paths whose exact bytes are the contract
-are still compared as bytes.
+elsewhere. Fixtures are written through `write_lf()`, because Python ends a line
+with CRLF on Windows and a fixture written that way would put those bytes into
+the commit a test reads back. Output is compared through `captured()`, which
+reads a captured stream as text with the platform's line endings normalized,
+because Python ends a line with CRLF on Windows; the paths whose exact bytes are
+the contract are still compared as bytes.
 
 Tests import the installed package (`uv sync` installs it in editable mode)
 and use temporary directories; they never edit checked-in fixtures. The complete
