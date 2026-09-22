@@ -65,15 +65,17 @@ compatibility check.
 
 ## Dependencies
 
-The direct runtime dependencies are `markdown-it-py` and `typing-extensions`
-on every supported Python version. The latter supplies the `override`
-decorator through one unconditional import, including on Python 3.11.
-Everything else comes from the standard library, including the archive, JSON,
-hashing and HTTP handling. The parser decides which text is a link, reference
-definition, code block, code span or HTML region. The private
-`_markdown_syntax` module owns its rule adapter, source coordinates and
-analysis records. It constructs the parser and document for each call and
-imports no release-step module.
+The direct runtime dependencies are `markdown-it-py` and `typing-extensions` on
+every supported Python version. The latter supplies the `override` decorator
+through one unconditional import, including on Python 3.11. Everything else
+comes from the standard library, including the archive, JSON, hashing and HTTP
+handling. Every question put to a forge or a package index goes through the
+`fetch` module, so one place decides how a request is made: a revalidated GET, a
+bounded wait and one narrated line per request. The parser decides which text is
+a link, reference definition, code block, code span or HTML region. The private
+`_markdown_syntax` module owns its rule adapter, source coordinates and analysis
+records. It constructs the parser and document for each call and imports no
+release-step module.
 
 `markdown` uses those records for URL rewriting, simplification and optional
 local-file validation. It retains the public analysis imports alongside

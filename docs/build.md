@@ -68,10 +68,14 @@ release, or the artifacts are never uploaded.
 
 ## Verifying and publishing what was built
 
-`release artifacts verify` re-checks the directory against its manifest
-immediately before uploading, so exactly the validated bytes are published:
+`release publish` re-checks every digest against the bytes on disk and uploads
+exactly the files the manifest names, so a file beside them that nothing
+validated is a refusal rather than an extra upload:
 
 ```sh
-release artifacts verify "../dist-${version}/artifacts.json"
-uv publish "../dist-${version}"/*.whl "../dist-${version}"/*.tar.gz
+release publish "../dist-${version}/artifacts.json"
 ```
+
+`release artifacts verify` makes the same comparison without uploading, for a
+check that stands on its own. See
+[Uploading what was validated](./publish.md).

@@ -11,7 +11,7 @@ release status "${version}" --manifest "../dist-${version}/artifacts.json"
 ```text
 ok       changelog          CHANGELOG.md documents 2.0.0
 ok       tag                v2.0.0 at 59031c0cb666
-unknown  tag pushed         git timed out after 20s
+unknown  tag pushed         git ls-remote timed out after 20s
 ok       artifact revision  artifacts were built from the tag
 ok       index              pypi serves the validated files
 ok       forge release      github has a release for v2.0.0

@@ -8,11 +8,11 @@ Release helpers for projects that publish from a Git-tracked source tree.
 
 Components and tools:
 
-- `release`: command that covers the error-prone steps around a release:
-  preparing repository Markdown for package indexes, and, as the package grows,
-  version sites, changelogs, artifacts, tags and post-publish verification. Each
-  step is one subcommand; the order of steps stays in each project's own
-  procedure.
+- `release`: one command for the error-prone steps around a release: version
+  sites, changelogs, artifacts, tags, the push, the upload, the forge's release
+  entry, post-publish verification, and the repository Markdown a package index
+  needs. Each step is one subcommand; the order of steps stays in each project's
+  own procedure.
 
 <!-- rumdl-disable MD033 -->
 <!-- HTML for consistent rendering across limited platform parsers -->
@@ -93,6 +93,7 @@ artifact operations also work independently; see
 The end-to-end order for a Python project is in
 [Releasing a Python package](./docs/python-packages.md).
 
+
 ## Output
 
 **Stdout is the product, stderr is the story.** One rule for every command, so
@@ -142,6 +143,7 @@ and `2` on invalid usage.
 [development guide](./DEVELOPMENT.md#releases); the recipe it follows is
 [Releasing a Python package](./docs/python-packages.md). The declaration is
 the `[tool.releasing]` table in `pyproject.toml`.
+
 
 ## Development
 
