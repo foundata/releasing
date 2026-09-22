@@ -284,8 +284,8 @@ def _paint(text: str, style: str) -> str:
     return f"{style}{text}{_RESET}" if wants_colour(sys.stderr) else text
 
 
-def error(message: str, *, problems: Sequence[str] = ()) -> None:
-    """Report a failure, listing each problem below it.
+def error(message: str, *, problems: Sequence[str] = (), hint: str = "") -> None:
+    """Report a failure, listing each problem and how to proceed.
 
     A failure is not part of the story and does not go through the reporter: a
     command that refuses must say why even under ``--quiet``, and a library
@@ -294,6 +294,8 @@ def error(message: str, *, problems: Sequence[str] = ()) -> None:
     print(f"{_paint('Error:', _RED + _BOLD)} {message}", file=sys.stderr)
     for problem in problems:
         print(f"  {problem}", file=sys.stderr)
+    if hint:
+        print(hint, file=sys.stderr)
 
 
 def warning(message: str) -> None:

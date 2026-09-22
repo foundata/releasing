@@ -18,6 +18,7 @@ from urllib.parse import quote
 from releasing import (
     antsibull,
     artifacts,
+    attribution,
     build,
     changelog,
     config,
@@ -655,6 +656,8 @@ _RELEASE_ERRORS = (
 def _run_tag_create(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
+        if _stops_for_attribution(args, loaded, args.revision):
+            return 1
         created = tagging.create(
             loaded.root,
             loaded,
@@ -805,6 +808,13 @@ def _run_push(args: argparse.Namespace) -> int:
             args.version,
             remote=args.remote,
         )
+        if _stops_for_attribution(
+            args,
+            loaded,
+            prepared.revision,
+            _unpushed(loaded.root, prepared.remote, prepared.branch),
+        ):
+            return 1
         sent = publication.execute(loaded.root, prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
@@ -855,6 +865,8 @@ def _run_forge_release_create(args: argparse.Namespace) -> int:
             manifest_path=manifest_path,
             offline=args.offline,
         )
+        if _stops_for_attribution(args, loaded, prepared.tag):
+            return 1
         reported = forge_release.execute(loaded.root, prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
@@ -896,6 +908,62 @@ def _add_dry_run(parser: argparse.ArgumentParser, what: str) -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help=f"report what would happen; {what}"
     )
+
+
+def _unpushed(root: Path, remote: str, branch: str) -> str:
+    """The range of commits the remote does not have yet, if it can be known.
+
+    Before the first push there is no remote-tracking branch, and everything
+    reachable would be "unpushed"; the tagged revision alone is checked then.
+    """
+    reference = f"{remote}/{branch}"
+    try:
+        processes.git(
+            root, "rev-parse", "--verify", "--quiet", f"{reference}^{{commit}}"
+        )
+    except processes.ProcessError:
+        return ""
+    return f"{reference}..{branch}"
+
+
+def _add_allow_tool_attribution(parser: argparse.ArgumentParser) -> None:
+    """Offer to publish commits that credit a tool as their author."""
+    parser.add_argument(
+        "--allow-tool-attribution",
+        action="store_true",
+        help="publish commits that credit a tool as their author",
+    )
+
+
+def _stops_for_attribution(
+    args: argparse.Namespace, loaded: config.ReleaseConfig, *revisions: str
+) -> bool:
+    """Whether publishing must stop because a commit credits a tool.
+
+    The commits checked are the ones the command would make public, which are
+    also the ones whose message can still be amended for nothing.
+    """
+    commits = attribution.read(loaded.root, [item for item in revisions if item])
+    found = attribution.findings(commits, allowed=loaded.allowed_attribution)
+    if not found:
+        reporting.phase(f"Checked {len(commits)} commit(s) for attribution")
+        return False
+    if args.allow_tool_attribution:
+        reporting.warning(
+            f"publishing {len(found)} tool attribution(s); "
+            "--allow-tool-attribution was given"
+        )
+        return False
+    affected = len({finding.revision for finding in found})
+    reporting.error(
+        f"{affected} commit(s) would publish a tool attribution:",
+        problems=attribution.describe(found),
+        hint=(
+            "Amend the message before publishing, or pass "
+            "--allow-tool-attribution to publish it as it stands."
+        ),
+    )
+    return True
 
 
 def _add_quiet(parser: argparse.ArgumentParser) -> None:
@@ -1135,6 +1203,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="refuse unless the revision is the one these artifacts were built from",
     )
     _add_dry_run(tag_create, "no tag is created")
+    _add_allow_tool_attribution(tag_create)
     tag_create.set_defaults(run=_run_tag_create)
     tag_check = tag_commands.add_parser(
         "check", help="the tag is annotated, worded and placed as a release tag"
@@ -1203,6 +1272,7 @@ def build_parser() -> argparse.ArgumentParser:
     push_parser.add_argument(
         "--dry-run", action="store_true", help="ask the remote without sending anything"
     )
+    _add_allow_tool_attribution(push_parser)
     push_parser.set_defaults(run=_run_push)
     publish_parser = commands.add_parser(
         "publish",
@@ -1237,6 +1307,7 @@ def build_parser() -> argparse.ArgumentParser:
     forge_create.add_argument(
         "--dry-run", action="store_true", help="print the command without running it"
     )
+    _add_allow_tool_attribution(forge_create)
     forge_create.set_defaults(run=_run_forge_release_create)
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"

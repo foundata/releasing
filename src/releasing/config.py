@@ -14,6 +14,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
+from releasing import attribution
+
 PYPROJECT = "pyproject.toml"
 STANDALONE = "releasing.toml"
 FORGES = ("github",)
@@ -42,6 +44,7 @@ _KEYS = frozenset(
         "tag-message",
         "dependency-pins",
         "readmes",
+        "allowed-attribution",
     }
 )
 _README_KEYS = frozenset(
@@ -88,6 +91,7 @@ class ReleaseConfig:
     tag_format: str = "v{version}"
     tag_message: str = "version {version}"
     dependency_pins: tuple[DependencyPin, ...] = ()
+    allowed_attribution: tuple[str, ...] = ()
     readmes: tuple[ReadmeConfig, ...] = field(default_factory=lambda: (ReadmeConfig(),))
 
     @property
@@ -191,6 +195,7 @@ def load_release_config(root: Path) -> ReleaseConfig:
         _pin(item, f"{where}dependency-pins[{number}]")
         for number, item in enumerate(_as_list(raw.get("dependency-pins", [])))
     )
+    allowed_attribution = _allowed_attribution(raw, where)
     readmes = tuple(
         _readme(item, f"{where}readmes[{number}]")
         for number, item in enumerate(_as_list(raw.get("readmes", [{}])))
@@ -209,10 +214,30 @@ def load_release_config(root: Path) -> ReleaseConfig:
         tag_format=tag_format,
         tag_message=tag_message,
         dependency_pins=pins,
+        allowed_attribution=allowed_attribution,
         readmes=readmes,
     )
     _check_files(config)
     return config
+
+
+def _allowed_attribution(raw: Mapping[str, object], where: str) -> tuple[str, ...]:
+    """The attribution rules this project carries on purpose.
+
+    A project bound by a policy that requires the disclosure, such as the
+    Ansible Community Policy for AI-Assisted Contributions, names the one rule
+    it allows rather than turning the check off.
+    """
+    values = _as_list(raw.get("allowed-attribution", []))
+    names = []
+    for value in values:
+        if not isinstance(value, str) or value not in attribution.RULES:
+            raise ConfigError(
+                f"{where}allowed-attribution must name known rules "
+                f"({', '.join(attribution.RULES)}): {value!r}"
+            )
+        names.append(value)
+    return tuple(dict.fromkeys(names))
 
 
 def _check_files(config: ReleaseConfig) -> None:

@@ -35,7 +35,7 @@ CHANGELOG = """# Changelog
 """
 
 
-def git(cwd: Path, *arguments: str) -> str:
+def git(cwd: Path, *arguments: str, stdin: str | None = None) -> str:
     return subprocess.run(
         ["git", "-C", str(cwd), *arguments],
         env={**os.environ, **GIT_ENV},
@@ -43,6 +43,7 @@ def git(cwd: Path, *arguments: str) -> str:
         text=True,
         timeout=60,
         check=True,
+        input=stdin,
     ).stdout
 
 
@@ -257,3 +258,69 @@ def test_a_terminal_gets_colour_and_a_pipe_does_not(repository: Path) -> None:
         release(repository, "changelog", "check").stderr
         == b"\xc2\xbb Checked CHANGELOG.md\n"
     )
+
+
+TOOL_TRAILER = (
+    "release: prepare 1.1.0\n\n"
+    "Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+)
+
+
+def _credit_a_tool(root: Path) -> None:
+    (root / "NOTES.md").write_text("# Notes\n", encoding="utf-8")
+    git(root, "add", ".")
+    git(root, "commit", "-q", "-F", "-", stdin=TOOL_TRAILER)
+
+
+def test_tagging_refuses_a_commit_that_credits_a_tool(repository: Path) -> None:
+    _credit_a_tool(repository)
+
+    result = release(repository, "tag", "create", "1.0.0", "--offline")
+
+    assert result.returncode == 1
+    assert git(repository, "tag", "--list") == ""
+    story = result.stderr.decode()
+    assert "would publish a tool attribution" in story
+    assert "co-authored-by: Claude Opus 5 (1M context)" in story
+    assert "--allow-tool-attribution" in story
+
+
+def test_the_flag_publishes_it_anyway_and_says_so(repository: Path) -> None:
+    _credit_a_tool(repository)
+
+    result = release(
+        repository, "tag", "create", "1.0.0", "--offline", "--allow-tool-attribution"
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b"v1.0.0\n"
+    assert b"WARNING: publishing 1 tool attribution(s)" in result.stderr
+
+
+def test_pushing_checks_every_commit_it_would_send(repository: Path) -> None:
+    # The tagged commit is clean; the one behind it is not, and the push would
+    # publish both.
+    release(repository, "tag", "create", "1.0.0", "--offline")
+    _credit_a_tool(repository)
+    git(repository, "commit", "-q", "--allow-empty", "-m", "chore: after")
+
+    result = release(repository, "push", "1.0.0")
+
+    assert result.returncode == 1
+    assert "would publish a tool attribution" in result.stderr.decode()
+    assert git(repository, "log", "--oneline", "origin/main..main").count("\n") == 2
+
+
+def test_a_declaration_may_allow_one_rule(repository: Path) -> None:
+    text = (repository / "pyproject.toml").read_text(encoding="utf-8")
+    (repository / "pyproject.toml").write_text(
+        text + 'allowed-attribution = ["assisted-by"]\n', encoding="utf-8"
+    )
+    (repository / "NOTES.md").write_text("# Notes\n", encoding="utf-8")
+    git(repository, "add", ".")
+    git(repository, "commit", "-q", "-F", "-", stdin="feat: x\n\nAssisted-by: a tool")
+
+    result = release(repository, "tag", "create", "1.0.0", "--offline")
+
+    assert result.returncode == 0, result.stderr
+    assert b"Checked 1 commit(s) for attribution" in result.stderr
