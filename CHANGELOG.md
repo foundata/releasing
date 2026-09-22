@@ -9,6 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [3.0.0] - 2026-09-22
+
 ### Changed
 
 - `release` narrates its work on standard error: what is being checked, every
@@ -101,7 +106,8 @@ and this project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v2.2.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/foundata/releasing/releases/tag/v3.0.0
 [2.2.0]: https://github.com/foundata/releasing/releases/tag/v2.2.0
 [2.1.0]: https://github.com/foundata/releasing/releases/tag/v2.1.0
 [2.0.0]: https://github.com/foundata/releasing/releases/tag/v2.0.0
