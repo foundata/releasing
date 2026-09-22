@@ -19,18 +19,19 @@ the project configuration.
 
 ## Keys
 
-|        Key        |          Default          | Meaning |
-| :---------------- | :------------------------ | :------ |
-| `repository`      | required                  | `owner/name` on the forge. |
-| `forge`           | `github`                  | Where tags and releases live. |
-| `ecosystem`       | `python`                  | `python`, `ansible-collection` or `hugo-component`; sets other defaults. |
-| `index`           | by ecosystem              | `pypi`, `galaxy` or `none`. |
-| `version-files`   | by ecosystem              | Files carrying the version, relative to the project root. |
-| `changelog`       | by ecosystem              | A Keep a Changelog file, or `antsibull` for antsibull-changelog. |
-| `tag-format`      | `v{version}`              | Tag name template; must contain `{version}`. |
-| `tag-message`     | `version {version}`       | Annotated tag message; may use `{version}` and `{tag}`. |
-| `dependency-pins` | none                      | Requirements whose lower bound follows the project's version. |
-| `readmes`         | one entry for `README.md` | Documents prepared for the index; see below. |
+|          Key          |          Default          | Meaning |
+| :-------------------- | :------------------------ | :------ |
+| `repository`          | required                  | `owner/name` on the forge. |
+| `forge`               | `github`                  | Where tags and releases live. |
+| `ecosystem`           | `python`                  | `python`, `ansible-collection` or `hugo-component`; sets other defaults. |
+| `index`               | by ecosystem              | `pypi`, `galaxy` or `none`. |
+| `version-files`       | by ecosystem              | Files carrying the version, relative to the project root. |
+| `changelog`           | by ecosystem              | A Keep a Changelog file, or `antsibull` for antsibull-changelog. |
+| `tag-format`          | `v{version}`              | Tag name template; must contain `{version}`. |
+| `tag-message`         | `version {version}`       | Annotated tag message; may use `{version}` and `{tag}`. |
+| `dependency-pins`     | none                      | Requirements whose lower bound follows the project's version. |
+| `readmes`             | one entry for `README.md` | Documents prepared for the index; see below. |
+| `allowed-attribution` | none                      | Tool attributions the project carries on purpose; see below. |
 
 Ecosystem defaults:
 
@@ -65,6 +66,41 @@ An array of tables with `file` and `name`. On a version bump, the lower bound
 of the named requirement in that file is raised to the new version. This
 encodes a lockstep release of workspace members, such as a frontend package
 that requires its own engine version or newer.
+
+### `allowed-attribution`
+
+Before `tag create`, `push` and `forge release-create` publish anything, they
+read the commits that would become public and refuse a commit whose author or
+committer is a known tool identity, whose `Co-authored-by:` names one, that
+carries an `Assisted-by:` trailer, or that says it was generated with a tool.
+A commit message records the work, and a message can still be amended for
+nothing until it is pushed.
+
+A project bound by a policy that requires such a disclosure, such as the
+[Ansible Community Policy for AI-Assisted Contributions](https://docs.ansible.com/ansible/latest/community/ai_policy.html),
+names what it allows here instead of turning the check off. An entry is a rule
+name, which allows every value of that rule, or a rule name and a regular
+expression, which allows the values that expression finds:
+
+```toml
+# Allow the whole rule: any Assisted-by: trailer.
+allowed-attribution = ["assisted-by"]
+
+# Or only the values the expression finds, here a disclosure without an
+# address. A forge credits a person by the address in the line, so a
+# disclosure that names none stays a note in the message.
+allowed-attribution = ["assisted-by: ^[^<]*$"]
+```
+
+The rules are `identity`, `co-authored-by`, `assisted-by` and
+`generated-with`. A pattern is Python's regular-expression syntax, matched
+case-insensitively anywhere in the value; it is only ever compiled, never run
+as a command, and an expression that does not compile is a declaration error
+rather than a rule that silently matches nothing. An entry naming an unknown
+rule is refused for the same reason.
+
+`--allow-tool-attribution` permits everything for one invocation and names in
+a warning what it let through.
 
 ## Examples
 
