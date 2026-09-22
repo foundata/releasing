@@ -306,18 +306,25 @@ def _retain(
 
 def _check_changelog(exported: Path, config: ReleaseConfig, found: str) -> None:
     if config.changelog_format == "antsibull":
-        text = (exported / "changelogs" / "changelog.yaml").read_text(encoding="utf-8")
+        text = _read(exported / "changelogs" / "changelog.yaml")
         if not changelog.antsibull_has_release(text, found):
             raise BuildError(f"changelogs/changelog.yaml has no release {found}")
         return
     problems = changelog.check(
-        (exported / config.changelog).read_text(encoding="utf-8"),
+        _read(exported / config.changelog),
         forge=forge_for(config),
         tag_format=config.tag_format,
         version=found,
     )
     if problems:
         raise BuildError(f"{config.changelog}:\n  " + "\n  ".join(problems))
+
+
+def _read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise BuildError(f"cannot read {path.name}: {exc}") from exc
 
 
 def _resolve(root: Path, revision: str) -> str:
