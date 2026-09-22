@@ -123,6 +123,7 @@ def build(
     out: Path,
     expect: str | None = None,
     allow_local_sources: bool = False,
+    dry_run: bool = False,
 ) -> BuildResult:
     """Export, prepare, build, check and record one revision's distributions."""
     root = root.resolve()
@@ -150,6 +151,23 @@ def build(
         prepared = prepare_readmes(
             exported, config, version_string=found, forge=forge_for(config)
         )
+        if dry_run:
+            staged = workspace / "artifacts"
+            staged.mkdir()
+            _build_artifacts(exported, config, staged, dry_run=True)
+            reporting.phase(
+                "a dry run builds nothing, so there are no files to check "
+                "and no digests to record"
+            )
+            return BuildResult(
+                directory=out,
+                files=(),
+                manifest=out / MANIFEST,
+                revision=resolved,
+                version=found,
+                prepared=tuple(prepared),
+                local_sources=tuple(local),
+            )
         staged = workspace / "artifacts"
         staged.mkdir()
         files = _build_artifacts(exported, config, staged)
@@ -177,25 +195,46 @@ def build(
     )
 
 
-def _build_artifacts(exported: Path, config: ReleaseConfig, staged: Path) -> list[Path]:
+def _build_artifacts(
+    exported: Path, config: ReleaseConfig, staged: Path, *, dry_run: bool = False
+) -> list[Path]:
     if config.ecosystem == "python":
-        return _build_python(exported, staged)
+        return _build_python(exported, staged, dry_run=dry_run)
     if config.ecosystem == "ansible-collection":
-        return _build_collection(exported, staged)
+        return _build_collection(exported, staged, dry_run=dry_run)
     raise BuildError(f"the {config.ecosystem} ecosystem builds no artifacts")
 
 
-def _build_python(exported: Path, staged: Path) -> list[Path]:
+def _build_python(exported: Path, staged: Path, *, dry_run: bool = False) -> list[Path]:
     uv = str(processes.executable("uv"))
     if _is_workspace_root(exported):
         # A virtual workspace root is not a distribution; its members are. uv
         # builds each member's source distribution and its wheel from that.
-        processes.run(
-            [uv, "build", "--all-packages", "--out-dir", str(staged)],
-            cwd=exported,
-            echo=True,
-        )
+        argv = [uv, "build", "--all-packages", "--out-dir", str(staged)]
+        if dry_run:
+            reporting.command(argv, cwd=exported, executed=False)
+            return []
+        processes.run(argv, cwd=exported, echo=True)
         return _distributions(staged)
+    if dry_run:
+        # The wheel is built from the source distribution, which does not exist
+        # yet, so only the first command can be shown with its real arguments.
+        reporting.command(
+            [uv, "build", "--sdist", "--out-dir", str(staged), str(exported)],
+            executed=False,
+        )
+        reporting.command(
+            [
+                uv,
+                "build",
+                "--wheel",
+                "--out-dir",
+                str(staged),
+                "<the source distribution>",
+            ],
+            executed=False,
+        )
+        return []
     processes.run(
         [uv, "build", "--sdist", "--out-dir", str(staged), str(exported)], echo=True
     )
@@ -218,12 +257,15 @@ def _is_workspace_root(exported: Path) -> bool:
     return "project" not in data and isinstance(workspace, dict)
 
 
-def _build_collection(exported: Path, staged: Path) -> list[Path]:
+def _build_collection(
+    exported: Path, staged: Path, *, dry_run: bool = False
+) -> list[Path]:
     galaxy = str(processes.executable("ansible-galaxy"))
-    processes.run(
-        [galaxy, "collection", "build", "--output-path", str(staged), str(exported)],
-        echo=True,
-    )
+    argv = [galaxy, "collection", "build", "--output-path", str(staged), str(exported)]
+    if dry_run:
+        reporting.command(argv, executed=False)
+        return []
+    processes.run(argv, echo=True)
     return _distributions(staged)
 
 

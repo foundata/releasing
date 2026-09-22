@@ -22,7 +22,7 @@ CHANGELOG = """# Changelog
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+- Something new.
 
 
 ## [1.0.0] - 2026-09-01
@@ -153,3 +153,69 @@ def test_a_library_caller_narrates_nothing(repository: Path, tmp_path: Path) -> 
     assert result.stdout == b""
     assert result.stderr == b""
     assert (tmp_path / "exported" / "pyproject.toml").is_file()
+
+
+DRY_RUNS = [
+    ("version bump", ("version", "bump", "1.1.0", "--no-lock")),
+    ("changelog release", ("changelog", "release", "1.1.0")),
+    ("tag create", ("tag", "create", "1.0.0", "--offline")),
+    ("build", ("build", "--out", "dist", "--expect", "1.0.0")),
+    ("artifacts manifest", None),
+]
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [case[1] for case in DRY_RUNS if case[1] is not None],
+    ids=[case[0] for case in DRY_RUNS if case[1] is not None],
+)
+def test_a_dry_run_changes_nothing(
+    repository: Path, arguments: tuple[str, ...]
+) -> None:
+    before = {
+        path: path.read_bytes()
+        for path in repository.iterdir()
+        if path.is_file() and path.name != ".git"
+    }
+
+    result = release(repository, *arguments, "--dry-run")
+
+    assert result.returncode == 0, result.stderr
+    assert {path: path.read_bytes() for path in before} == before
+    assert git(repository, "tag", "--list") == ""
+    assert git(repository, "status", "--porcelain") == ""
+    assert not (repository / "dist").exists()
+
+
+def test_a_dry_run_reports_what_it_would_run(repository: Path) -> None:
+    story = release(
+        repository, "build", "--out", "dist", "--expect", "1.0.0", "--dry-run"
+    ).stderr.decode()
+
+    assert "» would run: uv build --sdist" in story
+    # A dry run may not invent what it cannot know.
+    assert "no digests to record" in story
+    assert "$ uv build" not in story
+
+
+def test_a_dry_run_of_a_manifest_shows_it_instead_of_writing_it(
+    repository: Path, tmp_path: Path
+) -> None:
+    artifact = tmp_path / "example-1.0.0.tar.gz"
+    artifact.write_bytes(b"not a real distribution")
+    target = tmp_path / "artifacts.json"
+
+    result = release(
+        repository,
+        "artifacts",
+        "manifest",
+        str(artifact),
+        "--out",
+        str(target),
+        "--version",
+        "1.0.0",
+        "--dry-run",
+    )
+
+    assert result.returncode == 1  # the file is not a distribution
+    assert not target.exists()

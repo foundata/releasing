@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from releasing import processes
+from releasing import processes, publish, reporting
 
 
 def test_remote_git_calls_are_bounded_and_do_not_prompt(
@@ -110,3 +110,32 @@ def test_a_failure_names_the_program_and_its_subcommand(
 def test_a_failing_command_reports_the_described_name(tmp_path: Path) -> None:
     with pytest.raises(processes.ProcessError, match=r"^git status failed with status"):
         processes.git(tmp_path, "status")
+
+
+def test_an_echoed_command_can_never_carry_a_credential(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # Echoing command lines turns "secrets reach a child through the
+    # environment" from a good practice into a precondition: an argument would
+    # now be written to standard error and into whatever captures it.
+    seen: list[str] = []
+    monkeypatch.setattr(
+        reporting, "command", lambda argv, **kwargs: seen.append(reporting.render(argv))
+    )
+    monkeypatch.setattr(processes, "executable", lambda name: Path("/usr/bin") / name)
+    monkeypatch.setattr(processes, "run", lambda argv, **kwargs: "")
+
+    def narrate(argv: list[str], **kwargs: object) -> str:
+        reporting.command(argv)
+        return ""
+
+    monkeypatch.setattr(processes, "run", narrate)
+    plan = publish.PublishPlan(index="pypi", version="1.0.0", files=(tmp_path / "a",))
+    publish.execute(plan)
+
+    assert seen, "the upload must be narrated"
+    assert not any(
+        marker in line.lower()
+        for line in seen
+        for marker in ("token", "password", "secret", "--api-key")
+    ), seen

@@ -341,7 +341,7 @@ def _run_version_bump(args: argparse.Namespace) -> int:
                 "uncommitted changes in version files; commit or stash them, "
                 "or pass --force:\n" + status.rstrip()
             )
-        edits = version.bump(loaded.root, loaded, args.version)
+        edits = version.bump(loaded.root, loaded, args.version, dry_run=args.dry_run)
         for edit in edits:
             reporting.detail(
                 "".join(
@@ -354,6 +354,9 @@ def _run_version_bump(args: argparse.Namespace) -> int:
                 )
             )
         if (loaded.root / "uv.lock").is_file() and not args.no_lock:
+            if args.dry_run:
+                reporting.command(["uv", "lock"], executed=False)
+                return 0
             processes.run(
                 [str(processes.executable("uv")), "lock"],
                 cwd=loaded.root,
@@ -452,6 +455,9 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
             ]
             if when is not None:
                 command += ["--date", when.isoformat()]
+            if args.dry_run:
+                reporting.command(command, cwd=loaded.root, executed=False)
+                return 0
             processes.run(command, cwd=loaded.root, stream=True, echo=True)
             return 0
         path = loaded.root / loaded.changelog
@@ -463,6 +469,19 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
             when=when,
             placeholder=args.placeholder,
         )
+        if args.dry_run:
+            reporting.detail(
+                "".join(
+                    difflib.unified_diff(
+                        _read(path).splitlines(keepends=True),
+                        result.splitlines(keepends=True),
+                        fromfile=f"a/{loaded.changelog}",
+                        tofile=f"b/{loaded.changelog}",
+                    )
+                )
+            )
+            reporting.phase(f"{loaded.changelog}: not written")
+            return 0
         _write(path, result.encode("utf-8"), stat.S_IMODE(path.stat().st_mode))
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -540,6 +559,10 @@ def _run_artifacts_manifest(args: argparse.Namespace) -> int:
             target = cast(Path, args.out)
             if target.exists():
                 raise ValueError(f"manifest must not already exist: {target}")
+            if args.dry_run:
+                reporting.detail(text)
+                reporting.phase(f"{target}: not written")
+                return 0
             _write(target, text.encode("utf-8"), 0o644)
             reporting.phase(f"{target}: {len(manifest.artifacts)} artifact(s) recorded")
     except (
@@ -580,6 +603,7 @@ def _run_build(args: argparse.Namespace) -> int:
             out=cast(Path, args.out),
             expect=args.expect,
             allow_local_sources=args.allow_local_sources,
+            dry_run=args.dry_run,
         )
     except (
         config.ConfigError,
@@ -598,6 +622,12 @@ def _run_build(args: argparse.Namespace) -> int:
             "these artifacts must never be uploaded",
             file=sys.stderr,
         )
+    if args.dry_run:
+        reporting.phase(
+            f"would build {result.version} from {result.revision[:12]} "
+            f"into {result.directory}"
+        )
+        return 0
     reporting.phase(
         f"built {result.version} from {result.revision[:12]} in {result.directory}"
     )
@@ -634,6 +664,7 @@ def _run_tag_create(args: argparse.Namespace) -> int:
             forges.forge_for(loaded),
             args.version,
             revision=args.revision,
+            dry_run=args.dry_run,
             manifest=(
                 None
                 if args.manifest is None
@@ -681,11 +712,13 @@ def _run_tag_delete(args: argparse.Namespace) -> int:
             args.version,
             remote=not args.local,
             offline=args.offline,
+            dry_run=args.dry_run,
         )
     except _RELEASE_ERRORS as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    reporting.phase(f"{loaded.tag(args.version)}: deleted ({', '.join(deleted)})")
+    what = "would delete" if args.dry_run else "deleted"
+    reporting.phase(f"{loaded.tag(args.version)}: {what} ({', '.join(deleted)})")
     return 0
 
 
@@ -859,6 +892,13 @@ def _add_tag_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_dry_run(parser: argparse.ArgumentParser, what: str) -> None:
+    """Offer a dry run on a command that changes something."""
+    parser.add_argument(
+        "--dry-run", action="store_true", help=f"report what would happen; {what}"
+    )
+
+
 def _add_quiet(parser: argparse.ArgumentParser) -> None:
     """Accept --quiet here as well as before the command.
 
@@ -963,6 +1003,7 @@ def build_parser() -> argparse.ArgumentParser:
     version_bump.add_argument(
         "--no-lock", action="store_true", help="do not run uv lock afterwards"
     )
+    _add_dry_run(version_bump, "no file is written")
     version_bump.set_defaults(run=_run_version_bump)
     changelog_parser = commands.add_parser(
         "changelog", help="check, show or release Keep a Changelog sections"
@@ -992,6 +1033,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_project(changelog_release)
     changelog_release.add_argument("version", metavar="X.Y.Z", help="the version")
+    _add_dry_run(changelog_release, "the changelog is not written")
     changelog_release.add_argument(
         "--date", metavar="YYYY-MM-DD", help="release date (default: today)"
     )
@@ -1032,6 +1074,7 @@ def build_parser() -> argparse.ArgumentParser:
     artifacts_manifest.add_argument(
         "--repository", metavar="OWNER/NAME", help="override the declared repository"
     )
+    _add_dry_run(artifacts_manifest, "the manifest is shown, not written")
     artifacts_manifest.set_defaults(run=_run_artifacts_manifest)
     artifacts_verify = artifacts_commands.add_parser(
         "verify", help="files beside a manifest match its digests exactly"
@@ -1070,6 +1113,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="build although a dependency resolves from a local directory",
     )
+    _add_dry_run(build_parser, "nothing is built and no directory is written")
     build_parser.set_defaults(run=_run_build)
     tag_parser = commands.add_parser(
         "tag", help="create, check or delete a release tag"
@@ -1091,6 +1135,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="refuse unless the revision is the one these artifacts were built from",
     )
+    _add_dry_run(tag_create, "no tag is created")
     tag_create.set_defaults(run=_run_tag_create)
     tag_check = tag_commands.add_parser(
         "check", help="the tag is annotated, worded and placed as a release tag"
@@ -1107,6 +1152,7 @@ def build_parser() -> argparse.ArgumentParser:
     tag_delete.add_argument(
         "--local", action="store_true", help="do not delete the tag on the remote"
     )
+    _add_dry_run(tag_delete, "no tag is deleted")
     tag_delete.set_defaults(run=_run_tag_delete)
     verify_parser = commands.add_parser(
         "verify",

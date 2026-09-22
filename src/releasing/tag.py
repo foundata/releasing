@@ -99,6 +99,7 @@ def create(
     revision: str = "HEAD",
     manifest: Manifest | None = None,
     offline: bool = False,
+    dry_run: bool = False,
 ) -> str:
     """Create the annotated release tag for ``version_string`` under guard.
 
@@ -128,6 +129,10 @@ def create(
         raise TagError(f"tag {tag} already exists locally at {current.revision[:12]}")
     if current.remote_revision is not None:
         raise TagError(f"tag {tag} already exists on the remote")
+    argv = ["git", "tag", "-a", tag, target, "-m", config.tag_message_for(found)]
+    if dry_run:
+        reporting.command(argv, executed=False)
+        return tag
     processes.git(
         root, "tag", "-a", tag, target, "-m", config.tag_message_for(found), echo=True
     )
@@ -206,6 +211,7 @@ def delete(
     *,
     remote: bool = True,
     offline: bool = False,
+    dry_run: bool = False,
 ) -> list[str]:
     """Delete the release tag locally and on the remote while no release exists."""
     tag = config.tag(version_string)
@@ -219,12 +225,20 @@ def delete(
         raise TagError(f"tag {tag} exists neither locally nor on the remote")
     deleted = []
     if current.revision is not None:
-        processes.git(root, "tag", "-d", tag, echo=True)
+        if dry_run:
+            reporting.command(["git", "tag", "-d", tag], executed=False)
+        else:
+            processes.git(root, "tag", "-d", tag, echo=True)
         deleted.append("local")
     if remote and current.remote_revision is not None:
-        processes.git(
-            root, "push", "origin", f":refs/tags/{tag}", remote=True, echo=True
-        )
+        if dry_run:
+            reporting.command(
+                ["git", "push", "origin", f":refs/tags/{tag}"], executed=False
+            )
+        else:
+            processes.git(
+                root, "push", "origin", f":refs/tags/{tag}", remote=True, echo=True
+            )
         deleted.append("remote")
     return deleted
 

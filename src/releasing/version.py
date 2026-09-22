@@ -165,13 +165,15 @@ class Edit:
     after: str
 
 
-def bump(root: Path, config: ReleaseConfig, new_version: str) -> list[Edit]:
+def bump(
+    root: Path, config: ReleaseConfig, new_version: str, *, dry_run: bool = False
+) -> list[Edit]:
     """Rewrite every site and every lockstep pin to ``new_version``; return the edits.
 
     The current version is taken from the sites, which must agree. Files are
     written only after every edit has been computed. Quoting, spacing, line
     endings and trailing commas are preserved. The changelog and lockfile are
-    not touched.
+    not touched. ``dry_run`` computes the same edits and writes nothing.
     """
     if not is_version(new_version):
         raise VersionError(f"not a version: {new_version!r}")
@@ -212,6 +214,8 @@ def bump(root: Path, config: ReleaseConfig, new_version: str) -> list[Edit]:
             lambda m: m["prefix"] + new_version + m["suffix"], text
         )
     edits = [Edit(file, before[file], after[file]) for file in before]
+    if dry_run:
+        return edits
     for edit in edits:
         (root / edit.file).write_text(edit.after, encoding="utf-8", newline="")
     return edits
