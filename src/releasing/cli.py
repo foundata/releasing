@@ -827,12 +827,7 @@ def _run_push(args: argparse.Namespace) -> int:
             args.version,
             remote=_remote(args, loaded),
         )
-        if _stops_for_attribution(
-            args,
-            loaded,
-            prepared.revision,
-            _unpushed(loaded.root, prepared.remote, prepared.branch),
-        ):
+        if _stops_for_attribution(args, loaded, prepared.branch, walk=True):
             return 1
         sent = push.execute(loaded.root, prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
@@ -933,7 +928,8 @@ def _add_remote(parser: argparse.ArgumentParser, what: str) -> None:
 
 def _remote(args: argparse.Namespace, loaded: config.ReleaseConfig) -> str:
     """The remote to ask: the one named, else the one the branch tracks."""
-    return cast("str | None", args.remote) or processes.remote_for(loaded.root)
+    named = cast("str | None", getattr(args, "remote", None))
+    return named or processes.remote_for(loaded.root)
 
 
 def _add_dry_run(parser: argparse.ArgumentParser, what: str) -> None:
@@ -941,22 +937,6 @@ def _add_dry_run(parser: argparse.ArgumentParser, what: str) -> None:
     parser.add_argument(
         "--dry-run", action="store_true", help=f"report what would happen; {what}"
     )
-
-
-def _unpushed(root: Path, remote: str, branch: str) -> str:
-    """The range of commits the remote does not have yet, if it can be known.
-
-    Before the first push there is no remote-tracking branch, and everything
-    reachable would be "unpushed"; the tagged revision alone is checked then.
-    """
-    reference = f"{remote}/{branch}"
-    try:
-        processes.git(
-            root, "rev-parse", "--verify", "--quiet", f"{reference}^{{commit}}"
-        )
-    except processes.ProcessError:
-        return ""
-    return f"{reference}..{branch}"
 
 
 def _add_allow_tool_attribution(parser: argparse.ArgumentParser) -> None:
@@ -969,17 +949,26 @@ def _add_allow_tool_attribution(parser: argparse.ArgumentParser) -> None:
 
 
 def _stops_for_attribution(
-    args: argparse.Namespace, loaded: config.ReleaseConfig, *revisions: str
+    args: argparse.Namespace,
+    loaded: config.ReleaseConfig,
+    *revisions: str,
+    walk: bool = False,
 ) -> bool:
     """Whether publishing must stop because a commit credits a tool.
 
-    The commits checked are the ones the command would make public, which are
-    also the ones whose message can still be amended for nothing.
+    The commits checked are the ones the command would make public and the
+    remote does not have yet, which are also the ones whose message can still
+    be amended for nothing.
     """
-    commits = attribution.read(loaded.root, [item for item in revisions if item])
+    commits = attribution.read(
+        loaded.root,
+        [item for item in revisions if item],
+        walk=walk,
+        remote=_remote(args, loaded),
+    )
     found = attribution.findings(commits, allowed=loaded.allowed_attribution)
     if not found:
-        reporting.phase(f"Checked {len(commits)} commit(s) for attribution")
+        reporting.phase(f"Checked {len(commits)} unpushed commit(s) for attribution")
         return False
     if args.allow_tool_attribution:
         # What was let through belongs in the record: the refusal that would

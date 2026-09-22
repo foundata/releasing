@@ -70,11 +70,13 @@ that requires its own engine version or newer.
 ### `allowed-attribution`
 
 Before `tag create`, `push` and `forge release-create` publish anything, they
-read the commits that would become public and refuse a commit whose author or
-committer is a known tool identity, whose `Co-authored-by:` names one, that
-carries an `Assisted-by:` trailer, or that says it was generated with a tool.
-A commit message records the work, and a message can still be amended for
-nothing until it is pushed.
+read the commits that would become public and that the remote does not have
+yet, and refuse a commit whose author or committer is a known tool identity,
+whose `Co-authored-by:` names one, that carries an `Assisted-by:` trailer, or
+that says it was generated with a tool. A commit message records the work, and
+an unpushed message can still be amended for nothing; a published one only
+through a history rewrite, which is why the check stops at what the remote
+already has.
 
 A project bound by a policy that requires such a disclosure, such as the
 [Ansible Community Policy for AI-Assisted Contributions](https://docs.ansible.com/ansible/latest/community/ai_policy.html),

@@ -17,6 +17,8 @@ GIT_ENV = {
     "GIT_AUTHOR_EMAIL": "test@example.invalid",
     "GIT_COMMITTER_NAME": "Test",
     "GIT_COMMITTER_EMAIL": "test@example.invalid",
+    # Git transport stays on the local filesystem in these tests.
+    "GIT_ALLOW_PROTOCOL": "file",
 }
 AWKWARD = """release: prepare 1.0.0
 
@@ -94,3 +96,27 @@ def test_an_unknown_revision_is_reported_as_such(history: Path) -> None:
 def test_nothing_to_read_is_not_an_error(history: Path) -> None:
     assert attribution.read(history, []) == []
     assert attribution.read(history, ["HEAD..HEAD"]) == []
+
+
+def test_what_a_named_remote_already_has_is_left_out(
+    history: Path, tmp_path: Path
+) -> None:
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "-q", "--bare", str(remote)],
+        env={**os.environ, **GIT_ENV},
+        check=True,
+        timeout=60,
+        capture_output=True,
+    )
+    git(history, "remote", "add", "origin", str(remote))
+    git(history, "push", "-q", "origin", "main")
+    git(history, "commit", "-q", "--allow-empty", "-m", "chore: after the push")
+
+    assert len(attribution.read(history, ["main"], walk=True)) == 3
+    assert len(attribution.read(history, ["main"], walk=True, remote="origin")) == 1
+    # Without a walk a plain selector is still exactly one commit.
+    assert len(attribution.read(history, ["main"])) == 1
+    assert attribution.read(history, ["HEAD~1"], remote="origin") == []
+    # An unknown remote excludes nothing rather than everything.
+    assert len(attribution.read(history, ["HEAD~1"], remote="absent")) == 1

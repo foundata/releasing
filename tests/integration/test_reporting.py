@@ -325,4 +325,38 @@ def test_a_declaration_may_allow_one_rule(repository: Path) -> None:
     result = release(repository, "tag", "create", "1.0.0", "--offline")
 
     assert result.returncode == 0, result.stderr
-    assert b"Checked 1 commit(s) for attribution" in result.stderr
+    assert b"Checked 1 unpushed commit(s) for attribution" in result.stderr
+
+
+def test_a_commit_the_remote_already_has_is_not_checked(repository: Path) -> None:
+    # Once a commit is published, amending it means rewriting history everyone
+    # else has. Refusing the release then blocks work over something the
+    # refusal cannot fix, so only what is still unpushed is read.
+    _credit_a_tool(repository)
+    git(repository, "push", "-q", "origin", "main")
+
+    result = release(repository, "tag", "create", "1.0.0", "--offline")
+
+    assert result.returncode == 0, result.stderr
+    assert b"Checked 0 unpushed commit(s) for attribution" in result.stderr
+    assert release(repository, "push", "1.0.0").returncode == 0
+
+
+def test_a_commit_of_another_remote_is_still_checked(repository: Path) -> None:
+    # Published on a fork is not published where the release goes.
+    other = repository.parent / "fork.git"
+    subprocess.run(
+        ["git", "init", "-q", "--bare", str(other)],
+        env={**os.environ, **GIT_ENV},
+        check=True,
+        timeout=60,
+        capture_output=True,
+    )
+    git(repository, "remote", "add", "fork", str(other))
+    _credit_a_tool(repository)
+    git(repository, "push", "-q", "fork", "main")
+
+    result = release(repository, "tag", "create", "1.0.0", "--offline")
+
+    assert result.returncode == 1
+    assert b"would publish a tool attribution" in result.stderr

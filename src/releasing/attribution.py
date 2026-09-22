@@ -152,21 +152,36 @@ def _is_tool(identity: str) -> bool:
     return any(pattern.search(identity) for pattern in _TOOL_IDENTITIES)
 
 
-def read(root: Path, revisions: Sequence[str]) -> list[Commit]:
-    """Read every commit ``revisions`` selects.
+def read(
+    root: Path,
+    revisions: Sequence[str],
+    *,
+    walk: bool = False,
+    remote: str | None = None,
+) -> list[Commit]:
+    """Read the commits ``revisions`` selects that are not published yet.
 
-    A selector is either one commit or a ``a..b`` range. The two are read
-    separately, because a single revision must not drag its ancestors in while
-    a range must. Duplicates are collapsed: a release commit is both the tagged
-    revision and part of what the push would send.
+    A selector is one commit, or a ``a..b`` range, which always brings its
+    ancestry. ``walk`` gives a plain selector the same reach, for a branch
+    whose every unpublished commit is about to be sent. Duplicates are
+    collapsed: a release commit is both the tagged revision and part of what
+    the push would send.
+
+    ``remote`` names the remote a release goes to, and every commit it already
+    has is left out. Such a commit cannot be amended for free any more, so
+    reporting it would refuse work over something only a history rewrite could
+    change. Without a remote, or before anything was ever pushed to it, every
+    selected commit is read.
     """
+    published = [] if remote is None else ["--not", f"--remotes={remote}"]
     ranges = [item for item in revisions if ".." in item]
     singles = [item for item in revisions if ".." not in item]
     records: list[str] = []
     if singles:
-        records += _log(root, ["--no-walk", *singles])
+        walking = [] if walk else ["--no-walk"]
+        records += _log(root, [*walking, *singles, *published])
     if ranges:
-        records += _log(root, list(ranges))
+        records += _log(root, [*ranges, *published])
     seen: dict[str, Commit] = {}
     for record in records:
         fields = record.strip("\n\x00").split(_SEPARATOR)

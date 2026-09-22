@@ -9,7 +9,12 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Changed
+
+- The attribution check reads only the commits the release remote does not
+  have yet. A published message can no longer be amended for free, so refusing
+  a release over one blocked work that the refusal could not fix; a repository
+  with such a commit in its history releases again.
 
 
 ## [4.0.0] - 2026-09-23
