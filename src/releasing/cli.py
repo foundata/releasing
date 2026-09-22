@@ -27,23 +27,13 @@ from releasing import (
     forges,
     markdown,
     processes,
+    publish,
+    push,
     reporting,
+    status,
+    tag,
+    verify,
     version,
-)
-from releasing import (
-    publish as uploading,
-)
-from releasing import (
-    push as publication,
-)
-from releasing import (
-    status as reports,
-)
-from releasing import (
-    tag as tagging,
-)
-from releasing import (
-    verify as verification,
 )
 
 Runner = Callable[[argparse.Namespace], int]
@@ -336,11 +326,11 @@ def _run_version_bump(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
         touched = [*loaded.version_files, *(pin.file for pin in loaded.dependency_pins)]
-        status = _git(loaded.root, "status", "--porcelain", "--", *touched)
-        if status and not args.force:
+        changed = _git(loaded.root, "status", "--porcelain", "--", *touched)
+        if changed and not args.force:
             raise ValueError(
                 "uncommitted changes in version files; commit or stash them, "
-                "or pass --force:\n" + status.rstrip()
+                "or pass --force:\n" + changed.rstrip()
             )
         edits = version.bump(loaded.root, loaded, args.version, dry_run=args.dry_run)
         for edit in edits:
@@ -641,12 +631,12 @@ _RELEASE_ERRORS = (
     changelog.ChangelogError,
     artifacts.ArtifactError,
     build.BuildError,
-    tagging.TagError,
-    publication.PushError,
-    uploading.PublishError,
+    tag.TagError,
+    push.PushError,
+    publish.PublishError,
     forge_release.ForgeReleaseError,
     antsibull.AntsibullError,
-    verification.VerificationError,
+    verify.VerificationError,
     forge_api.ForgeError,
     processes.ProcessError,
     ValueError,
@@ -658,7 +648,7 @@ def _run_tag_create(args: argparse.Namespace) -> int:
         loaded = _load_config(args)
         if _stops_for_attribution(args, loaded, args.revision):
             return 1
-        created = tagging.create(
+        created = tag.create(
             loaded.root,
             loaded,
             forges.forge_for(loaded),
@@ -682,7 +672,7 @@ def _run_tag_create(args: argparse.Namespace) -> int:
 def _run_tag_check(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
-        problems = tagging.check(
+        problems = tag.check(
             loaded.root,
             loaded,
             forges.forge_for(loaded),
@@ -703,7 +693,7 @@ def _run_tag_check(args: argparse.Namespace) -> int:
 def _run_tag_delete(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
-        deleted = tagging.delete(
+        deleted = tag.delete(
             loaded.root,
             loaded,
             forges.forge_for(loaded),
@@ -728,14 +718,14 @@ def _run_verify(args: argparse.Namespace) -> int:
         found = manifest.version or args.version
         if args.version is not None and found != args.version:
             raise ValueError(f"the manifest records {found}, not {args.version}")
-        distribution, selected = verification.select_distribution(
+        distribution, selected = verify.select_distribution(
             manifest, index=loaded.index, version=found, distribution=args.distribution
         )
-        problems = verification.compare_with_manifest(
-            selected, verification.index_files(loaded.index, distribution, found)
+        problems = verify.compare_with_manifest(
+            selected, verify.index_files(loaded.index, distribution, found)
         )
         if problems:
-            raise verification.VerificationError(
+            raise verify.VerificationError(
                 f"{loaded.index} serves other files than were validated:\n  "
                 + "\n  ".join(problems)
             )
@@ -743,18 +733,18 @@ def _run_verify(args: argparse.Namespace) -> int:
             f"Verified {loaded.index} serves the validated files for {found}"
         )
         if loaded.index == "pypi" and not args.no_install:
-            reported = verification.installed_version(distribution, found)
+            reported = verify.installed_version(distribution, found)
             if reported != found:
-                raise verification.VerificationError(
+                raise verify.VerificationError(
                     f"an isolated install of {distribution} reports {reported}, not {found}"
                 )
             reporting.phase(
                 f"Verified an isolated install reports {distribution} {reported}"
             )
         expected = loaded.tag(found)
-        latest = verification.latest_tag(forge)
+        latest = verify.latest_tag(forge)
         if latest != expected:
-            raise verification.VerificationError(
+            raise verify.VerificationError(
                 f"{loaded.forge} reports {latest or 'no release'} as latest, not {expected}"
             )
         reporting.phase(
@@ -774,7 +764,7 @@ def _run_status(args: argparse.Namespace) -> int:
             if args.manifest is None
             else artifacts.load_manifest(cast(Path, args.manifest))
         )
-        report = reports.collect(
+        report = status.collect(
             loaded.root,
             loaded,
             forges.forge_for(loaded),
@@ -801,7 +791,7 @@ def _run_status(args: argparse.Namespace) -> int:
 def _run_push(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
-        prepared = publication.plan(
+        prepared = push.plan(
             loaded.root,
             loaded,
             forges.forge_for(loaded),
@@ -815,7 +805,7 @@ def _run_push(args: argparse.Namespace) -> int:
             _unpushed(loaded.root, prepared.remote, prepared.branch),
         ):
             return 1
-        sent = publication.execute(loaded.root, prepared, dry_run=args.dry_run)
+        sent = push.execute(loaded.root, prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
         return 1
@@ -830,14 +820,14 @@ def _run_publish(args: argparse.Namespace) -> int:
         loaded = _load_config(args)
         manifest_path = cast(Path, args.manifest)
         manifest = artifacts.load_manifest(manifest_path)
-        prepared = uploading.plan(manifest, manifest_path.parent, index=loaded.index)
-        variable = uploading.token_variable(loaded.index)
+        prepared = publish.plan(manifest, manifest_path.parent, index=loaded.index)
+        variable = publish.token_variable(loaded.index)
         if not args.dry_run and not os.environ.get(variable):
             reporting.warning(
                 f"{variable} is unset; {loaded.index} may use a configured "
                 "credential instead"
             )
-        sent = uploading.execute(prepared, dry_run=args.dry_run)
+        sent = publish.execute(prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
         return 1
@@ -1156,35 +1146,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="where the files are (default: beside the manifest)",
     )
     artifacts_verify.set_defaults(run=_run_artifacts_verify)
-    build_parser = commands.add_parser(
+    build_command = commands.add_parser(
         "build",
         help="build distributions from an exported revision",
         description=build.__doc__,
     )
-    _add_project(build_parser)
-    build_parser.add_argument(
+    _add_project(build_command)
+    build_command.add_argument(
         "--revision",
         default="HEAD",
         metavar="REV",
         help="what to export (default: HEAD)",
     )
-    build_parser.add_argument(
+    build_command.add_argument(
         "--out",
         type=Path,
         required=True,
         metavar="DIR",
         help="new directory for the distributions and their manifest",
     )
-    build_parser.add_argument(
+    build_command.add_argument(
         "--expect", metavar="X.Y.Z", help="the version the revision must state"
     )
-    build_parser.add_argument(
+    build_command.add_argument(
         "--allow-local-sources",
         action="store_true",
         help="build although a dependency resolves from a local directory",
     )
-    _add_dry_run(build_parser, "nothing is built and no directory is written")
-    build_parser.set_defaults(run=_run_build)
+    _add_dry_run(build_command, "nothing is built and no directory is written")
+    build_command.set_defaults(run=_run_build)
     tag_parser = commands.add_parser(
         "tag", help="create, check or delete a release tag"
     )
@@ -1194,7 +1184,7 @@ def build_parser() -> argparse.ArgumentParser:
     tag_create = tag_commands.add_parser(
         "create",
         help="annotated tag on a clean tree whose version sites agree",
-        description=tagging.__doc__,
+        description=tag.__doc__,
     )
     _add_tag_arguments(tag_create)
     tag_create.add_argument(
@@ -1228,7 +1218,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser = commands.add_parser(
         "verify",
         help="the index serves the validated files and the forge reports the tag",
-        description=verification.__doc__,
+        description=verify.__doc__,
     )
     _add_project(verify_parser)
     verify_parser.add_argument(
@@ -1247,7 +1237,7 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser = commands.add_parser(
         "status",
         help="report which steps of a release are done, pending or broken",
-        description=reports.__doc__,
+        description=status.__doc__,
     )
     _add_project(status_parser)
     status_parser.add_argument("version", metavar="X.Y.Z", help="the release version")
@@ -1263,14 +1253,14 @@ def build_parser() -> argparse.ArgumentParser:
     push_parser = commands.add_parser(
         "push",
         help="publish the release branch and its tag together",
-        description=publication.__doc__,
+        description=push.__doc__,
     )
     _add_project(push_parser)
     push_parser.add_argument("version", metavar="X.Y.Z", help="the release version")
     push_parser.add_argument(
         "--remote",
-        default=publication.DEFAULT_REMOTE,
-        help=f"where to push (default: {publication.DEFAULT_REMOTE})",
+        default=push.DEFAULT_REMOTE,
+        help=f"where to push (default: {push.DEFAULT_REMOTE})",
     )
     push_parser.add_argument(
         "--dry-run", action="store_true", help="ask the remote without sending anything"
@@ -1280,7 +1270,7 @@ def build_parser() -> argparse.ArgumentParser:
     publish_parser = commands.add_parser(
         "publish",
         help="upload exactly the files a manifest names",
-        description=uploading.__doc__,
+        description=publish.__doc__,
     )
     _add_project(publish_parser)
     publish_parser.add_argument(
