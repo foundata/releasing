@@ -8,19 +8,12 @@ of that version report it? Does the forge report the version's tag as the
 latest release? A release that cannot answer all three is not finished.
 """
 
-import json
 import re
-import urllib.error
-import urllib.request
 from dataclasses import dataclass, replace
-from pathlib import Path
 
-from releasing import forge_api, processes, reporting
+from releasing import fetch, forge_api, processes
 from releasing.artifacts import Manifest, ManifestEntry
 from releasing.forges import Forge
-
-TIMEOUT = 30.0
-_USER_AGENT = "foundata-releasing"
 
 
 class VerificationError(RuntimeError):
@@ -179,33 +172,9 @@ def latest_tag(forge: Forge) -> str | None:
 
 
 def _get(url: str) -> object:
-    request = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/json",
-            "User-Agent": _USER_AGENT,
-            # Verification runs moments after the upload, which is exactly when
-            # a cached listing still predates the version being verified.
-            "Cache-Control": "no-cache",
-        },
-    )
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            document = json.loads(response.read().decode("utf-8"))
-            reporting.request("GET", url, response.status)
-            return document
-    except urllib.error.HTTPError as exc:
-        # The error carries an open response body; release it either way.
-        exc.close()
-        reporting.request("GET", url, exc.code)
-        if exc.code == 404:
-            raise VerificationError(f"{url}: not published (HTTP 404)") from exc
-        raise VerificationError(f"{url}: HTTP {exc.code} {exc.reason}") from exc
-    except (urllib.error.URLError, OSError, ValueError) as exc:
-        reporting.request("GET", url, "failed")
-        raise VerificationError(f"{url}: {exc}") from exc
-
-
-def manifest_path_for(directory: Path) -> Path:
-    """The manifest inside a build output directory."""
-    return directory / "artifacts.json"
+        return fetch.get(url)
+    except fetch.NotFoundError as exc:
+        raise VerificationError(f"{url}: not published (HTTP 404)") from exc
+    except fetch.FetchError as exc:
+        raise VerificationError(str(exc)) from exc

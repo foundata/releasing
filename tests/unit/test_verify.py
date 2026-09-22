@@ -49,11 +49,7 @@ class Response(io.BytesIO):
 
 
 def answer(
-    monkeypatch: pytest.MonkeyPatch,
-    module: Any,
-    payload: object,
-    *,
-    status: int | None = None,
+    monkeypatch: pytest.MonkeyPatch, payload: object, *, status: int | None = None
 ) -> list[str]:
     seen: list[str] = []
 
@@ -67,7 +63,7 @@ def answer(
             )
         return Response(json.dumps(payload).encode())
 
-    monkeypatch.setattr(module.urllib.request, "urlopen", fake)
+    monkeypatch.setattr(urllib.request, "urlopen", fake)
     return seen
 
 
@@ -76,7 +72,6 @@ def test_pypi_files_are_read_from_the_published_digests(
 ) -> None:
     seen = answer(
         monkeypatch,
-        verify,
         {
             "urls": [
                 {"filename": "example-1.0.0.tar.gz", "digests": {"sha256": "1" * 64}},
@@ -97,7 +92,6 @@ def test_galaxy_files_are_read_from_the_artifact_digest(
 ) -> None:
     seen = answer(
         monkeypatch,
-        verify,
         {"artifact": {"filename": "foundata-linux-1.4.0.tar.gz", "sha256": "3" * 64}},
     )
     files = verify.index_files("galaxy", "foundata.linux", "1.4.0")
@@ -160,7 +154,7 @@ def test_distribution_selection_supports_a_minimal_compatible_manifest() -> None
 
 
 def test_unpublished_version_and_unknown_index(monkeypatch: pytest.MonkeyPatch) -> None:
-    answer(monkeypatch, verify, None, status=404)
+    answer(monkeypatch, None, status=404)
     with pytest.raises(verify.VerificationError, match="not published"):
         verify.index_files("pypi", "example", "9.9.9")
     with pytest.raises(verify.VerificationError, match="publishes nothing"):
@@ -170,15 +164,15 @@ def test_unpublished_version_and_unknown_index(monkeypatch: pytest.MonkeyPatch) 
 def test_latest_release_tag_and_missing_release(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    seen = answer(monkeypatch, forge_api, {"tag_name": "v1.0.0"})
+    seen = answer(monkeypatch, {"tag_name": "v1.0.0"})
     assert verify.latest_tag(FORGE) == "v1.0.0"
     assert seen == ["https://api.github.com/repos/foundata/example/releases/latest"]
-    answer(monkeypatch, forge_api, None, status=404)
+    answer(monkeypatch, None, status=404)
     assert verify.latest_tag(FORGE) is None
     assert forge_api.release_exists(FORGE, "v1.0.0") is False
-    answer(monkeypatch, forge_api, {"tag_name": "v1.0.0"})
+    answer(monkeypatch, {"tag_name": "v1.0.0"})
     assert forge_api.release_exists(FORGE, "v1.0.0") is True
-    answer(monkeypatch, forge_api, None, status=500)
+    answer(monkeypatch, None, status=500)
     with pytest.raises(forge_api.ForgeError, match="HTTP 500"):
         verify.latest_tag(FORGE)
 

@@ -8,16 +8,10 @@ token is used only when the environment provides one for a private repository.
 Anything that creates a release stays with the forge's own command-line tool.
 """
 
-import json
 import os
-import urllib.error
-import urllib.request
 from typing import Any
 
-from releasing import reporting
-
-TIMEOUT = 30.0
-_USER_AGENT = "foundata-releasing"
+from releasing import fetch
 
 
 class ForgeError(RuntimeError):
@@ -26,33 +20,16 @@ class ForgeError(RuntimeError):
 
 def _request(url: str) -> Any | None:
     """GET a JSON document, or None when the forge reports it does not exist."""
-    headers = {
-        "Accept": "application/json",
-        "User-Agent": _USER_AGENT,
-        # A release asks these questions moments after changing the answer, and
-        # an anonymous request is served from a cache that may still hold the
-        # previous one. Ask for a revalidated answer rather than a fast one.
-        "Cache-Control": "no-cache",
-    }
+    headers = {}
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    request = urllib.request.Request(url, headers=headers, method="GET")
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            document = json.loads(response.read().decode("utf-8"))
-            reporting.request("GET", url, response.status)
-            return document
-    except urllib.error.HTTPError as exc:
-        # The error carries an open response body; release it either way.
-        exc.close()
-        reporting.request("GET", url, exc.code)
-        if exc.code == 404:
-            return None
-        raise ForgeError(f"{url}: HTTP {exc.code} {exc.reason}") from exc
-    except (urllib.error.URLError, OSError, ValueError) as exc:
-        reporting.request("GET", url, "failed")
-        raise ForgeError(f"{url}: {exc}") from exc
+        return fetch.get(url, headers=headers)
+    except fetch.NotFoundError:
+        return None
+    except fetch.FetchError as exc:
+        raise ForgeError(str(exc)) from exc
 
 
 def release_exists(forge: Any, tag: str) -> bool:
