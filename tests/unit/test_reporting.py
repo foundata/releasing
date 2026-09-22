@@ -120,10 +120,17 @@ def test_every_narrated_line_starts_with_a_known_verb() -> None:
     ],
 )
 def test_colour_follows_the_stream_and_the_conventional_variables(
-    stream: io.StringIO, environ: dict[str, str], expected: bool
+    stream: io.StringIO,
+    environ: dict[str, str],
+    expected: bool,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # A redirected story is the audit trail of a release; escape sequences in
-    # it would be noise in the record.
+    # it would be noise in the record. On Windows the last step asks the
+    # console itself, which a stream double has no handle for, so that answer
+    # is supplied here and the decision under test is the one above it.
+    monkeypatch.setattr(reporting, "_enable_windows_sequences", lambda stream: True)
+
     assert reporting.wants_colour(stream, environ) is expected
 
 

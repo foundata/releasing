@@ -4,6 +4,7 @@
 
 import argparse
 import difflib
+import io
 import os
 import re
 import stat
@@ -1351,6 +1352,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _same_bytes_everywhere() -> None:
+    """Write UTF-8 with LF, whatever the platform and the locale prefer.
+
+    A console codepage that cannot encode a character would otherwise stop a
+    command mid-sentence, and a platform that ends a line with CRLF would put
+    that into the record a redirected run keeps.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8", newline="\n")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the non-interactive CLI; reserve stdout for generated output.
 
@@ -1358,6 +1371,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     command that changes something and every request to a forge. ``--quiet``
     keeps the product and drops the story; errors are never dropped.
     """
+    _same_bytes_everywhere()
     args = build_parser().parse_args(argv)
     run = cast(Runner, args.run)
     if getattr(args, "quiet", False):

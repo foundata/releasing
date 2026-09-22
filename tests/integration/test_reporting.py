@@ -364,3 +364,26 @@ def test_a_commit_of_another_remote_is_still_checked(repository: Path) -> None:
 
     assert result.returncode == 1
     assert b"would publish a tool attribution" in result.stderr
+
+
+def test_the_output_is_utf_8_with_lf_whatever_the_locale_asks_for(
+    repository: Path,
+) -> None:
+    # A Windows console encodes in its codepage, where the marker is one byte
+    # or not encodable at all; an encoding the marker has no place in stands
+    # in for that here. Without the fix the command stops mid-sentence.
+    result = subprocess.run(
+        # No -I: isolated mode would ignore the variable standing in for the
+        # console's encoding.
+        [sys.executable, "-m", "releasing", "tag", "create", "1.0.0", "--offline"],
+        cwd=repository,
+        env={**os.environ, **GIT_ENV, "PYTHONIOENCODING": "ascii"},
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b"v1.0.0\n"
+    assert result.stderr.startswith("»".encode())
+    assert b"\r\n" not in result.stderr

@@ -194,6 +194,7 @@ def test_export_rejects_special_members_before_extracting_any_member(
 
 
 @pytest.mark.parametrize("write_through", [False, True])
+@POSIX_ONLY
 def test_export_keeps_outward_symlinks_but_rejects_writes_through_them(
     tmp_path: Path, scratch: Path, monkeypatch: pytest.MonkeyPatch, write_through: bool
 ) -> None:
@@ -231,7 +232,7 @@ def test_export_does_not_roll_back_a_partially_extracted_destination(
     (destination / "unrelated").write_bytes(b"caller-owned")
     with pytest.raises(BuildError) as caught:
         export(tmp_path, "revision", destination)
-    assert isinstance(caught.value.__cause__, IsADirectoryError)
+    assert isinstance(caught.value.__cause__, IsADirectoryError | PermissionError)
     assert str(caught.value) == (
         f"cannot extract the exported revision: {caught.value.__cause__}"
     )

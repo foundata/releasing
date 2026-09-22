@@ -47,7 +47,7 @@ def describe(argv: Sequence[str]) -> str:
     than ``git archive failed`` when a release stops. Flags, paths and
     versions are skipped; the first plain word after them is the subcommand.
     """
-    name = Path(argv[0]).name
+    name = reporting.program(argv[0])
     for argument in argv[1:]:
         if _SUBCOMMAND.fullmatch(argument):
             return f"{name} {argument}"

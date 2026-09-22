@@ -225,6 +225,20 @@ class Writer:
         self._stream.flush()
 
 
+# What a Windows path search appends to the name of a program. A reader
+# types "git", and a diagnostic that says "git.EXE failed" names a file
+# rather than the command that was run.
+_PROGRAM_SUFFIXES = frozenset({".bat", ".cmd", ".com", ".exe"})
+
+
+def program(path: str) -> str:
+    """The name to show for an executable, without a platform's suffix."""
+    name = Path(path).name
+    if sys.platform == "win32" and Path(name).suffix.lower() in _PROGRAM_SUFFIXES:
+        return Path(name).stem
+    return name
+
+
 def render(argv: Sequence[str]) -> str:
     """Quote an argument list the way the running platform's shell expects.
 
@@ -232,7 +246,7 @@ def render(argv: Sequence[str]) -> str:
     located before it runs. The line is for a reader, and it stays runnable
     with the plain name, since that is where it was found.
     """
-    arguments = [Path(argv[0]).name, *(str(argument) for argument in argv[1:])]
+    arguments = [program(argv[0]), *(str(argument) for argument in argv[1:])]
     if sys.platform == "win32":  # pragma: no cover - exercised on Windows only
         return subprocess.list2cmdline(arguments)
     return shlex.join(arguments)
