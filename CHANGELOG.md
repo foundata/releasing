@@ -9,6 +9,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Every narrated line begins with a verb from a closed vocabulary: a participle
+  while the work runs, a past tense once it is done, `Would` for what a dry run
+  declined. The wording of many lines changed with it.
+
+### Added
+
+- The narration is coloured on a terminal: the verb that opens a line, the
+  answer to a request, and the `Error:` and `WARNING:` prefixes. Redirected
+  output stays plain, so a captured story remains a clean record. `NO_COLOR`
+  suppresses the styling and `FORCE_COLOR` demands it where no terminal is
+  detected.
+
 ### Fixed
 
 - Every request to a forge or an index asks for a revalidated answer. A release

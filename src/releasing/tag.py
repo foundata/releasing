@@ -121,8 +121,8 @@ def create(
     ).strip()
     if manifest is not None:
         check_built_revision(manifest, target, version_string)
-        reporting.phase(f"the manifest records artifacts built from {target[:12]}")
-    reporting.phase("the working tree is clean")
+        reporting.phase(f"Found artifacts built from {target[:12]} in the manifest")
+    reporting.phase("Verified the working tree is clean")
     found = check_revision(root, target, version_string)
     current = state(root, config, forge, tag, offline=offline)
     if current.revision is not None:
@@ -175,7 +175,7 @@ def check_revision(root: Path, revision: str, expected: str) -> str:
         exported = Path(value)
         _source_export.export(root, revision, exported)
         reporting.phase(
-            "checking version sites, lockfile, pins and changelog in the export"
+            "Checking version sites, lockfile, pins and changelog in the export"
         )
         config = load_release_config(exported)
         found = version.check(exported, config, expect=expected)

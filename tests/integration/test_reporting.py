@@ -91,8 +91,8 @@ def test_the_story_goes_to_stderr_and_the_product_to_stdout(repository: Path) ->
     # The product: exactly what the command made, nothing else.
     assert result.stdout == b"v1.0.0\n"
     story = result.stderr.decode()
-    assert "» the working tree is clean" in story
-    assert "» exporting " in story
+    assert "» Verified the working tree is clean" in story
+    assert "» Exporting " in story
     assert "$ git -C " in story
     assert "tag -a v1.0.0" in story
 
@@ -192,9 +192,9 @@ def test_a_dry_run_reports_what_it_would_run(repository: Path) -> None:
         repository, "build", "--out", "dist", "--expect", "1.0.0", "--dry-run"
     ).stderr.decode()
 
-    assert "» would run: uv build --sdist" in story
+    assert "» Would run: uv build --sdist" in story
     # A dry run may not invent what it cannot know.
-    assert "no digests to record" in story
+    assert "recording their digests" in story
     assert "$ uv build" not in story
 
 
@@ -219,3 +219,41 @@ def test_a_dry_run_of_a_manifest_shows_it_instead_of_writing_it(
 
     assert result.returncode == 1  # the file is not a distribution
     assert not target.exists()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="no pty on Windows")
+def test_a_terminal_gets_colour_and_a_pipe_does_not(repository: Path) -> None:
+    # The decision is made against the real stream, so it is worth making once
+    # against a real terminal rather than only against a stream double.
+    import pty
+
+    main, worker = pty.openpty()
+    process = subprocess.Popen(
+        [sys.executable, "-I", "-m", "releasing", "changelog", "check"],
+        cwd=repository,
+        stdout=subprocess.DEVNULL,
+        stderr=worker,
+        env={
+            **os.environ,
+            **GIT_ENV,
+            "TERM": "xterm",
+            "NO_COLOR": "",
+            "FORCE_COLOR": "",
+        },
+    )
+    os.close(worker)
+    seen = bytearray()
+    try:
+        while chunk := os.read(main, 4096):
+            seen += chunk
+    except OSError:
+        pass  # the terminal reports EIO once the child is gone
+    finally:
+        os.close(main)
+    assert process.wait(timeout=60) == 0
+
+    assert b"\x1b[32mChecked\x1b[0m" in seen, bytes(seen)
+    assert (
+        release(repository, "changelog", "check").stderr
+        == b"\xc2\xbb Checked CHANGELOG.md\n"
+    )

@@ -88,9 +88,13 @@ def test_workspace_verifies_only_the_selected_distribution(
     output = capsys.readouterr()
     assert output.out == ""
     assert output.err == (
-        "» pypi serves the validated files for 1.0.0\n"
-        + ("" if no_install else f"» an isolated install reports {name} 1.0.0\n")
-        + "» github reports v1.0.0 as the latest release\n"
+        "» Verified pypi serves the validated files for 1.0.0\n"
+        + (
+            ""
+            if no_install
+            else f"» Verified an isolated install reports {name} 1.0.0\n"
+        )
+        + "» Verified github reports v1.0.0 as the latest release\n"
     )
 
 
@@ -177,8 +181,10 @@ def test_verification_preserves_progress_before_a_later_failure(
     assert invoke(project, MANIFEST, "--distribution", "example") == 1
     output = capsys.readouterr()
     assert output.out == ""
-    assert output.err.startswith("» pypi serves the validated files for 1.0.0\n")
+    assert output.err.startswith(
+        "» Verified pypi serves the validated files for 1.0.0\n"
+    )
     if stage == "forge":
-        assert "» an isolated install reports example 1.0.0" in output.err
+        assert "» Verified an isolated install reports example 1.0.0" in output.err
     assert "0.9.0" in output.err
     assert "forge:foundata/example" not in calls

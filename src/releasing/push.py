@@ -60,7 +60,7 @@ def plan(
             f"{branch} does not contain {tag} ({revision[:12]}); pushing the tag "
             "would publish a commit that is on no branch"
         )
-    reporting.phase(f"{branch} contains {tag} ({revision[:12]})")
+    reporting.phase(f"Verified {branch} contains {tag} ({revision[:12]})")
     found = tagging.check_revision(root, revision, version_string)
     return PushPlan(
         remote=remote, branch=branch, tag=tag, revision=revision, version=found

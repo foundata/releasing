@@ -52,11 +52,11 @@ def project(tmp_path: Path) -> Path:
 def test_check_show_and_release_without_git_or_network(project: Path) -> None:
     checked = release(project, "check")
     assert checked.stdout == b""
-    assert b"CHANGELOG.md: ok" in checked.stderr
+    assert b"Checked CHANGELOG.md" in checked.stderr
     assert release(project, "show", "1.2.3").stdout == b"- Initial.\n"
     result = release(project, "release", "1.3.0", "--date", "2026-09-20")
     assert (result.returncode, result.stdout) == (0, b"")
-    assert b"CHANGELOG.md: released 1.3.0" in result.stderr
+    assert b"Released 1.3.0 in CHANGELOG.md" in result.stderr
     text = (project / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "## [1.3.0] - 2026-09-20\n\n- Something new.\n" in text
     assert (

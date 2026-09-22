@@ -269,7 +269,7 @@ def test_check_compares_remote_tag_objects(repository: Path, remote: str) -> Non
     assert result.returncode == (0 if remote == "identical" else 1), result.stderr
     if remote == "identical":
         assert result.stdout == b""
-        assert b"v1.0.0: ok" in result.stderr
+        assert b"Checked v1.0.0" in result.stderr
     else:
         assert b"differs between the remote and this repository" in result.stderr
 

@@ -107,15 +107,22 @@ that changed something, and every request to a forge or an index.
 
 ```console
 $ release tag create 2.2.0 --manifest ../dist-2.2.0/artifacts.json
-» the manifest records artifacts built from 41db3420c2d6
-» the working tree is clean
-» exporting 41db3420c2d6 into a temporary directory
+» Found artifacts built from 41db3420c2d6 in the manifest
+» Verified the working tree is clean
+» Exporting 41db3420c2d6 into a temporary directory
 $ git -C /home/example/project archive --format=tar 41db3420c2d6...
-» checking version sites, lockfile, pins and changelog in the export
+» Checking version sites, lockfile, pins and changelog in the export
 » GET https://api.github.com/repos/foundata/releasing/releases/tags/v2.2.0 → 404
 $ git -C /home/example/project tag -a v2.2.0 41db3420c2d6 -m 'version 2.2.0'
 v2.2.0
 ```
+
+Every narrated line begins with a verb, so the first word of each line says
+what happened: a participle while the work runs, a past tense once it is done,
+and `Would` for what a dry run declined to do. On a terminal that verb carries
+the colour, as does the answer to a request; a redirected story stays plain,
+because it is the record of the release. `NO_COLOR` suppresses the styling and
+`FORCE_COLOR` demands it.
 
 `--quiet` (`-q`), accepted before or after the command, keeps the product and
 drops the story. It never suppresses an error. `2>/dev/null` does the same,

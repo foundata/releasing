@@ -190,7 +190,7 @@ def test_build_prepares_the_readme_inside_the_export_only(repository: Path) -> N
     out = repository.parent / "dist"
     result = release(repository, "build", "--out", str(out), "--expect", "1.0.0")
     assert result.returncode == 0, result.stderr
-    assert b"prepared README.md" in result.stderr
+    assert b"Prepared README.md" in result.stderr
 
     # The committed README keeps its relative links; nothing was restored.
     assert (repository / "README.md").read_text(encoding="utf-8") == README

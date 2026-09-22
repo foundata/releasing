@@ -112,7 +112,7 @@ def prepare_readmes(
             target.write_text(prepared, encoding="utf-8", newline="")
             touched.append(copy)
     for path in touched:
-        reporting.phase(f"prepared {path}")
+        reporting.phase(f"Prepared {path}")
     return touched
 
 
@@ -147,7 +147,7 @@ def build(
             )
         found = version.check(exported, config, expect=expect)
         _check_changelog(exported, config, found)
-        reporting.phase(f"the export states {found}")
+        reporting.phase(f"Found {found} in the export")
         prepared = prepare_readmes(
             exported, config, version_string=found, forge=forge_for(config)
         )
@@ -156,8 +156,8 @@ def build(
             staged.mkdir()
             _build_artifacts(exported, config, staged, dry_run=True)
             reporting.phase(
-                "a dry run builds nothing, so there are no files to check "
-                "and no digests to record"
+                "Skipped checking the files and recording their digests: "
+                "a dry run builds nothing"
             )
             return BuildResult(
                 directory=out,
@@ -173,7 +173,7 @@ def build(
         files = _build_artifacts(exported, config, staged)
         inspected = [artifacts.inspect(path) for path in files]
         names = tuple(version.project_names(exported, config).values())
-        reporting.phase(f"checking {len(files)} built file(s)")
+        reporting.phase(f"Checking {len(files)} built file(s)")
         problems = artifacts.check(inspected, version=found, names=names)
         if problems:
             raise BuildError(

@@ -86,7 +86,7 @@ def test_manifest_and_verify_round_trip(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     verified = release(tmp_path, "verify", str(manifest))
     assert verified.stdout == b""
-    assert b"1 artifact(s) match the manifest" in verified.stderr
+    assert b"Matched 1 artifact(s) to the manifest" in verified.stderr
     path.write_bytes(path.read_bytes() + b"\0")
     result = release(tmp_path, "verify", str(manifest))
     assert result.returncode == 1

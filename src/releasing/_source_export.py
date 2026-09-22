@@ -25,7 +25,7 @@ def export(root: Path, revision: str, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="releasing-export-") as value:
         archive = Path(value) / "source.tar"
-        reporting.phase(f"exporting {revision[:12]} into a temporary directory")
+        reporting.phase(f"Exporting {revision[:12]} into a temporary directory")
         processes.git(
             root, "archive", "--format=tar", revision, stdout=archive, echo=True
         )

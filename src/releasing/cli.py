@@ -268,7 +268,7 @@ def _run_markdown_prepare(args: argparse.Namespace) -> int:
                 if args.output is None:
                     _show_diff(path, target, original_text, result)
             elif args.output is None:
-                reporting.phase(f"unchanged: {path}")
+                reporting.phase(f"Kept {path} unchanged")
     except (OSError, UnicodeError, ValueError) as exc:
         reporting.error(str(exc))
         return 1
@@ -423,7 +423,7 @@ def _run_changelog_check(args: argparse.Namespace) -> int:
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
         reporting.error(str(exc))
         return 1
-    reporting.phase(f"{loaded.changelog}: ok")
+    reporting.phase(f"Checked {loaded.changelog}")
     return 0
 
 
@@ -480,7 +480,7 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
                     )
                 )
             )
-            reporting.phase(f"{loaded.changelog}: not written")
+            reporting.phase(f"Would write {loaded.changelog}")
             return 0
         _write(path, result.encode("utf-8"), stat.S_IMODE(path.stat().st_mode))
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
@@ -489,7 +489,7 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
     except processes.ProcessError as exc:
         reporting.error(f"changelog release failed: {exc}")
         return 1
-    reporting.phase(f"{loaded.changelog}: released {args.version}")
+    reporting.phase(f"Released {args.version} in {loaded.changelog}")
     return 0
 
 
@@ -559,10 +559,12 @@ def _run_artifacts_manifest(args: argparse.Namespace) -> int:
                 raise ValueError(f"manifest must not already exist: {target}")
             if args.dry_run:
                 reporting.detail(text)
-                reporting.phase(f"{target}: not written")
+                reporting.phase(f"Would write {target}")
                 return 0
             _write(target, text.encode("utf-8"), 0o644)
-            reporting.phase(f"{target}: {len(manifest.artifacts)} artifact(s) recorded")
+            reporting.phase(
+                f"Recorded {len(manifest.artifacts)} artifact(s) in {target}"
+            )
     except (
         config.ConfigError,
         version.VersionError,
@@ -587,7 +589,7 @@ def _run_artifacts_verify(args: argparse.Namespace) -> int:
     if problems:
         reporting.error("files differ from the manifest:", problems=problems)
         return 1
-    reporting.phase(f"{len(manifest.artifacts)} artifact(s) match the manifest")
+    reporting.phase(f"Matched {len(manifest.artifacts)} artifact(s) to the manifest")
     return 0
 
 
@@ -619,12 +621,12 @@ def _run_build(args: argparse.Namespace) -> int:
         )
     if args.dry_run:
         reporting.phase(
-            f"would build {result.version} from {result.revision[:12]} "
+            f"Would build {result.version} from {result.revision[:12]} "
             f"into {result.directory}"
         )
         return 0
     reporting.phase(
-        f"built {result.version} from {result.revision[:12]} in {result.directory}"
+        f"Built {result.version} from {result.revision[:12]} in {result.directory}"
     )
     for path in result.files:
         print(path)
@@ -691,7 +693,7 @@ def _run_tag_check(args: argparse.Namespace) -> int:
     if problems:
         reporting.error("the release tag is not usable:", problems=problems)
         return 1
-    reporting.phase(f"{loaded.tag(args.version)}: ok")
+    reporting.phase(f"Checked {loaded.tag(args.version)}")
     return 0
 
 
@@ -710,8 +712,8 @@ def _run_tag_delete(args: argparse.Namespace) -> int:
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
         return 1
-    what = "would delete" if args.dry_run else "deleted"
-    reporting.phase(f"{loaded.tag(args.version)}: {what} ({', '.join(deleted)})")
+    what = "Would delete" if args.dry_run else "Deleted"
+    reporting.phase(f"{what} {loaded.tag(args.version)} ({', '.join(deleted)})")
     return 0
 
 
@@ -734,21 +736,27 @@ def _run_verify(args: argparse.Namespace) -> int:
                 f"{loaded.index} serves other files than were validated:\n  "
                 + "\n  ".join(problems)
             )
-        reporting.phase(f"{loaded.index} serves the validated files for {found}")
+        reporting.phase(
+            f"Verified {loaded.index} serves the validated files for {found}"
+        )
         if loaded.index == "pypi" and not args.no_install:
             reported = verification.installed_version(distribution, found)
             if reported != found:
                 raise verification.VerificationError(
                     f"an isolated install of {distribution} reports {reported}, not {found}"
                 )
-            reporting.phase(f"an isolated install reports {distribution} {reported}")
+            reporting.phase(
+                f"Verified an isolated install reports {distribution} {reported}"
+            )
         expected = loaded.tag(found)
         latest = verification.latest_tag(forge)
         if latest != expected:
             raise verification.VerificationError(
                 f"{loaded.forge} reports {latest or 'no release'} as latest, not {expected}"
             )
-        reporting.phase(f"{loaded.forge} reports {expected} as the latest release")
+        reporting.phase(
+            f"Verified {loaded.forge} reports {expected} as the latest release"
+        )
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
         return 1
@@ -801,7 +809,7 @@ def _run_push(args: argparse.Namespace) -> int:
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
         return 1
-    what = "would push" if args.dry_run else "pushed"
+    what = "Would push" if args.dry_run else "Pushed"
     for reference in sent:
         reporting.phase(f"{what} {reference} to {prepared.remote}")
     return 0
@@ -815,7 +823,7 @@ def _run_publish(args: argparse.Namespace) -> int:
         prepared = uploading.plan(manifest, manifest_path.parent, index=loaded.index)
         variable = uploading.token_variable(loaded.index)
         if not args.dry_run and not os.environ.get(variable):
-            reporting.phase(
+            reporting.warning(
                 f"{variable} is unset; {loaded.index} may use a configured "
                 "credential instead"
             )
@@ -823,13 +831,11 @@ def _run_publish(args: argparse.Namespace) -> int:
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
         return 1
-    what = "would upload" if args.dry_run else "uploaded"
+    what = "Would upload" if args.dry_run else "Uploaded"
     for name in sent:
         reporting.phase(f"{what} {name}")
-    reporting.phase(
-        f"{prepared.version} to {prepared.index}"
-        + (" (nothing sent)" if args.dry_run else "")
-    )
+    published = "Would publish" if args.dry_run else "Published"
+    reporting.phase(f"{published} {prepared.version} to {prepared.index}")
     return 0
 
 
@@ -855,9 +861,9 @@ def _run_forge_release_create(args: argparse.Namespace) -> int:
         return 1
     if args.dry_run:
         return 0
-    reporting.phase(f"{prepared.forge} created the release entry for {prepared.tag}")
+    reporting.phase(f"Created the {prepared.forge} release entry for {prepared.tag}")
     for path in prepared.assets:
-        reporting.phase(f"attached {path.name}")
+        reporting.phase(f"Attached {path.name}")
     if reported:
         print(reported)
     return 0

@@ -42,7 +42,7 @@ def plan(manifest: Manifest, directory: Path, *, index: str) -> PublishPlan:
     if index not in _TOKEN_VARIABLES:
         raise PublishError(f"the {index} index publishes nothing")
     reporting.phase(
-        f"re-checking {len(manifest.artifacts)} file(s) against the manifest"
+        f"Re-checking {len(manifest.artifacts)} file(s) against the manifest"
     )
     problems = artifacts.verify_manifest(manifest, directory)
     if problems:
