@@ -24,7 +24,8 @@ from releasing._source_export import export as export
 from releasing.config import ReleaseConfig, load_release_config
 from releasing.forges import Forge, forge_for
 
-# The manifest belongs to the artifacts it lists; this is where a build puts it.
+# The name belongs to the module that writes and reads the file; it is kept
+# here because a build result is where callers look for it.
 MANIFEST = artifacts.MANIFEST
 
 
