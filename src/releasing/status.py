@@ -120,12 +120,8 @@ def collect(
 def _changelog_step(
     root: Path, config: ReleaseConfig, forge: Forge, version_string: str
 ) -> Step:
-    if config.changelog_format == "antsibull":
-        path = root / "changelogs" / "changelog.yaml"
-        name = "changelogs/changelog.yaml"
-    else:
-        path = root / config.changelog
-        name = config.changelog
+    name = config.changelog_path
+    path = root / name
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as exc:

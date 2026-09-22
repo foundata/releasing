@@ -105,6 +105,13 @@ class ReleaseConfig:
         return self.repository.partition("/")[2]
 
     @property
+    def changelog_path(self) -> str:
+        """The file the changelog is kept in, whichever format owns it."""
+        if self.changelog_format == "antsibull":
+            return "changelogs/changelog.yaml"
+        return self.changelog
+
+    @property
     def changelog_format(self) -> str:
         """``keep-a-changelog`` for a Markdown file, ``antsibull`` otherwise."""
         return "antsibull" if self.changelog == "antsibull" else "keep-a-changelog"
@@ -252,9 +259,9 @@ def _check_files(config: ReleaseConfig) -> None:
     ]
     if (
         config.changelog == "antsibull"
-        and not (config.root / "changelogs" / "changelog.yaml").is_file()
+        and not (config.root / config.changelog_path).is_file()
     ):
-        missing.append("changelogs/changelog.yaml")
+        missing.append(config.changelog_path)
     if missing:
         raise ConfigError(
             "declared files are missing below "

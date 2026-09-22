@@ -11,6 +11,9 @@ and this project adheres to
 
 ### Fixed
 
+- `changelog check` on a collection said it had checked `antsibull` instead of
+  naming `changelogs/changelog.yaml`. Every command now names the file the
+  changelog is kept in, whichever format owns it.
 - The export a build and a tag check run on no longer depends on the machine's
   line-ending configuration. `git archive` applies `core.autocrlf` and
   `core.eol`, which Git for Windows sets to convert by default, so the same

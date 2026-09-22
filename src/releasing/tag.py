@@ -178,18 +178,14 @@ def check_revision(root: Path, revision: str, expected: str) -> str:
         )
         config = load_release_config(exported)
         found = version.check(exported, config, expect=expected)
-        path = exported / (
-            "changelogs/changelog.yaml"
-            if config.changelog_format == "antsibull"
-            else config.changelog
-        )
+        path = exported / config.changelog_path
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as exc:
             raise TagError(f"cannot read {path.relative_to(exported)}: {exc}") from exc
         if config.changelog_format == "antsibull":
             if not changelog.antsibull_has_release(text, found):
-                raise TagError(f"changelogs/changelog.yaml has no release {found}")
+                raise TagError(f"{config.changelog_path} has no release {found}")
         else:
             problems = changelog.check(
                 text,

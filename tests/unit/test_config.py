@@ -27,6 +27,34 @@ def project(tmp_path: Path, declaration: str, *, standalone: bool = False) -> Pa
     return tmp_path
 
 
+def test_the_changelog_path_names_the_file_whichever_format_owns_it(
+    tmp_path: Path,
+) -> None:
+    # antsibull-changelog owns a directory of its own, and a report that says
+    # "antsibull" instead of the file leaves the reader looking for it.
+    (tmp_path / "README.md").write_text("# x\n", encoding="utf-8")
+    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
+    (tmp_path / "galaxy.yml").write_text('version: "1.0.0"\n', encoding="utf-8")
+    (tmp_path / "changelogs").mkdir()
+    (tmp_path / "changelogs" / "changelog.yaml").write_text(
+        "releases:\n", encoding="utf-8"
+    )
+    (tmp_path / "releasing.toml").write_text(
+        'repository = "foundata/example"\nversion-files = ["galaxy.yml"]\n',
+        encoding="utf-8",
+    )
+
+    keep_a_changelog = load_release_config(tmp_path)
+    assert keep_a_changelog.changelog_path == "CHANGELOG.md"
+
+    (tmp_path / "releasing.toml").write_text(
+        'repository = "foundata/example"\necosystem = "ansible-collection"\n',
+        encoding="utf-8",
+    )
+    collection = load_release_config(tmp_path)
+    assert collection.changelog_path == "changelogs/changelog.yaml"
+
+
 def test_minimal_declaration_applies_every_default(tmp_path: Path) -> None:
     config = load_release_config(project(tmp_path, 'repository = "foundata/example"\n'))
     assert config.source == tmp_path.resolve() / "pyproject.toml"

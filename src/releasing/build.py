@@ -306,9 +306,9 @@ def _retain(
 
 def _check_changelog(exported: Path, config: ReleaseConfig, found: str) -> None:
     if config.changelog_format == "antsibull":
-        text = _read(exported / "changelogs" / "changelog.yaml")
+        text = _read(exported / config.changelog_path)
         if not changelog.antsibull_has_release(text, found):
-            raise BuildError(f"changelogs/changelog.yaml has no release {found}")
+            raise BuildError(f"{config.changelog_path} has no release {found}")
         return
     problems = changelog.check(
         _read(exported / config.changelog),

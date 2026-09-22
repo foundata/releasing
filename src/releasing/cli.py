@@ -416,10 +416,10 @@ def _check_changelog(loaded: config.ReleaseConfig, found: str | None) -> None:
                 "antsibull-changelog owns this changelog; pass --version to "
                 "check that a release is recorded"
             )
-        text = _read(loaded.root / "changelogs" / "changelog.yaml")
+        text = _read(loaded.root / loaded.changelog_path)
         if not changelog.antsibull_has_release(text, found):
             raise changelog.ChangelogError(
-                f"changelogs/changelog.yaml has no release {found}; "
+                f"{loaded.changelog_path} has no release {found}; "
                 "run antsibull-changelog release"
             )
         return
@@ -440,7 +440,7 @@ def _run_changelog_check(args: argparse.Namespace) -> int:
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
         reporting.error(str(exc))
         return 1
-    reporting.phase(f"Checked {loaded.changelog}")
+    reporting.phase(f"Checked {loaded.changelog_path}")
     return 0
 
 
