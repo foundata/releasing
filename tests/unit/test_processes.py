@@ -84,3 +84,29 @@ def test_the_story_stream_falls_back_when_stderr_has_no_descriptor(
 
     monkeypatch.setattr(sys, "stderr", Detached())
     assert processes._story_stream() == subprocess.DEVNULL
+
+
+@pytest.mark.parametrize(
+    "argv, expected",
+    [
+        (
+            ["/usr/bin/git", "-C", "/repo", "archive", "--format=tar", "HEAD"],
+            "git archive",
+        ),
+        (["/usr/bin/uv", "build", "--sdist", "--out-dir", "/tmp/x"], "uv build"),
+        (["/usr/bin/gh", "release", "create", "v2.2.0"], "gh release"),
+        (["/usr/bin/python3", "-c", "import sys; print('x')"], "python3"),
+        (["/usr/bin/somebinary"], "somebinary"),
+    ],
+)
+def test_a_failure_names_the_program_and_its_subcommand(
+    argv: list[str], expected: str
+) -> None:
+    # The resolved executable is an absolute path, so "git failed" would say
+    # less than "git archive failed" when a release stops.
+    assert processes.describe(argv) == expected
+
+
+def test_a_failing_command_reports_the_described_name(tmp_path: Path) -> None:
+    with pytest.raises(processes.ProcessError, match=r"^git status failed with status"):
+        processes.git(tmp_path, "status")

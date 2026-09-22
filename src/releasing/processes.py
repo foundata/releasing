@@ -8,6 +8,7 @@ as arguments: a token reaches a child through the environment only.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -31,6 +32,23 @@ def executable(name: str) -> Path:
     if found is None:
         raise ProcessError(f"required program not found in PATH: {name}")
     return Path(found)
+
+
+_SUBCOMMAND = re.compile(r"[a-z][a-z0-9-]*")
+
+
+def describe(argv: Sequence[str]) -> str:
+    """Name an invocation for a diagnostic: the program and its subcommand.
+
+    A resolved executable is an absolute path, and ``git failed`` says less
+    than ``git archive failed`` when a release stops. Flags, paths and
+    versions are skipped; the first plain word after them is the subcommand.
+    """
+    name = Path(argv[0]).name
+    for argument in argv[1:]:
+        if _SUBCOMMAND.fullmatch(argument):
+            return f"{name} {argument}"
+    return name
 
 
 def _story_stream() -> int:
@@ -102,13 +120,15 @@ def run(
         if isinstance(detail, bytes):
             detail = detail.decode("utf-8", errors="replace").strip()
         raise ProcessError(
-            f"{argv[0]} failed with status {exc.returncode}"
+            f"{describe(argv)} failed with status {exc.returncode}"
             + (f":\n{detail}" if detail else "")
         ) from exc
     except subprocess.TimeoutExpired as exc:
-        raise ProcessError(f"{argv[0]} timed out after {timeout:.0f}s") from exc
+        raise ProcessError(
+            f"{describe(argv)} timed out after {timeout:.0f}s"
+        ) from exc
     except OSError as exc:
-        raise ProcessError(f"cannot run {argv[0]}: {exc}") from exc
+        raise ProcessError(f"cannot run {describe(argv)}: {exc}") from exc
     return result.stdout
 
 
