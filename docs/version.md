@@ -41,7 +41,8 @@ HEAD`; nothing is written or fetched.
 Rewrites every site and raises every lockstep pin's lower bound to the new
 version, keeping quoting, spacing, line endings and trailing commas as they
 were, then runs `uv lock` when a `uv.lock` exists so the lockfile records the
-new version. A unified diff of every rewritten file goes to stdout.
+new version. A unified diff of every rewritten file goes to stderr, with
+the rest of the story. `--dry-run` shows the same diff and writes nothing.
 
 The bump refuses to run while a version file or pinned file has uncommitted
 changes, because it rewrites them; `--force` overrides that. Other uncommitted

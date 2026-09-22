@@ -27,6 +27,9 @@ without a source revision is refused rather than accepted.
 release tag create "${version}" --manifest "${dist}/artifacts.json"
 ```
 
+`--dry-run` runs every check and reports the tag it would create, without
+creating it.
+
 `--revision` tags something other than `HEAD`. The version and changelog
 checks read that committed revision's declaration and files in a temporary
 export, including its lockfile and dependency pins. The current declaration
@@ -50,6 +53,8 @@ the artifacts, so the fix needs a new version.
 ```sh
 release tag delete "${version}"     # refused once a release exists
 ```
+
+`--dry-run` reports which deletions would happen and performs none.
 
 `--local` keeps the remote tag. `--offline` skips the forge query for a
 repository whose forge is unreachable. It also skips the release condition, so

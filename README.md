@@ -93,9 +93,40 @@ artifact operations also work independently; see
 The end-to-end order for a Python project is in
 [Releasing a Python package](./docs/python-packages.md).
 
+## Output
+
+**Stdout is the product, stderr is the story.** One rule for every command, so
+output can be redirected without knowing which command is in hand.
+
+Stdout carries what the command produced and nothing else: the tag it created,
+the files it built, the changelog section, the manifest JSON, the report. A
+check produces nothing there and answers with its exit status.
+
+Stderr carries what happened on the way: what is being done, every command
+that changed something, and every request to a forge or an index.
+
+```console
+$ release tag create 2.2.0 --manifest ../dist-2.2.0/artifacts.json
+» the manifest records artifacts built from 41db3420c2d6
+» the working tree is clean
+» exporting 41db3420c2d6 into a temporary directory
+$ git -C /home/example/project archive --format=tar 41db3420c2d6...
+» checking version sites, lockfile, pins and changelog in the export
+» GET https://api.github.com/repos/foundata/releasing/releases/tags/v2.2.0 → 404
+$ git -C /home/example/project tag -a v2.2.0 41db3420c2d6 -m 'version 2.2.0'
+v2.2.0
+```
+
+`--quiet` (`-q`), accepted before or after the command, keeps the product and
+drops the story. It never suppresses an error. `2>/dev/null` does the same,
+and `2>&1 | tee release.log` keeps both together.
+
+Every command that changes something accepts `--dry-run`: it reports what it
+would do, marks the commands it would run, and changes nothing. A command that
+only reads does not offer the flag.
+
 Every command exits with `0` on success, `1` when a check or operation fails
-and `2` on invalid usage. Diagnostics go to stderr; stdout carries only
-generated output.
+and `2` on invalid usage.
 
 
 ## Releasing this package

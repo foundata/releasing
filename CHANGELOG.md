@@ -9,7 +9,26 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Changed
+
+- `release` narrates its work on standard error: what is being checked, every
+  command that changes something and every request to a forge or an index.
+  `--quiet`, accepted before or after the command, prints the result only.
+- Standard output carries the product of a command and nothing else. A check
+  answers with its exit status, so `changelog check`, `tag check`,
+  `artifacts verify`, `verify`, `push` and `publish` print nothing there, and
+  the diff of `version bump` moved to standard error with the rest of the
+  story. `status` prints its conclusion with its report instead of splitting
+  them across two streams.
+- `forge release-create` prints the URL of the release entry it created.
+- A failing external program is named with its subcommand, for example
+  `git archive failed with status 128`.
+
+### Added
+
+- `--dry-run` on every command that changes something: `version bump`,
+  `changelog release`, `build`, `tag create`, `tag delete` and
+  `artifacts manifest --out`, alongside the commands that already had it.
 
 
 ## [2.2.0] - 2026-09-20

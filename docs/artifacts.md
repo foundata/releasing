@@ -47,7 +47,8 @@ require an artifact for every declared distribution:
 }
 ```
 
-`--revision` records the commit the files were built from. A gate that calls
+`--revision` records the commit the files were built from. `--dry-run`
+shows the manifest it would record and writes no file. A gate that calls
 `releasing.artifacts.dump_manifest()` directly can add producer-specific
 top-level keys through its `extra` argument, for example the revision of a guide
 the gate implements; they may not shadow the standard keys, and readers of the

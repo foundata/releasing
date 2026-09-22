@@ -59,4 +59,5 @@ placeholder entry above it, points `[unreleased]` at the new tag and inserts
 the version's tag link. It refuses to run when there are no entries, when the
 section already exists, when the version is not newer than the latest one, or
 when the file fails the structural check. `--placeholder` sets the entry of
-the fresh `Unreleased` section.
+the fresh `Unreleased` section. `--dry-run` shows the diff it would write
+and leaves the file alone.

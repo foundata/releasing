@@ -55,7 +55,12 @@ never be uploaded. Workspace sources name no directory and are not affected.
 ```
 
 The artifact paths go to stdout, one per line, so a publishing step can read
-them. Progress and the prepared documents go to stderr.
+them, followed by the path of the manifest. Everything else, including the
+commands that built them, goes to stderr.
+
+`--dry-run` exports the revision and runs every check, then reports the build
+commands it would run without running them. It writes no output directory and
+records no digests, because there are no artifacts to hash.
 
 Because the build runs before the tag exists, the prepared links point at the
 version's tag ref (`refs/tags/vX.Y.Z` by default). The tag is pushed with the
