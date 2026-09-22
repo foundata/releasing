@@ -307,6 +307,14 @@ def _run_config_check(args: argparse.Namespace) -> int:
     print(f"version files: {', '.join(loaded.version_files) or 'none'}")
     print(f"changelog: {loaded.changelog}")
     print(f"tag: {loaded.tag('X.Y.Z')}")
+    print(
+        "dependency pins: "
+        + (
+            ", ".join(f"{pin.name} in {pin.file}" for pin in loaded.dependency_pins)
+            or "none"
+        )
+    )
+    print(f"allowed attribution: {', '.join(loaded.allowed_attribution) or 'none'}")
     for readme in loaded.readmes:
         print(f"readme: {readme.source_path} -> {readme.ref}")
     return 0

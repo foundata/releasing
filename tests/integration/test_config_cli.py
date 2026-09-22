@@ -40,8 +40,30 @@ def test_config_check_reports_the_effective_declaration(tmp_path: Path) -> None:
         "version files: pyproject.toml\n"
         "changelog: CHANGELOG.md\n"
         "tag: vX.Y.Z\n"
+        "dependency pins: none\n"
+        "allowed attribution: none\n"
         "readme: README.md -> refs/tags/{tag}\n"
     )
+
+
+def test_config_check_reports_the_keys_a_project_declares(tmp_path: Path) -> None:
+    # Every declared value is printed, so the effective declaration can be
+    # read off one report instead of the file plus the defaults.
+    (tmp_path / "README.md").write_text("# x\n", encoding="utf-8")
+    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "example"\n\n[tool.releasing]\n'
+        'repository = "foundata/example"\n'
+        'allowed-attribution = ["assisted-by: ^[^<]*$"]\n'
+        'dependency-pins = [{ file = "pyproject.toml", name = "example" }]\n',
+        encoding="utf-8",
+    )
+
+    result = invoke(tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert "dependency pins: example in pyproject.toml\n" in result.stdout.decode()
+    assert "allowed attribution: assisted-by: ^[^<]*$\n" in result.stdout.decode()
 
 
 def test_config_check_fails_with_a_reason_and_no_traceback(tmp_path: Path) -> None:

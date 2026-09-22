@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- `config check` reports the declared dependency pins and allowed attributions
+  along with the rest of the effective declaration.
 - `tag create`, `push` and `forge release-create` refuse a commit that credits
   a tool as its author; `--allow-tool-attribution` permits it once, and
   `allowed-attribution` in the declaration permits a named rule, or the values
