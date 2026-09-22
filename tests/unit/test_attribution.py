@@ -140,6 +140,35 @@ def test_a_project_can_allow_one_rule_without_allowing_the_rest() -> None:
     assert attribution.findings([credited], allowed=["assisted-by"])
 
 
+def test_one_identity_in_both_fields_is_one_finding() -> None:
+    # Author and committer are usually the same person; two identical lines
+    # read like two separate problems.
+    tool = "Claude <noreply@anthropic.com>"
+
+    found = attribution.findings([commit("feat: add", author=tool, committer=tool)])
+
+    assert [(item.rule, item.evidence) for item in found] == [
+        (attribution.IDENTITY, tool)
+    ]
+
+
+def test_a_different_author_and_committer_are_both_reported() -> None:
+    found = attribution.findings(
+        [
+            commit(
+                "feat: add",
+                author="Claude <noreply@anthropic.com>",
+                committer="Copilot <copilot@github.com>",
+            )
+        ]
+    )
+
+    assert [item.evidence for item in found] == [
+        "Claude <noreply@anthropic.com>",
+        "Copilot <copilot@github.com>",
+    ]
+
+
 def test_every_finding_of_one_commit_is_reported() -> None:
     both = commit(
         "release: prepare 1.0.0\n\n"

@@ -295,6 +295,8 @@ def test_the_flag_publishes_it_anyway_and_says_so(repository: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stdout == b"v1.0.0\n"
     assert b"WARNING: publishing 1 tool attribution(s)" in result.stderr
+    # The refusal that would have named it never appeared, so the bypass has to.
+    assert b"co-authored-by: Claude Opus 5 (1M context)" in result.stderr
 
 
 def test_pushing_checks_every_commit_it_would_send(repository: Path) -> None:

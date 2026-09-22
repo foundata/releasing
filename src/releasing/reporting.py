@@ -298,6 +298,8 @@ def error(message: str, *, problems: Sequence[str] = (), hint: str = "") -> None
         print(hint, file=sys.stderr)
 
 
-def warning(message: str) -> None:
+def warning(message: str, *, problems: Sequence[str] = ()) -> None:
     """Report something that does not stop the work but must not be missed."""
     print(f"{_paint('WARNING:', _YELLOW)} {message}", file=sys.stderr)
+    for problem in problems:
+        print(f"  {problem}", file=sys.stderr)

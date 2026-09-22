@@ -949,9 +949,12 @@ def _stops_for_attribution(
         reporting.phase(f"Checked {len(commits)} commit(s) for attribution")
         return False
     if args.allow_tool_attribution:
+        # What was let through belongs in the record: the refusal that would
+        # have named it never appeared.
         reporting.warning(
             f"publishing {len(found)} tool attribution(s); "
-            "--allow-tool-attribution was given"
+            "--allow-tool-attribution was given",
+            problems=attribution.describe(found),
         )
         return False
     affected = len({finding.revision for finding in found})

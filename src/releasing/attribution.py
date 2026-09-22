@@ -125,6 +125,11 @@ def findings(
 
 
 def _inspect(commit: Commit) -> list[tuple[str, str]]:
+    """What one commit says, each distinct finding once.
+
+    The author and the committer are usually the same person, and reporting a
+    line twice for one identity reads like two separate problems.
+    """
     found: list[tuple[str, str]] = []
     for identity in (commit.author, commit.committer):
         if _is_tool(identity):
@@ -140,7 +145,7 @@ def _inspect(commit: Commit) -> list[tuple[str, str]]:
             continue
         if _GENERATED_WITH.search(line):
             found.append((GENERATED_WITH, line.strip()))
-    return found
+    return list(dict.fromkeys(found))
 
 
 def _is_tool(identity: str) -> bool:
