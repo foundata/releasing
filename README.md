@@ -1,14 +1,14 @@
-# releasing
+# releasing (helpers and tooling for software releases)
 
 Release helpers for projects that publish from a Git-tracked source tree.
 
-> **Important:** This tooling is built for foundata's release process(es). You
-> are welcome to use it but Pull Requests to adapt our toolset to different
-> release policies or processes are out of scope.
+> **Important:** This tooling is built for foundata's own release processes. You
+> are welcome to use it but requests to adapt our toolset to different release
+> policies or processes are out of scope.
 
 Components and tools:
 
-- `release`: one command for the error-prone steps around a release: version
+- **`release`: one command for error-prone steps around a release:** version
   sites, changelogs, artifacts, tags, the push, the upload, the forge's release
   entry, post-publish verification, and the repository Markdown a package index
   needs. Each step is one subcommand; the order of steps stays in each project's
@@ -51,7 +51,9 @@ dependency of projects that target Debian 12, which ships Python 3.11.
 
 ## Commands
 
-Project-aware commands read the release declaration, one table in
+### `release`
+
+Project-aware subcommands read the release declaration, one table in
 `pyproject.toml` or `releasing.toml`. Markdown preparation and explicit-version
 artifact operations also work independently; see
 [The release declaration](./docs/config.md).
@@ -118,13 +120,6 @@ $ git -C /home/example/project tag -a v2.2.0 41db3420c2d6 -m 'version 2.2.0'
 v2.2.0
 ```
 
-Every narrated line begins with a verb, so the first word of each line says
-what happened: a participle while the work runs, a past tense once it is done,
-and `Would` for what a dry run declined to do. On a terminal that verb carries
-the colour, as does the answer to a request; a redirected story stays plain,
-because it is the record of the release. `NO_COLOR` suppresses the styling and
-`FORCE_COLOR` demands it.
-
 `--quiet` (`-q`), accepted before or after the command, keeps the product and
 drops the story. It never suppresses an error. `2>/dev/null` does the same,
 and `2>&1 | tee release.log` keeps both together.
@@ -176,5 +171,5 @@ create a
 
 ## Author information<a id="author-information"></a>
 
-This project was created and is maintained by
-[foundata](https://foundata.com/).
+This [project](https://foundata.com/en/projects/) was created and is maintained
+by [foundata](https://foundata.com/).
