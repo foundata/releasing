@@ -7,7 +7,6 @@ import difflib
 import os
 import re
 import stat
-import subprocess
 import sys
 import tempfile
 from collections.abc import Callable, Sequence
@@ -292,6 +291,11 @@ def _run_config_check(args: argparse.Namespace) -> int:
     return 0
 
 
+# A read-only query must not hang the command line on an unresponsive
+# repository; it is short and local.
+_QUERY_TIMEOUT = 30.0
+
+
 def _load_config(args: argparse.Namespace) -> config.ReleaseConfig:
     return config.load_release_config(cast(Path, args.project))
 
@@ -300,17 +304,7 @@ def _git(root: Path, *arguments: str) -> str | None:
     """Run a read-only Git query in ``root``; None when it is not a checkout."""
     if not (root / ".git").exists():
         return None
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(root), *arguments],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=True,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        raise ValueError(f"git {arguments[0]} failed in {root}: {exc}") from exc
-    return result.stdout
+    return processes.git(root, *arguments, timeout=_QUERY_TIMEOUT)
 
 
 def _run_version_check(args: argparse.Namespace) -> int:
@@ -358,11 +352,15 @@ def _run_version_bump(args: argparse.Namespace) -> int:
             )
         if (loaded.root / "uv.lock").is_file() and not args.no_lock:
             print("release: uv lock", file=sys.stderr)
-            subprocess.run(["uv", "lock"], cwd=loaded.root, check=True, timeout=600)
+            processes.run(
+                [str(processes.executable("uv")), "lock"],
+                cwd=loaded.root,
+                stream=True,
+            )
     except (config.ConfigError, version.VersionError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    except (OSError, subprocess.SubprocessError) as exc:
+    except processes.ProcessError as exc:
         print(f"Error: uv lock failed: {exc}", file=sys.stderr)
         return 1
     return 0
@@ -443,11 +441,16 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
         loaded = _load_config(args)
         when = date.fromisoformat(args.date) if args.date else None
         if loaded.changelog_format == "antsibull":
-            command = ["antsibull-changelog", "release", "--version", args.version]
+            command = [
+                str(processes.executable("antsibull-changelog")),
+                "release",
+                "--version",
+                args.version,
+            ]
             if when is not None:
                 command += ["--date", when.isoformat()]
-            print("release: " + " ".join(command), file=sys.stderr)
-            subprocess.run(command, cwd=loaded.root, check=True, timeout=600)
+            print("release: antsibull-changelog release", file=sys.stderr)
+            processes.run(command, cwd=loaded.root, stream=True)
             return 0
         path = loaded.root / loaded.changelog
         result = changelog.release(
@@ -462,7 +465,7 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    except (OSError, subprocess.SubprocessError) as exc:
+    except processes.ProcessError as exc:
         print(f"Error: changelog release failed: {exc}", file=sys.stderr)
         return 1
     print(f"{loaded.changelog}: released {args.version}")

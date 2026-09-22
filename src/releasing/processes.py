@@ -10,6 +10,7 @@ as arguments: a token reaches a child through the environment only.
 import os
 import shutil
 import subprocess
+import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -32,6 +33,20 @@ def executable(name: str) -> Path:
     return Path(found)
 
 
+def _story_stream() -> int:
+    """The descriptor a child's own output belongs on: ours, standard error.
+
+    A child writing to the caller's standard output would corrupt the one
+    thing that must stay clean, such as the changelog section piped into a
+    forge tool. Its output is part of the story, so it goes where the story
+    goes.
+    """
+    try:
+        return sys.stderr.fileno()
+    except (AttributeError, OSError, ValueError):
+        return subprocess.DEVNULL
+
+
 def run(
     argv: Sequence[str],
     *,
@@ -39,22 +54,35 @@ def run(
     timeout: float = TIMEOUT,
     environment: Mapping[str, str] | None = None,
     stdout: Path | None = None,
+    stream: bool = False,
 ) -> str:
     """Run one program and return its standard output.
 
     ``environment`` adds variables to a copy of the current environment; use it
     for credentials. ``stdout`` writes the output to a file instead of
-    capturing it, for archives and other binary output.
+    capturing it, for archives and other binary output. ``stream`` lets a
+    long-running program report to the terminal as it works; its output is
+    written to standard error and nothing is returned.
     """
     values = None if environment is None else {**os.environ, **environment}
     try:
+        if stream:
+            subprocess.run(
+                list(argv),
+                cwd=cwd,
+                env=values,
+                stdout=_story_stream(),
+                timeout=timeout,
+                check=True,
+            )
+            return ""
         if stdout is not None:
-            with stdout.open("wb") as stream:
+            with stdout.open("wb") as destination:
                 subprocess.run(
                     list(argv),
                     cwd=cwd,
                     env=values,
-                    stdout=stream,
+                    stdout=destination,
                     stderr=subprocess.PIPE,
                     timeout=timeout,
                     check=True,

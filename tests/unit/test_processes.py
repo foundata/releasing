@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -50,3 +52,35 @@ def test_a_configured_ssh_command_is_left_alone(
     environment = seen["environment"]
     assert isinstance(environment, dict)
     assert "GIT_SSH_COMMAND" not in environment
+
+
+def test_a_streamed_child_reports_to_our_standard_error(
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    # A child's own output is part of the story. Our standard output carries
+    # the product, such as a changelog section piped into a forge tool, so
+    # nothing a child prints may land there.
+    script = "import sys; print('to stdout'); print('to stderr', file=sys.stderr)"
+    returned = processes.run([sys.executable, "-c", script], stream=True)
+
+    captured = capfd.readouterr()
+    assert returned == ""
+    assert captured.out == ""
+    assert "to stdout" in captured.err
+    assert "to stderr" in captured.err
+
+
+def test_a_streamed_child_that_fails_is_reported_like_any_other() -> None:
+    with pytest.raises(processes.ProcessError, match="failed with status 3"):
+        processes.run([sys.executable, "-c", "raise SystemExit(3)"], stream=True)
+
+
+def test_the_story_stream_falls_back_when_stderr_has_no_descriptor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Detached:
+        def fileno(self) -> int:
+            raise OSError("no descriptor here")
+
+    monkeypatch.setattr(sys, "stderr", Detached())
+    assert processes._story_stream() == subprocess.DEVNULL
