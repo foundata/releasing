@@ -10,6 +10,7 @@ import stat
 import sys
 import tempfile
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import cast
@@ -186,6 +187,91 @@ def _add_markdown_prepare(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(run=_run_markdown_prepare, parser=parser)
 
 
+@dataclass(frozen=True)
+class _Document:
+    """One input file, what it becomes, and where that is written."""
+
+    source: Path
+    target: Path
+    original: str
+    result: str
+    mode: int
+
+
+def _prepare_document(
+    path: Path, args: argparse.Namespace, *, raw_base: str, ui_base: str
+) -> _Document:
+    """Read and transform one input, and settle where its output may go."""
+    if not path.is_file():
+        raise ValueError(f"{path}: input must be a regular file")
+    if args.output is None and path.is_symlink():
+        raise ValueError(f"{path}: in-place input must not be a symbolic link")
+    original = path.read_bytes()
+    if original.startswith(b"\xef\xbb\xbf"):
+        raise ValueError(f"{path}: UTF-8 byte-order marks are unsupported")
+    text = original.decode("utf-8")
+    source_path = args.source_path or "README.md"
+    try:
+        if args.repo_root is not None:
+            markdown.validate_local_files(
+                text, repo_root=args.repo_root, source_path=source_path
+            )
+        result = markdown.prepare_markdown(
+            text,
+            raw_base=raw_base,
+            ui_base=ui_base,
+            source_path=source_path,
+            simplify=args.simplify,
+            simplify_badges=args.simplify_badges,
+            collapse_header=args.collapse_header,
+            strict=args.strict,
+        )
+    except ValueError as exc:
+        raise ValueError(f"{path}:{exc}") from exc
+    target = path if args.output is None else Path(args.output)
+    if args.output not in (None, "-"):
+        _check_output(path, target)
+    mode = stat.S_IMODE(
+        (target if target.exists() and args.output != "-" else path).stat().st_mode
+    )
+    return _Document(
+        source=path, target=target, original=text, result=result, mode=mode
+    )
+
+
+def _check_output(path: Path, target: Path) -> None:
+    """Refuse an output that would replace the input or is not a regular file."""
+    if (
+        target.is_symlink()
+        or target.resolve() == path.resolve()
+        or (target.exists() and target.samefile(path))
+    ):
+        raise ValueError(
+            "output must be a separate regular file, not the input or a symbolic link"
+        )
+    if target.exists() and not target.is_file():
+        raise ValueError("output must be a regular file")
+    if not target.parent.is_dir():
+        raise ValueError(f"output parent must be a directory: {target.parent}")
+
+
+def _emit(document: _Document, args: argparse.Namespace) -> None:
+    """Write, print or keep one prepared document, as the flags ask."""
+    if args.dry_run:
+        _show_diff(document.source, document.target, document.original, document.result)
+    elif args.output == "-":
+        sys.stdout.buffer.write(document.result.encode("utf-8"))
+        sys.stdout.buffer.flush()
+    elif args.output is not None or document.result != document.original:
+        _write(document.target, document.result.encode("utf-8"), document.mode)
+        if args.output is None:
+            _show_diff(
+                document.source, document.target, document.original, document.result
+            )
+    elif args.output is None:
+        reporting.phase(f"Kept {document.source} unchanged")
+
+
 def _run_markdown_prepare(args: argparse.Namespace) -> int:
     parser = cast(argparse.ArgumentParser, args.parser)
     if args.dry_run and args.output == "-":
@@ -196,70 +282,13 @@ def _run_markdown_prepare(args: argparse.Namespace) -> int:
         parser.error("--output, --stdout and --source-path require exactly one input")
     try:
         raw_base, ui_base = _url_bases(args)
-        prepared = []
-        for path in args.files:
-            if not path.is_file():
-                raise ValueError(f"{path}: input must be a regular file")
-            if args.output is None and path.is_symlink():
-                raise ValueError(f"{path}: in-place input must not be a symbolic link")
-            original = path.read_bytes()
-            if original.startswith(b"\xef\xbb\xbf"):
-                raise ValueError(f"{path}: UTF-8 byte-order marks are unsupported")
-            text = original.decode("utf-8")
-            try:
-                if args.repo_root is not None:
-                    markdown.validate_local_files(
-                        text,
-                        repo_root=args.repo_root,
-                        source_path=args.source_path or "README.md",
-                    )
-                result = markdown.prepare_markdown(
-                    text,
-                    raw_base=raw_base,
-                    ui_base=ui_base,
-                    source_path=args.source_path or "README.md",
-                    simplify=args.simplify,
-                    simplify_badges=args.simplify_badges,
-                    collapse_header=args.collapse_header,
-                    strict=args.strict,
-                )
-            except ValueError as exc:
-                raise ValueError(f"{path}:{exc}") from exc
-            target = path if args.output is None else Path(args.output)
-            if args.output not in (None, "-"):
-                if (
-                    target.is_symlink()
-                    or target.resolve() == path.resolve()
-                    or (target.exists() and target.samefile(path))
-                ):
-                    raise ValueError(
-                        "output must be a separate regular file, not the input or a symbolic link"
-                    )
-                if target.exists() and not target.is_file():
-                    raise ValueError("output must be a regular file")
-                if not target.parent.is_dir():
-                    raise ValueError(
-                        f"output parent must be a directory: {target.parent}"
-                    )
-            mode = stat.S_IMODE(
-                (target if target.exists() and args.output != "-" else path)
-                .stat()
-                .st_mode
-            )
-            prepared.append((path, target, text, result, mode))
         # Finish validation for the whole batch before replacing any input.
-        for path, target, original_text, result, mode in prepared:
-            if args.dry_run:
-                _show_diff(path, target, original_text, result)
-            elif args.output == "-":
-                sys.stdout.buffer.write(result.encode("utf-8"))
-                sys.stdout.buffer.flush()
-            elif args.output is not None or result != original_text:
-                _write(target, result.encode("utf-8"), mode)
-                if args.output is None:
-                    _show_diff(path, target, original_text, result)
-            elif args.output is None:
-                reporting.phase(f"Kept {path} unchanged")
+        prepared = [
+            _prepare_document(path, args, raw_base=raw_base, ui_base=ui_base)
+            for path in args.files
+        ]
+        for document in prepared:
+            _emit(document, args)
     except (OSError, UnicodeError, ValueError) as exc:
         reporting.error(str(exc))
         return 1
@@ -371,8 +400,14 @@ def _read(path: Path) -> str:
         raise ValueError(f"cannot read {path}: {exc}") from exc
 
 
-def _check_changelog(loaded: config.ReleaseConfig, found: str) -> None:
+def _check_changelog(loaded: config.ReleaseConfig, found: str | None) -> None:
+    """Check the project's changelog, whichever format it is kept in."""
     if loaded.changelog_format == "antsibull":
+        if found is None:
+            raise ValueError(
+                "antsibull-changelog owns this changelog; pass --version to "
+                "check that a release is recorded"
+            )
         text = _read(loaded.root / "changelogs" / "changelog.yaml")
         if not changelog.antsibull_has_release(text, found):
             raise changelog.ChangelogError(
@@ -393,24 +428,7 @@ def _check_changelog(loaded: config.ReleaseConfig, found: str) -> None:
 def _run_changelog_check(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
-        if loaded.changelog_format == "antsibull":
-            if args.version is None:
-                raise ValueError(
-                    "antsibull-changelog owns this changelog; pass --version to "
-                    "check that a release is recorded"
-                )
-            _check_changelog(loaded, args.version)
-        else:
-            problems = changelog.check(
-                _read(loaded.root / loaded.changelog),
-                forge=forges.forge_for(loaded),
-                tag_format=loaded.tag_format,
-                version=args.version,
-            )
-            if problems:
-                raise changelog.ChangelogError(
-                    f"{loaded.changelog}:\n" + "\n".join(problems)
-                )
+        _check_changelog(loaded, args.version)
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
         reporting.error(str(exc))
         return 1
