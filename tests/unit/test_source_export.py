@@ -45,7 +45,15 @@ def archive_git(
     def git(
         root: Path, *arguments: str, stdout: Path | None = None, **_: object
     ) -> str:
-        assert arguments == ("archive", "--format=tar", "revision")
+        assert arguments == (
+            "-c",
+            "core.autocrlf=false",
+            "-c",
+            "core.eol=lf",
+            "archive",
+            "--format=tar",
+            "revision",
+        )
         assert stdout is not None
         archives.append(stdout)
         with tarfile.open(stdout, "w:") as stream:

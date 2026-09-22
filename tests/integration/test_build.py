@@ -147,6 +147,31 @@ def test_export_uses_the_selected_commit_and_its_export_ignore(
     assert list(scratch.iterdir()) == []
 
 
+def test_export_ignores_a_line_ending_conversion_the_machine_asks_for(
+    repository: Path, tmp_path: Path
+) -> None:
+    # Git for Windows converts by default, and git archive applies that to the
+    # export, so the same commit would produce different artifacts there. The
+    # repository decides through its attributes, not the machine.
+    git(repository, "config", "core.autocrlf", "true")
+    git(repository, "config", "core.eol", "crlf")
+    (repository / ".gitattributes").write_text(
+        "notes.txt export-ignore\n*.cmd text eol=crlf\n", encoding="utf-8"
+    )
+    (repository / "run.cmd").write_text("echo hello\n", encoding="utf-8")
+    git(repository, "add", ".")
+    git(repository, "commit", "-q", "-m", "repository: declare line endings")
+    revision = git(repository, "rev-parse", "HEAD").strip()
+    destination = tmp_path / "exported"
+
+    build.export(repository, revision, destination)
+
+    assert (destination / "README.md").read_bytes() == README.encode()
+    assert b"\r\n" not in (destination / "pyproject.toml").read_bytes()
+    # What the repository declares is still honoured.
+    assert (destination / "run.cmd").read_bytes() == b"echo hello\r\n"
+
+
 def test_export_preserves_the_git_error_for_an_unknown_revision(
     repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

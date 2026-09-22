@@ -9,6 +9,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- The export a build and a tag check run on no longer depends on the machine's
+  line-ending configuration. `git archive` applies `core.autocrlf` and
+  `core.eol`, which Git for Windows sets to convert by default, so the same
+  commit produced different artifacts there: a source distribution of 65301
+  bytes against 64694 for the Linux build of the same revision. An `eol`
+  attribute the repository declares still decides.
+
 ### Changed
 
 - The attribution check reads only the commits the release remote does not

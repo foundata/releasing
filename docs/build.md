@@ -13,7 +13,10 @@ release build --out "../dist-${version}"
 
 1. Resolves `--revision` (default `HEAD`) to a full commit and exports it.
    `export-ignore` in `.gitattributes` keeps a tracked file out of the
-   artifacts.
+   artifacts. The export ignores the machine's `core.autocrlf` and `core.eol`,
+   which Git for Windows sets to convert line endings by default, so the same
+   commit produces the same bytes everywhere; an `eol` attribute the
+   repository declares still decides.
 2. Loads the release declaration from the export and runs `version check`
    there, so the version that ships is the committed one. `--expect X.Y.Z`
    pins what that version has to be.

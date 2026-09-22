@@ -26,8 +26,23 @@ def export(root: Path, revision: str, destination: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="releasing-export-") as value:
         archive = Path(value) / "source.tar"
         reporting.phase(f"Exporting {revision[:12]} into a temporary directory")
+        # A release is a commit, so two machines exporting it must produce the
+        # same bytes. git archive applies core.autocrlf and core.eol, which
+        # Git for Windows sets to convert by default, and the difference
+        # reaches the published artifact. Neither is the repository's
+        # decision, so both are switched off here; an eol attribute the
+        # repository declares still wins and still applies.
         processes.git(
-            root, "archive", "--format=tar", revision, stdout=archive, echo=True
+            root,
+            "-c",
+            "core.autocrlf=false",
+            "-c",
+            "core.eol=lf",
+            "archive",
+            "--format=tar",
+            revision,
+            stdout=archive,
+            echo=True,
         )
         try:
             with tarfile.open(archive, mode="r:") as stream:
