@@ -99,7 +99,8 @@ def test_version_check_works_in_an_exported_tree_without_git(tmp_path: Path) -> 
 def test_version_bump_prints_diffs_and_refuses_dirty_sites(repository: Path) -> None:
     result = release(repository, "version", "bump", "1.3.0", "--no-lock")
     assert result.returncode == 0, result.stderr
-    assert b'-version = "1.2.3"\n+version = "1.3.0"\n' in result.stdout
+    assert result.stdout == b""
+    assert b'-version = "1.2.3"\n+version = "1.3.0"\n' in result.stderr
     assert git(repository, "status", "--porcelain").strip() == "M pyproject.toml"
     result = release(repository, "version", "bump", "1.4.0", "--no-lock")
     assert result.returncode == 1

@@ -35,6 +35,9 @@ class Reporter(Protocol):
     def request(self, method: str, url: str, status: int | str) -> None:
         """Report one request to a forge or index."""
 
+    def detail(self, text: str) -> None:
+        """Show verbatim output, such as a diff, that carries its own format."""
+
 
 class Silent:
     """Says nothing. The default, so importing this package stays quiet."""
@@ -49,6 +52,9 @@ class Silent:
 
     def request(self, method: str, url: str, status: int | str) -> None:
         """Discard the request."""
+
+    def detail(self, text: str) -> None:
+        """Discard the detail."""
 
 
 class Writer:
@@ -80,6 +86,11 @@ class Writer:
     def request(self, method: str, url: str, status: int | str) -> None:
         """Write one request and what it answered."""
         self._write(f"» {method} {url} → {status}")
+
+    def detail(self, text: str) -> None:
+        """Write verbatim text, unprefixed, so its own format survives."""
+        self._stream.write(text)
+        self._stream.flush()
 
     def _write(self, line: str) -> None:
         self._stream.write(line + "\n")
@@ -134,3 +145,8 @@ def command(
 def request(method: str, url: str, status: int | str) -> None:
     """Report one request to a forge or index."""
     _current.request(method, url, status)
+
+
+def detail(text: str) -> None:
+    """Show verbatim output that carries its own format."""
+    _current.detail(text)

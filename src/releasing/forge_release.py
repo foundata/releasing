@@ -12,7 +12,7 @@ credential that can write to a repository.
 from dataclasses import dataclass
 from pathlib import Path
 
-from releasing import antsibull, artifacts, changelog, forge_api, processes
+from releasing import antsibull, artifacts, changelog, forge_api, processes, reporting
 from releasing.artifacts import Manifest
 from releasing.config import ReleaseConfig
 from releasing.forges import Forge
@@ -83,8 +83,12 @@ def plan(
     )
 
 
-def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> list[str]:
-    """Create the release entry. Return the command that was run, or would be."""
+def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> str:
+    """Create the release entry and return the URL the forge reports for it.
+
+    A dry run narrates the command it would run and returns nothing, because
+    no entry exists to point at.
+    """
     notes_file = root / f".releasing-notes-{prepared.tag}"
     argv = [
         str(processes.executable(prepared.tool)),
@@ -98,15 +102,16 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> list
         *[str(path) for path in prepared.assets],
     ]
     if dry_run:
-        return argv
+        reporting.command(argv, cwd=root, executed=False)
+        return ""
     try:
         notes_file.write_text(prepared.notes, encoding="utf-8")
-        processes.run(argv, cwd=root, timeout=600, echo=True)
+        reported = processes.run(argv, cwd=root, timeout=600, echo=True)
     except (OSError, UnicodeError) as exc:
         raise ForgeReleaseError(f"cannot stage the release notes: {exc}") from exc
     finally:
         notes_file.unlink(missing_ok=True)
-    return argv
+    return reported.strip()
 
 
 def _notes(root: Path, config: ReleaseConfig, version_string: str) -> str:

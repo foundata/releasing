@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from releasing import forge_api, forge_release, processes
+from releasing import forge_api, forge_release, processes, reporting
 from releasing.artifacts import build_manifest, dump_manifest, load_manifest
 from releasing.config import ReleaseConfig
 from releasing.forges import Forge
@@ -174,12 +174,16 @@ def test_the_write_is_delegated_and_the_notes_file_is_transient(
         seen["argv"] = argv
         notes = Path(argv[argv.index("--notes-file") + 1])
         seen["notes"] = notes.read_text(encoding="utf-8")
-        return ""
+        return "https://github.com/foundata/example/releases/tag/v1.0.0\n"
 
     monkeypatch.setattr(processes, "run", record)
-    argv = forge_release.execute(project.root, prepared)
+    reported = forge_release.execute(project.root, prepared)
+    argv = seen["argv"]
+    assert isinstance(argv, list)
     assert argv[1:4] == ["release", "create", "v1.0.0"]
     assert seen["notes"] == prepared.notes
+    # The forge's own tool reports where the entry lives; that is the product.
+    assert reported == "https://github.com/foundata/example/releases/tag/v1.0.0"
     # No credential is ever an argument, and the notes do not outlive the call.
     assert not any("token" in item.lower() for item in argv)
     assert list(project.root.glob(".releasing-notes-*")) == []
@@ -193,6 +197,13 @@ def test_dry_run_runs_nothing(
 
     monkeypatch.setattr(processes, "run", refuse)
     prepared = forge_release.plan(project.root, project, FORGE, "1.0.0")
-    argv = forge_release.execute(project.root, prepared, dry_run=True)
-    assert argv[1:4] == ["release", "create", "v1.0.0"]
+    narrated: list[str] = []
+    monkeypatch.setattr(
+        reporting,
+        "command",
+        lambda argv, **kwargs: narrated.append(reporting.render(argv)),
+    )
+
+    assert forge_release.execute(project.root, prepared, dry_run=True) == ""
+    assert "gh release create v1.0.0" in narrated[0]
     assert list(project.root.glob(".releasing-notes-*")) == []

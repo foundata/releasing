@@ -94,7 +94,9 @@ def test_push_sends_the_branch_before_the_tag(repository: Path) -> None:
 
     result = release(repository, "push", "1.0.0")
     assert result.returncode == 0, result.stderr
-    assert result.stdout == b"pushed main to origin\npushed v1.0.0 to origin\n"
+    assert result.stdout == b""
+    assert b"pushed main to origin" in result.stderr
+    assert b"pushed v1.0.0 to origin" in result.stderr
     refs = remote_refs(repository)
     assert "refs/tags/v1.0.0" in refs
     assert git(repository, "rev-parse", "HEAD").strip() in refs
@@ -104,7 +106,8 @@ def test_dry_run_sends_nothing(repository: Path) -> None:
     assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
     result = release(repository, "push", "1.0.0", "--dry-run")
     assert result.returncode == 0, result.stderr
-    assert result.stdout.startswith(b"would push main")
+    assert result.stdout == b""
+    assert b"would push main" in result.stderr
     assert "refs/tags/v1.0.0" not in remote_refs(repository)
 
 

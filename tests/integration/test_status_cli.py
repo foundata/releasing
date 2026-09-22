@@ -93,8 +93,8 @@ def test_status_reports_progress_and_exits_non_zero_until_complete(
     assert "ok       changelog" in report
     assert "pending  tag            v1.0.0 does not exist locally" in report
     assert "unknown  index          not queried" in report
-    assert b"incomplete" in result.stderr
-    assert b"needs attention" not in result.stderr
+    assert b"incomplete" in result.stdout
+    assert b"needs attention" not in result.stdout
 
     assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
     report = release(repository, "status", "1.0.0", "--offline").stdout.decode()
@@ -111,7 +111,7 @@ def test_status_separates_a_broken_release_from_an_unfinished_one(
     result = release(repository, "status", "1.0.0", "--offline")
     assert result.returncode == 1
     assert b"lightweight" in result.stdout
-    assert b"needs attention, not continuation" in result.stderr
+    assert b"needs attention, not continuation" in result.stdout
 
 
 def test_status_compares_the_manifest_revision_with_the_tag(
@@ -137,4 +137,4 @@ def test_status_compares_the_manifest_revision_with_the_tag(
     assert result.returncode == 1
     assert b"artifact revision" in result.stdout
     assert b"tag names" in result.stdout
-    assert b"needs attention" in result.stderr
+    assert b"needs attention" in result.stdout

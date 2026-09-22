@@ -124,9 +124,9 @@ def _show_diff(path: Path, target: Path, original: str, result: str) -> None:
         fromfile=str(path),
         tofile=str(target),
     ):
-        sys.stderr.write(line)
+        reporting.detail(line)
         if not line.endswith("\n"):
-            sys.stderr.write("\n\\ No newline at end of file\n")
+            reporting.detail("\n\\ No newline at end of file\n")
 
 
 def _add_markdown_prepare(parser: argparse.ArgumentParser) -> None:
@@ -268,7 +268,7 @@ def _run_markdown_prepare(args: argparse.Namespace) -> int:
                 if args.output is None:
                     _show_diff(path, target, original_text, result)
             elif args.output is None:
-                print(f"Unchanged: {path}", file=sys.stderr)
+                reporting.phase(f"unchanged: {path}")
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -343,12 +343,14 @@ def _run_version_bump(args: argparse.Namespace) -> int:
             )
         edits = version.bump(loaded.root, loaded, args.version)
         for edit in edits:
-            sys.stdout.writelines(
-                difflib.unified_diff(
-                    edit.before.splitlines(keepends=True),
-                    edit.after.splitlines(keepends=True),
-                    fromfile=f"a/{edit.file}",
-                    tofile=f"b/{edit.file}",
+            reporting.detail(
+                "".join(
+                    difflib.unified_diff(
+                        edit.before.splitlines(keepends=True),
+                        edit.after.splitlines(keepends=True),
+                        fromfile=f"a/{edit.file}",
+                        tofile=f"b/{edit.file}",
+                    )
                 )
             )
         if (loaded.root / "uv.lock").is_file() and not args.no_lock:
@@ -418,7 +420,7 @@ def _run_changelog_check(args: argparse.Namespace) -> int:
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    print(f"{loaded.changelog}: ok")
+    reporting.phase(f"{loaded.changelog}: ok")
     return 0
 
 
@@ -468,7 +470,7 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
     except processes.ProcessError as exc:
         print(f"Error: changelog release failed: {exc}", file=sys.stderr)
         return 1
-    print(f"{loaded.changelog}: released {args.version}")
+    reporting.phase(f"{loaded.changelog}: released {args.version}")
     return 0
 
 
@@ -539,7 +541,7 @@ def _run_artifacts_manifest(args: argparse.Namespace) -> int:
             if target.exists():
                 raise ValueError(f"manifest must not already exist: {target}")
             _write(target, text.encode("utf-8"), 0o644)
-            print(f"{target}: {len(manifest.artifacts)} artifact(s) recorded")
+            reporting.phase(f"{target}: {len(manifest.artifacts)} artifact(s) recorded")
     except (
         config.ConfigError,
         version.VersionError,
@@ -566,7 +568,7 @@ def _run_artifacts_verify(args: argparse.Namespace) -> int:
         for problem in problems:
             print(f"  {problem}", file=sys.stderr)
         return 1
-    print(f"{len(manifest.artifacts)} artifact(s) match the manifest")
+    reporting.phase(f"{len(manifest.artifacts)} artifact(s) match the manifest")
     return 0
 
 
@@ -596,15 +598,12 @@ def _run_build(args: argparse.Namespace) -> int:
             "these artifacts must never be uploaded",
             file=sys.stderr,
         )
-    for prepared in result.prepared:
-        print(f"prepared: {prepared}", file=sys.stderr)
+    reporting.phase(
+        f"built {result.version} from {result.revision[:12]} in {result.directory}"
+    )
     for path in result.files:
         print(path)
     print(result.manifest)
-    print(
-        f"release: {result.version} from {result.revision[:12]} in {result.directory}",
-        file=sys.stderr,
-    )
     return 0
 
 
@@ -668,7 +667,7 @@ def _run_tag_check(args: argparse.Namespace) -> int:
         for problem in problems:
             print(f"  {problem}", file=sys.stderr)
         return 1
-    print(f"{loaded.tag(args.version)}: ok")
+    reporting.phase(f"{loaded.tag(args.version)}: ok")
     return 0
 
 
@@ -686,7 +685,7 @@ def _run_tag_delete(args: argparse.Namespace) -> int:
     except _RELEASE_ERRORS as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    print(f"{loaded.tag(args.version)}: deleted ({', '.join(deleted)})")
+    reporting.phase(f"{loaded.tag(args.version)}: deleted ({', '.join(deleted)})")
     return 0
 
 
@@ -709,21 +708,21 @@ def _run_verify(args: argparse.Namespace) -> int:
                 f"{loaded.index} serves other files than were validated:\n  "
                 + "\n  ".join(problems)
             )
-        print(f"{loaded.index}: serves the validated files for {found}")
+        reporting.phase(f"{loaded.index} serves the validated files for {found}")
         if loaded.index == "pypi" and not args.no_install:
             reported = verification.installed_version(distribution, found)
             if reported != found:
                 raise verification.VerificationError(
                     f"an isolated install of {distribution} reports {reported}, not {found}"
                 )
-            print(f"install: {distribution} {reported}")
+            reporting.phase(f"an isolated install reports {distribution} {reported}")
         expected = loaded.tag(found)
         latest = verification.latest_tag(forge)
         if latest != expected:
             raise verification.VerificationError(
                 f"{loaded.forge} reports {latest or 'no release'} as latest, not {expected}"
             )
-        print(f"{loaded.forge}: {expected} is the latest release")
+        reporting.phase(f"{loaded.forge} reports {expected} as the latest release")
     except _RELEASE_ERRORS as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -756,9 +755,9 @@ def _run_status(args: argparse.Namespace) -> int:
         print(f"{report.tag}: released")
         return 0
     if report.broken:
-        print(f"{report.tag}: needs attention, not continuation", file=sys.stderr)
+        print(f"{report.tag}: needs attention, not continuation")
     else:
-        print(f"{report.tag}: incomplete", file=sys.stderr)
+        print(f"{report.tag}: incomplete")
     return 1
 
 
@@ -778,7 +777,7 @@ def _run_push(args: argparse.Namespace) -> int:
         return 1
     what = "would push" if args.dry_run else "pushed"
     for reference in sent:
-        print(f"{what} {reference} to {prepared.remote}")
+        reporting.phase(f"{what} {reference} to {prepared.remote}")
     return 0
 
 
@@ -790,10 +789,9 @@ def _run_publish(args: argparse.Namespace) -> int:
         prepared = uploading.plan(manifest, manifest_path.parent, index=loaded.index)
         variable = uploading.token_variable(loaded.index)
         if not args.dry_run and not os.environ.get(variable):
-            print(
-                f"note: {variable} is unset; {loaded.index} may use a configured "
-                "credential instead",
-                file=sys.stderr,
+            reporting.phase(
+                f"{variable} is unset; {loaded.index} may use a configured "
+                "credential instead"
             )
         sent = uploading.execute(prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
@@ -801,11 +799,10 @@ def _run_publish(args: argparse.Namespace) -> int:
         return 1
     what = "would upload" if args.dry_run else "uploaded"
     for name in sent:
-        print(f"{what} {name}")
-    print(
-        f"release: {prepared.version} to {prepared.index}"
-        + (" (nothing sent)" if args.dry_run else ""),
-        file=sys.stderr,
+        reporting.phase(f"{what} {name}")
+    reporting.phase(
+        f"{prepared.version} to {prepared.index}"
+        + (" (nothing sent)" if args.dry_run else "")
     )
     return 0
 
@@ -826,16 +823,17 @@ def _run_forge_release_create(args: argparse.Namespace) -> int:
             manifest_path=manifest_path,
             offline=args.offline,
         )
-        argv = forge_release.execute(loaded.root, prepared, dry_run=args.dry_run)
+        reported = forge_release.execute(loaded.root, prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     if args.dry_run:
-        print(" ".join(argv))
         return 0
-    print(f"{prepared.forge}: created the release entry for {prepared.tag}")
+    reporting.phase(f"{prepared.forge} created the release entry for {prepared.tag}")
     for path in prepared.assets:
-        print(f"attached {path.name}")
+        reporting.phase(f"attached {path.name}")
+    if reported:
+        print(reported)
     return 0
 
 

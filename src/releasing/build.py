@@ -111,6 +111,8 @@ def prepare_readmes(
                 raise BuildError(f"cannot copy the prepared document over {copy}")
             target.write_text(prepared, encoding="utf-8", newline="")
             touched.append(copy)
+    for path in touched:
+        reporting.phase(f"prepared {path}")
     return touched
 
 

@@ -268,7 +268,8 @@ def test_check_compares_remote_tag_objects(repository: Path, remote: str) -> Non
     result = release(repository, "tag", "check", "1.0.0", "--offline")
     assert result.returncode == (0 if remote == "identical" else 1), result.stderr
     if remote == "identical":
-        assert result.stdout == b"v1.0.0: ok\n"
+        assert result.stdout == b""
+        assert b"v1.0.0: ok" in result.stderr
     else:
         assert b"differs between the remote and this repository" in result.stderr
 
@@ -280,7 +281,7 @@ def test_delete_refuses_while_the_remote_still_has_the_tag_pushed(
     git(repository, "push", "-q", "origin", "refs/tags/v1.0.0")
     result = release(repository, "tag", "delete", "1.0.0", "--offline")
     assert result.returncode == 0, result.stderr
-    assert b"local, remote" in result.stdout
+    assert b"local, remote" in result.stderr
     assert git(repository, "ls-remote", "--tags", "origin") == ""
     missing = release(repository, "tag", "delete", "1.0.0", "--offline")
     assert missing.returncode == 1

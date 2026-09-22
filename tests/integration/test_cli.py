@@ -92,7 +92,7 @@ def test_in_place_preserves_permissions_and_is_noop_on_second_run(
     before = snapshot(path)
     second = invoke(tmp_path, *BASE, str(path))
     assert second.returncode == 0
-    assert b"Unchanged:" in second.stderr
+    assert b"unchanged:" in second.stderr
     assert snapshot(path) == before
 
 
