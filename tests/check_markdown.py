@@ -62,6 +62,7 @@ def main() -> int:
             "--no-cache",
             "README.md",
             "DEVELOPMENT.md",
+            "docs/ansible-collections.md",
             "docs/artifacts.md",
             "docs/build.md",
             "docs/changelog.md",

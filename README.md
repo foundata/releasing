@@ -92,8 +92,9 @@ artifact operations also work independently; see
   destinations to absolute URLs without reformatting the document. See
   [Preparing Markdown for package indexes](./docs/markdown.md).
 
-The end-to-end order for a Python project is in
-[Releasing a Python package](./docs/python-packages.md).
+The end-to-end order is in
+[Releasing a Python package](./docs/python-packages.md) and
+[Releasing an Ansible collection](./docs/ansible-collections.md).
 
 
 ## Output

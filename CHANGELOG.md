@@ -9,6 +9,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- [Releasing an Ansible collection](https://github.com/foundata/releasing/blob/main/docs/ansible-collections.md),
+  the recipe for the ecosystem: the declaration, what `build_ignore` has to
+  exclude, the antsibull-changelog steps and the Galaxy upload.
+
 ### Fixed
 
 - The product and the story are the same bytes on every platform and in every
