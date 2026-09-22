@@ -116,6 +116,9 @@ leaves the working tree untouched. That trade is not worth a metric.
   errors.
 - `tests/integration/`: command-line behaviour, temporary Git repositories,
   real builds and independent rendering checks.
+- `tests/integration/test_reporting.py`: the stream contract. Stdout carries
+  the product, stderr the story, `--quiet` drops the story but never an error,
+  a dry run changes nothing, and a library caller narrates nothing at all.
 - `tests/fixtures/cases.json`: small reviewed inputs and exact expected output.
 - `tests/fixtures/mixed-content*.md`: nested containers, references, tables,
   HTML, code and comments with exact expected Markdown and renderer assertions.
