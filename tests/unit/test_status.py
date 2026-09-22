@@ -107,6 +107,10 @@ def tag_state(**overrides: object) -> tagging.TagState:
     return tagging.TagState(**values)  # type: ignore[arg-type]
 
 
+def details(report: status.Status) -> dict[str, str]:
+    return {step.name: step.detail for step in report.steps}
+
+
 def states(report: status.Status) -> dict[str, str]:
     return {step.name: step.state for step in report.steps}
 
@@ -246,3 +250,26 @@ def test_an_unreachable_remote_leaves_the_push_state_unknown(
     assert states(report)["tag pushed"] == status.UNKNOWN
     assert report.broken == ()
     assert not report.complete
+
+
+def test_the_report_names_the_remote_it_asked(
+    project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A fork releases to a remote that is not called origin, so "not on the
+    # remote" has to say which one was asked.
+    arrange(
+        monkeypatch,
+        tag_state(revision=REVISION, annotated=True, message="version 1.0.0"),
+    )
+    asked: list[str] = []
+
+    def record(root: Path, *arguments: str, **kwargs: object) -> str:
+        asked.append(" ".join(arguments))
+        return ""
+
+    monkeypatch.setattr(processes, "git", record)
+
+    report = status.collect(project.root, project, FORGE, "1.0.0", remote="upstream")
+
+    assert "ls-remote --tags upstream refs/tags/v1.0.0" in asked
+    assert details(report)["tag pushed"] == "v1.0.0 is not on upstream"

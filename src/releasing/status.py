@@ -66,6 +66,7 @@ def collect(
     version_string: str,
     *,
     manifest: Manifest | None = None,
+    remote: str = processes.DEFAULT_REMOTE,
     offline: bool = False,
 ) -> Status:
     """Gather what is true of ``version_string`` locally, on the index and the forge."""
@@ -73,7 +74,7 @@ def collect(
     steps = [_changelog_step(root, config, forge, version_string)]
     # Local facts first, then the remote one separately: a report degrades to
     # "unknown" where a service is unreachable instead of failing outright.
-    tag_state = tagging.state(root, forge, tag, offline=True, remote=False)
+    tag_state = tagging.state(root, forge, tag, offline=True, remote=None)
     remote_revision: str | None = None
     remote_state: str | None = None
     if not offline:
@@ -82,7 +83,7 @@ def collect(
                 root,
                 "ls-remote",
                 "--tags",
-                "origin",
+                remote,
                 f"refs/tags/{tag}",
                 remote=True,
                 timeout=REMOTE_QUERY_TIMEOUT,
@@ -101,6 +102,7 @@ def collect(
             tag_state,
             version_string,
             manifest,
+            remote=remote,
             remote_revision=remote_revision,
             remote_unreachable=remote_state,
             offline=offline,
@@ -152,6 +154,7 @@ def _tag_steps(
     version_string: str,
     manifest: Manifest | None,
     *,
+    remote: str = processes.DEFAULT_REMOTE,
     remote_revision: str | None = None,
     remote_unreachable: str | None = None,
     offline: bool = False,
@@ -172,18 +175,16 @@ def _tag_steps(
     elif remote_unreachable is not None:
         steps.append(Step("tag pushed", UNKNOWN, remote_unreachable))
     elif remote_revision is None:
-        steps.append(Step("tag pushed", PENDING, f"{tag} is not on the remote"))
+        steps.append(Step("tag pushed", PENDING, f"{tag} is not on {remote}"))
     elif tag_state.revision is None:
-        steps.append(
-            Step("tag pushed", PROBLEM, f"{tag} is on the remote but not local")
-        )
+        steps.append(Step("tag pushed", PROBLEM, f"{tag} is on {remote} but not local"))
     else:
         local_object = processes.git(root, "rev-parse", f"refs/tags/{tag}").strip()
         if remote_revision == local_object:
-            steps.append(Step("tag pushed", OK, "remote matches this repository"))
+            steps.append(Step("tag pushed", OK, f"{remote} matches this repository"))
         else:
             steps.append(
-                Step("tag pushed", PROBLEM, f"{tag} differs between remote and local")
+                Step("tag pushed", PROBLEM, f"{tag} differs between {remote} and local")
             )
     if manifest is not None and manifest.source_revision is not None:
         if tag_state.revision is None:

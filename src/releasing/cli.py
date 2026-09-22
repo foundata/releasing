@@ -687,6 +687,7 @@ def _run_tag_create(args: argparse.Namespace) -> int:
                 else artifacts.load_manifest(cast(Path, args.manifest))
             ),
             offline=args.offline,
+            remote=_remote(args, loaded),
         )
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
@@ -705,6 +706,7 @@ def _run_tag_check(args: argparse.Namespace) -> int:
             args.version,
             revision=args.revision,
             offline=args.offline,
+            remote=_remote(args, loaded),
         )
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
@@ -724,7 +726,7 @@ def _run_tag_delete(args: argparse.Namespace) -> int:
             loaded,
             forges.forge_for(loaded),
             args.version,
-            remote=not args.local,
+            remote=None if args.local else _remote(args, loaded),
             offline=args.offline,
             dry_run=args.dry_run,
         )
@@ -796,6 +798,7 @@ def _run_status(args: argparse.Namespace) -> int:
             forges.forge_for(loaded),
             args.version,
             manifest=manifest,
+            remote=_remote(args, loaded),
             offline=args.offline,
         )
     except _RELEASE_ERRORS as exc:
@@ -822,7 +825,7 @@ def _run_push(args: argparse.Namespace) -> int:
             loaded,
             forges.forge_for(loaded),
             args.version,
-            remote=args.remote,
+            remote=_remote(args, loaded),
         )
         if _stops_for_attribution(
             args,
@@ -917,6 +920,20 @@ def _add_tag_arguments(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="do not ask the forge whether a release exists",
     )
+
+
+def _add_remote(parser: argparse.ArgumentParser, what: str) -> None:
+    """Offer to name the remote on a command that asks one about the tag."""
+    parser.add_argument(
+        "--remote",
+        help=f"{what} (default: the branch's tracking remote, or "
+        f"{processes.DEFAULT_REMOTE})",
+    )
+
+
+def _remote(args: argparse.Namespace, loaded: config.ReleaseConfig) -> str:
+    """The remote to ask: the one named, else the one the branch tracks."""
+    return cast("str | None", args.remote) or processes.remote_for(loaded.root)
 
 
 def _add_dry_run(parser: argparse.ArgumentParser, what: str) -> None:
@@ -1221,6 +1238,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="refuse unless the revision is the one these artifacts were built from",
     )
+    _add_remote(tag_create, "the remote that must not have the tag yet")
     _add_dry_run(tag_create, "no tag is created")
     _add_allow_tool_attribution(tag_create)
     tag_create.set_defaults(run=_run_tag_create)
@@ -1231,6 +1249,7 @@ def build_parser() -> argparse.ArgumentParser:
     tag_check.add_argument(
         "--revision", default="HEAD", metavar="REV", help="where it must point"
     )
+    _add_remote(tag_check, "the remote to compare the tag with")
     tag_check.set_defaults(run=_run_tag_check)
     tag_delete = tag_commands.add_parser(
         "delete", help="delete the tag while no release exists for it"
@@ -1239,6 +1258,7 @@ def build_parser() -> argparse.ArgumentParser:
     tag_delete.add_argument(
         "--local", action="store_true", help="do not delete the tag on the remote"
     )
+    _add_remote(tag_delete, "the remote to delete the tag from")
     _add_dry_run(tag_delete, "no tag is deleted")
     tag_delete.set_defaults(run=_run_tag_delete)
     verify_parser = commands.add_parser(
@@ -1272,6 +1292,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="the manifest written by release build, for digest comparison",
     )
+    _add_remote(status_parser, "the remote to ask about the tag")
     status_parser.add_argument(
         "--offline", action="store_true", help="do not query the index or the forge"
     )
@@ -1283,11 +1304,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_project(push_parser)
     push_parser.add_argument("version", metavar="X.Y.Z", help="the release version")
-    push_parser.add_argument(
-        "--remote",
-        default=push.DEFAULT_REMOTE,
-        help=f"where to push (default: {push.DEFAULT_REMOTE})",
-    )
+    _add_remote(push_parser, "where to push")
     push_parser.add_argument(
         "--dry-run", action="store_true", help="ask the remote without sending anything"
     )

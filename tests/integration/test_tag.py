@@ -271,7 +271,7 @@ def test_check_compares_remote_tag_objects(repository: Path, remote: str) -> Non
         assert result.stdout == b""
         assert b"Checked v1.0.0" in result.stderr
     else:
-        assert b"differs between the remote and this repository" in result.stderr
+        assert b"differs between origin and this repository" in result.stderr
 
 
 def test_delete_refuses_while_the_remote_still_has_the_tag_pushed(
@@ -286,6 +286,54 @@ def test_delete_refuses_while_the_remote_still_has_the_tag_pushed(
     missing = release(repository, "tag", "delete", "1.0.0", "--offline")
     assert missing.returncode == 1
     assert b"exists neither locally nor on the remote" in missing.stderr
+
+
+def test_the_tag_commands_ask_the_remote_the_branch_tracks(repository: Path) -> None:
+    # The tag on the tracked remote is the release; the one on origin is a
+    # leftover of the fork and must not decide whether the check passes.
+    upstream = repository.parent / "upstream.git"
+    subprocess.run(
+        ["git", "init", "-q", "--bare", str(upstream)],
+        env={**os.environ, **GIT_ENV},
+        check=True,
+        timeout=60,
+        capture_output=True,
+    )
+    git(repository, "remote", "add", "upstream", str(upstream))
+    git(repository, "push", "-q", "-u", "upstream", "main")
+    assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
+    git(repository, "push", "-q", "upstream", "refs/tags/v1.0.0")
+    git(repository, "tag", "-a", "other", "-m", "version 1.0.0\n\nAnother one.")
+    git(repository, "push", "-q", "origin", "refs/tags/other:refs/tags/v1.0.0")
+
+    assert release(repository, "tag", "check", "1.0.0", "--offline").returncode == 0
+
+    named = release(
+        repository, "tag", "check", "1.0.0", "--offline", "--remote", "origin"
+    )
+    assert named.returncode == 1
+    assert b"differs between origin and this repository" in named.stderr
+
+    deleted = release(repository, "tag", "delete", "1.0.0", "--offline")
+    assert deleted.returncode == 0, deleted.stderr
+    assert b"local, remote" in deleted.stderr
+    assert git(repository, "ls-remote", "--tags", "upstream") == ""
+    assert "refs/tags/v1.0.0" in git(repository, "ls-remote", "--tags", "origin")
+
+
+def test_delete_local_leaves_the_remote_tag_and_says_so(repository: Path) -> None:
+    assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
+    git(repository, "push", "-q", "origin", "refs/tags/v1.0.0")
+
+    result = release(repository, "tag", "delete", "1.0.0", "--offline", "--local")
+
+    assert result.returncode == 0, result.stderr
+    assert b"(local)" in result.stderr
+    assert "refs/tags/v1.0.0" in git(repository, "ls-remote", "--tags", "origin")
+
+    orphan = release(repository, "tag", "delete", "1.0.0", "--offline", "--local")
+    assert orphan.returncode == 1
+    assert b"exists neither locally nor on the remote" in orphan.stderr
 
 
 def manifest(path: Path, *, revision: str, version: str = "1.0.0") -> Path:

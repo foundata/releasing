@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- `--remote` on `tag create`, `tag check`, `tag delete`, `status` and `push`
+  names the remote to ask about the tag. Without it, commands use the remote
+  the current branch tracks, and `origin` when it tracks none.
 - `config check` reports the declared dependency pins and allowed attributions
   along with the rest of the effective declaration.
 - `tag create`, `push` and `forge release-create` refuse a commit that credits
@@ -31,6 +34,13 @@ and this project adheres to
 
 ### Fixed
 
+- Commands that ask a remote about the release tag asked `origin`, whatever the
+  release is pushed to. A fork releasing to another remote was told its tag was
+  absent, was compared against a leftover tag on `origin`, and had `tag delete`
+  report success while the tag stayed on the remote it was released to. Where a
+  message named "the remote", it now names the remote it asked.
+- `tag delete --local` no longer reports a deletion it did not perform when the
+  tag exists only on the remote.
 - Every request to a forge or an index asks for a revalidated answer. A release
   changes these answers and reads them back within seconds, where an anonymous
   request could be served the state from before the change: a release created

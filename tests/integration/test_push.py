@@ -162,3 +162,53 @@ def test_push_refuses_when_the_revision_disagrees_with_the_version(
     assert result.returncode == 1
     assert b"expected 1.0.0, sites state 2.0.0" in result.stderr
     assert "refs/tags/v1.0.0" not in remote_refs(repository)
+
+
+def fork(repository: Path, name: str) -> Path:
+    """Add a second remote and make the branch track it, as a fork does."""
+    other = repository.parent / f"{name}.git"
+    subprocess.run(
+        ["git", "init", "-q", "--bare", str(other)],
+        env={**os.environ, **GIT_ENV},
+        check=True,
+        timeout=60,
+        capture_output=True,
+    )
+    git(repository, "remote", "add", name, str(other))
+    git(repository, "push", "-q", "-u", name, "main")
+    return other
+
+
+def test_the_remote_is_the_one_the_branch_tracks(repository: Path) -> None:
+    # A fork releases to a remote that is not called origin, and pushing to
+    # origin would publish the release somewhere nobody is watching.
+    fork(repository, "upstream")
+    assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
+
+    result = release(repository, "push", "1.0.0")
+
+    assert result.returncode == 0, result.stderr
+    assert b"to upstream" in result.stderr
+    assert "refs/tags/v1.0.0" in git(repository, "ls-remote", "upstream")
+    assert git(repository, "ls-remote", "--tags", "origin") == ""
+
+
+def test_a_named_remote_wins_over_the_tracked_one(repository: Path) -> None:
+    fork(repository, "upstream")
+    assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
+
+    result = release(repository, "push", "1.0.0", "--remote", "origin")
+
+    assert result.returncode == 0, result.stderr
+    assert "refs/tags/v1.0.0" in git(repository, "ls-remote", "origin")
+    assert git(repository, "ls-remote", "--tags", "upstream") == ""
+
+
+def test_a_branch_that_tracks_nothing_falls_back_to_origin(repository: Path) -> None:
+    git(repository, "branch", "--unset-upstream")
+    assert release(repository, "tag", "create", "1.0.0", "--offline").returncode == 0
+
+    result = release(repository, "push", "1.0.0")
+
+    assert result.returncode == 0, result.stderr
+    assert "refs/tags/v1.0.0" in remote_refs(repository)

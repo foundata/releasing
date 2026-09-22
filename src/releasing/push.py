@@ -18,7 +18,7 @@ from releasing import tag as tagging
 from releasing.config import ReleaseConfig
 from releasing.forges import Forge
 
-DEFAULT_REMOTE = "origin"
+DEFAULT_REMOTE = processes.DEFAULT_REMOTE
 
 
 class PushError(RuntimeError):
@@ -51,7 +51,13 @@ def plan(
         raise PushError("HEAD is detached; check out the release branch first")
     revision = _tag_commit(root, tag)
     problems = tagging.check(
-        root, config, forge, version_string, revision=revision, offline=True
+        root,
+        config,
+        forge,
+        version_string,
+        revision=revision,
+        offline=True,
+        remote=remote,
     )
     if problems:
         raise PushError(f"{tag} is not usable:\n  " + "\n  ".join(problems))

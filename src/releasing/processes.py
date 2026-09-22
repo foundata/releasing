@@ -18,6 +18,7 @@ from pathlib import Path
 from releasing import reporting
 
 TIMEOUT = 600.0
+DEFAULT_REMOTE = "origin"
 # A command that contacts a remote waits on a network and possibly on
 # credentials. Without a bound it blocks for the full local timeout, which
 # turns an unreachable forge into a ten-minute hang.
@@ -167,6 +168,24 @@ def git(
         stdout=stdout,
         echo=echo,
     )
+
+
+def remote_for(root: Path) -> str:
+    """The remote the checked-out branch tracks, or ``origin``.
+
+    A fork workflow releases to a remote that is not called ``origin``, and a
+    command that always asked ``origin`` would answer about the wrong
+    repository. A branch without an upstream, a detached HEAD and a branch
+    tracking a local one all fall back to the conventional name.
+    """
+    try:
+        upstream = git(
+            root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"
+        ).strip()
+    except ProcessError:
+        return DEFAULT_REMOTE
+    remote, separator, _ = upstream.partition("/")
+    return remote if separator and remote else DEFAULT_REMOTE
 
 
 def is_checkout(root: Path) -> bool:

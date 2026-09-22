@@ -40,6 +40,9 @@ index. With `--manifest` it also compares the recorded digests against what
 the index serves and the recorded revision against the tag, which is the check
 that catches artifacts built from the wrong commit.
 
+The remote asked about the tag is the one the current branch tracks, and
+`origin` when the branch tracks nothing; `--remote NAME` names another one.
+
 `--offline` queries neither the remote, the index nor the forge, and reports
 those facts as `unknown`. Without it, an unreachable service degrades to
 `unknown` on its own rather than failing the report.

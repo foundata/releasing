@@ -56,6 +56,13 @@ release tag delete "${version}"     # refused once a release exists
 
 `--dry-run` reports which deletions would happen and performs none.
 
-`--local` keeps the remote tag. `--offline` skips the forge query for a
-repository whose forge is unreachable. It also skips the release condition, so
-use it only when you know no release exists.
+`--local` keeps the remote tag and asks no remote at all. `--offline` skips the
+forge query for a repository whose forge is unreachable. It also skips the
+release condition, so use it only when you know no release exists.
+
+## The remote these commands ask
+
+`create`, `check` and `delete` ask a remote whether it already has the tag, and
+`delete` removes it there. That remote is the one the current branch tracks,
+which is what a fork workflow needs, and `origin` when the branch tracks
+nothing. `--remote NAME` names another one.

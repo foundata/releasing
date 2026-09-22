@@ -17,7 +17,11 @@ It refuses when:
   not document it. That check exports the revision, so it describes what was
   committed rather than what the working tree currently holds.
 
-`--dry-run` asks the remote what would happen and sends nothing. `--remote`
-selects a remote other than `origin`.
+`--dry-run` asks the remote what would happen and sends nothing.
+
+The remote is the one the current branch tracks, and `origin` when the branch
+tracks nothing. `--remote NAME` names another one. The tag check before the
+push compares against the same remote, so a fork releasing to `upstream` is
+checked against `upstream`.
 
 If the branch push fails, the tag is not sent.

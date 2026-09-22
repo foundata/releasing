@@ -44,14 +44,19 @@ class TagState:
 
 
 def state(
-    root: Path, forge: Forge, tag: str, *, offline: bool = False, remote: bool = True
+    root: Path,
+    forge: Forge,
+    tag: str,
+    *,
+    offline: bool = False,
+    remote: str | None = processes.DEFAULT_REMOTE,
 ) -> TagState:
     """Collect the local and remote facts about ``tag``.
 
-    ``remote`` queries the configured remote for the tag; without it the
-    remote revision is reported as absent. A caller that must not act on an
-    unverified remote leaves it on, so an unreachable remote is an error
-    rather than a silent "not there".
+    ``remote`` names the remote to ask for the tag; ``None`` asks none and
+    reports the remote revision as absent. A caller that must not act on an
+    unverified remote names one, so an unreachable remote is an error rather
+    than a silent "not there".
     """
     listed = processes.git(root, "tag", "--list", tag).strip()
     revision = annotated_message = None
@@ -69,7 +74,7 @@ def state(
         )
     listing = (
         processes.git(
-            root, "ls-remote", "--tags", "origin", f"refs/tags/{tag}", remote=True
+            root, "ls-remote", "--tags", remote, f"refs/tags/{tag}", remote=True
         )
         if remote
         else ""
@@ -94,6 +99,7 @@ def create(
     revision: str = "HEAD",
     manifest: Manifest | None = None,
     offline: bool = False,
+    remote: str | None = processes.DEFAULT_REMOTE,
     dry_run: bool = False,
 ) -> str:
     """Create the annotated release tag for ``version_string`` under guard.
@@ -119,11 +125,11 @@ def create(
         reporting.phase(f"Found artifacts built from {target[:12]} in the manifest")
     reporting.phase("Verified the working tree is clean")
     found = check_revision(root, target, version_string)
-    current = state(root, forge, tag, offline=offline)
+    current = state(root, forge, tag, offline=offline, remote=remote)
     if current.revision is not None:
         raise TagError(f"tag {tag} already exists locally at {current.revision[:12]}")
     if current.remote_revision is not None:
-        raise TagError(f"tag {tag} already exists on the remote")
+        raise TagError(f"tag {tag} already exists on {remote}")
     _change(
         root,
         ["tag", "-a", tag, target, "-m", config.tag_message_for(found)],
@@ -202,13 +208,16 @@ def delete(
     forge: Forge,
     version_string: str,
     *,
-    remote: bool = True,
+    remote: str | None = processes.DEFAULT_REMOTE,
     offline: bool = False,
     dry_run: bool = False,
 ) -> list[str]:
-    """Delete the release tag locally and on the remote while no release exists."""
+    """Delete the release tag locally and on ``remote`` while no release exists.
+
+    ``remote`` of ``None`` leaves the remote alone and does not ask it.
+    """
     tag = config.tag(version_string)
-    current = state(root, forge, tag, offline=offline)
+    current = state(root, forge, tag, offline=offline, remote=remote)
     if current.release_exists:
         raise TagError(
             f"a {forge.name} release exists for {tag}; the version is spent. "
@@ -223,7 +232,7 @@ def delete(
     if remote and current.remote_revision is not None:
         _change(
             root,
-            ["push", "origin", f":refs/tags/{tag}"],
+            ["push", remote, f":refs/tags/{tag}"],
             dry_run=dry_run,
             contacts_remote=True,
         )
@@ -253,13 +262,14 @@ def check(
     *,
     revision: str = "HEAD",
     offline: bool = False,
+    remote: str | None = processes.DEFAULT_REMOTE,
 ) -> list[str]:
     """Return every reason the tag is not a valid release tag for the version."""
     tag = config.tag(version_string)
     target = processes.git(
         root, "rev-parse", "--verify", f"{revision}^{{commit}}"
     ).strip()
-    current = state(root, forge, tag, offline=offline)
+    current = state(root, forge, tag, offline=offline, remote=remote)
     problems = []
     if current.revision is None:
         return [f"tag {tag} does not exist"]
@@ -276,5 +286,5 @@ def check(
         # ls-remote reports the tag object, not its peeled target commit.
         local_object = processes.git(root, "rev-parse", f"refs/tags/{tag}").strip()
         if current.remote_revision != local_object:
-            problems.append(f"tag {tag} differs between the remote and this repository")
+            problems.append(f"tag {tag} differs between {remote} and this repository")
     return problems
