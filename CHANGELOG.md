@@ -9,8 +9,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [4.0.0] - 2026-09-23
+
 ### Changed
 
+- A repository whose commit messages credit a tool as their author no longer
+  releases: `tag create`, `push` and `forge release-create` refuse it until the
+  message is amended, `allowed-attribution` names what the project carries on
+  purpose, or `--allow-tool-attribution` permits it once.
 - Every narrated line begins with a verb from a closed vocabulary: a participle
   while the work runs, a past tense once it is done, `Would` for what a dry run
   declined. The wording of many lines changed with it.
@@ -141,7 +150,8 @@ and this project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v3.0.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/foundata/releasing/releases/tag/v4.0.0
 [3.0.0]: https://github.com/foundata/releasing/releases/tag/v3.0.0
 [2.2.0]: https://github.com/foundata/releasing/releases/tag/v2.2.0
 [2.1.0]: https://github.com/foundata/releasing/releases/tag/v2.1.0
