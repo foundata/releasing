@@ -61,14 +61,23 @@ def release(
     )
 
 
+def write_lf(path: Path, text: str) -> None:
+    """Write a fixture file with LF, whatever the platform would prefer.
+
+    A bump prints the diff of what it read, so the endings in the file decide
+    the endings in the diff these tests assert on.
+    """
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
 @pytest.fixture
 def repository(tmp_path: Path) -> Path:
-    (tmp_path / "README.md").write_text("# Example\n", encoding="utf-8")
-    (tmp_path / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text(
+    write_lf(tmp_path / "README.md", "# Example\n")
+    write_lf(tmp_path / "CHANGELOG.md", CHANGELOG)
+    write_lf(
+        tmp_path / "pyproject.toml",
         '[project]\nname = "example"\nversion = "1.2.3"\n\n'
         '[tool.releasing]\nrepository = "foundata/example"\n',
-        encoding="utf-8",
     )
     git(tmp_path, "init", "-q", "-b", "main")
     git(tmp_path, "add", ".")
@@ -87,12 +96,12 @@ def test_version_check_prints_the_version_and_honours_tags(repository: Path) -> 
 
 
 def test_version_check_works_in_an_exported_tree_without_git(tmp_path: Path) -> None:
-    (tmp_path / "README.md").write_text("# Example\n", encoding="utf-8")
-    (tmp_path / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text(
+    write_lf(tmp_path / "README.md", "# Example\n")
+    write_lf(tmp_path / "CHANGELOG.md", CHANGELOG)
+    write_lf(
+        tmp_path / "pyproject.toml",
         '[project]\nname = "example"\nversion = "1.2.3"\n\n'
         '[tool.releasing]\nrepository = "foundata/example"\n',
-        encoding="utf-8",
     )
     result = release(tmp_path, "version", "check", git_available=False)
     assert (result.returncode, result.stdout) == (0, b"1.2.3\n")
