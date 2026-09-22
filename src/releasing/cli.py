@@ -270,7 +270,7 @@ def _run_markdown_prepare(args: argparse.Namespace) -> int:
             elif args.output is None:
                 reporting.phase(f"unchanged: {path}")
     except (OSError, UnicodeError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     return 0
 
@@ -279,7 +279,7 @@ def _run_config_check(args: argparse.Namespace) -> int:
     try:
         loaded = config.load_release_config(cast(Path, args.project))
     except config.ConfigError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     print(f"{loaded.source.relative_to(loaded.root)}: valid release declaration")
     print(f"repository: {loaded.repository} ({loaded.forge})")
@@ -325,7 +325,7 @@ def _run_version_check(args: argparse.Namespace) -> int:
         changelog.ChangelogError,
         ValueError,
     ) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     print(found)
     return 0
@@ -364,10 +364,10 @@ def _run_version_bump(args: argparse.Namespace) -> int:
                 echo=True,
             )
     except (config.ConfigError, version.VersionError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     except processes.ProcessError as exc:
-        print(f"Error: uv lock failed: {exc}", file=sys.stderr)
+        reporting.error(f"uv lock failed: {exc}")
         return 1
     return 0
 
@@ -421,7 +421,7 @@ def _run_changelog_check(args: argparse.Namespace) -> int:
                     f"{loaded.changelog}:\n" + "\n".join(problems)
                 )
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     reporting.phase(f"{loaded.changelog}: ok")
     return 0
@@ -436,7 +436,7 @@ def _run_changelog_show(args: argparse.Namespace) -> int:
             else changelog.show(_read(loaded.root / loaded.changelog), args.version)
         )
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     sys.stdout.write(body)
     return 0
@@ -484,10 +484,10 @@ def _run_changelog_release(args: argparse.Namespace) -> int:
             return 0
         _write(path, result.encode("utf-8"), stat.S_IMODE(path.stat().st_mode))
     except (config.ConfigError, changelog.ChangelogError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     except processes.ProcessError as exc:
-        print(f"Error: changelog release failed: {exc}", file=sys.stderr)
+        reporting.error(f"changelog release failed: {exc}")
         return 1
     reporting.phase(f"{loaded.changelog}: released {args.version}")
     return 0
@@ -523,12 +523,10 @@ def _run_artifacts_check(args: argparse.Namespace) -> int:
         artifacts.ArtifactError,
         ValueError,
     ) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     if problems:
-        print("Error: artifacts are not publishable:", file=sys.stderr)
-        for problem in problems:
-            print(f"  {problem}", file=sys.stderr)
+        reporting.error("artifacts are not publishable:", problems=problems)
         return 1
     for artifact in inspected:
         print(
@@ -572,7 +570,7 @@ def _run_artifacts_manifest(args: argparse.Namespace) -> int:
         OSError,
         ValueError,
     ) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     return 0
 
@@ -584,12 +582,10 @@ def _run_artifacts_verify(args: argparse.Namespace) -> int:
         directory = cast("Path | None", args.directory) or manifest_path.parent
         problems = artifacts.verify_manifest(manifest, directory)
     except (artifacts.ArtifactError, OSError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     if problems:
-        print("Error: files differ from the manifest:", file=sys.stderr)
-        for problem in problems:
-            print(f"  {problem}", file=sys.stderr)
+        reporting.error("files differ from the manifest:", problems=problems)
         return 1
     reporting.phase(f"{len(manifest.artifacts)} artifact(s) match the manifest")
     return 0
@@ -614,13 +610,12 @@ def _run_build(args: argparse.Namespace) -> int:
         processes.ProcessError,
         ValueError,
     ) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     for source in result.local_sources:
-        print(
-            f"WARNING: built with a local dependency source ({source}); "
-            "these artifacts must never be uploaded",
-            file=sys.stderr,
+        reporting.warning(
+            f"built with a local dependency source ({source}); "
+            "these artifacts must never be uploaded"
         )
     if args.dry_run:
         reporting.phase(
@@ -673,7 +668,7 @@ def _run_tag_create(args: argparse.Namespace) -> int:
             offline=args.offline,
         )
     except _RELEASE_ERRORS as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     print(created)
     return 0
@@ -691,12 +686,10 @@ def _run_tag_check(args: argparse.Namespace) -> int:
             offline=args.offline,
         )
     except _RELEASE_ERRORS as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     if problems:
-        print("Error: the release tag is not usable:", file=sys.stderr)
-        for problem in problems:
-            print(f"  {problem}", file=sys.stderr)
+        reporting.error("the release tag is not usable:", problems=problems)
         return 1
     reporting.phase(f"{loaded.tag(args.version)}: ok")
     return 0
@@ -715,7 +708,7 @@ def _run_tag_delete(args: argparse.Namespace) -> int:
             dry_run=args.dry_run,
         )
     except _RELEASE_ERRORS as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     what = "would delete" if args.dry_run else "deleted"
     reporting.phase(f"{loaded.tag(args.version)}: {what} ({', '.join(deleted)})")
@@ -757,7 +750,7 @@ def _run_verify(args: argparse.Namespace) -> int:
             )
         reporting.phase(f"{loaded.forge} reports {expected} as the latest release")
     except _RELEASE_ERRORS as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     return 0
 
@@ -779,7 +772,7 @@ def _run_status(args: argparse.Namespace) -> int:
             offline=args.offline,
         )
     except _RELEASE_ERRORS as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     width = max(len(step.name) for step in report.steps)
     for step in report.steps:
@@ -806,7 +799,7 @@ def _run_push(args: argparse.Namespace) -> int:
         )
         sent = publication.execute(loaded.root, prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     what = "would push" if args.dry_run else "pushed"
     for reference in sent:
@@ -828,7 +821,7 @@ def _run_publish(args: argparse.Namespace) -> int:
             )
         sent = uploading.execute(prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     what = "would upload" if args.dry_run else "uploaded"
     for name in sent:
@@ -858,7 +851,7 @@ def _run_forge_release_create(args: argparse.Namespace) -> int:
         )
         reported = forge_release.execute(loaded.root, prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        reporting.error(str(exc))
         return 1
     if args.dry_run:
         return 0

@@ -150,3 +150,20 @@ def request(method: str, url: str, status: int | str) -> None:
 def detail(text: str) -> None:
     """Show verbatim output that carries its own format."""
     _current.detail(text)
+
+
+def error(message: str, *, problems: Sequence[str] = ()) -> None:
+    """Report a failure, listing each problem below it.
+
+    A failure is not part of the story and does not go through the reporter: a
+    command that refuses must say why even under ``--quiet``, and a library
+    caller never reaches this because it raises instead.
+    """
+    print(f"Error: {message}", file=sys.stderr)
+    for problem in problems:
+        print(f"  {problem}", file=sys.stderr)
+
+
+def warning(message: str) -> None:
+    """Report something that does not stop the work but must not be missed."""
+    print(f"WARNING: {message}", file=sys.stderr)
