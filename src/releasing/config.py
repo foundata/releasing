@@ -162,7 +162,7 @@ def load_release_config(root: Path) -> ReleaseConfig:
     _reject_unknown(raw, _KEYS, where)
     ecosystem = _choice(raw, "ecosystem", ECOSYSTEMS, "python", where)
     defaults = _ECOSYSTEM_DEFAULTS[ecosystem]
-    repository = _string(raw, "repository", None, where)
+    repository = _optional(raw, "repository", where)
     if repository is None:
         raise ConfigError(f"{where}repository is required, as owner/name")
     if not _REPOSITORY.fullmatch(repository):
@@ -173,20 +173,17 @@ def load_release_config(root: Path) -> ReleaseConfig:
     version_files = _relative_paths(raw, "version-files", default_files, where)
     if not version_files and ecosystem != "hugo-component":
         raise ConfigError(f"{where}version-files must name at least one file")
-    changelog = _string(
+    changelog = _text(
         raw, "changelog", str(defaults.get("changelog", "CHANGELOG.md")), where
     )
-    assert changelog is not None
     if changelog != "antsibull":
         changelog = _relative_path(
             changelog, f"{where}changelog", allow_directory=False
         )
-    tag_format = _string(raw, "tag-format", "v{version}", where)
-    assert tag_format is not None
+    tag_format = _text(raw, "tag-format", "v{version}", where)
     if "{version}" not in tag_format or _formats_badly(tag_format, version="1"):
         raise ConfigError(f"{where}tag-format must contain {{version}}: {tag_format!r}")
-    tag_message = _string(raw, "tag-message", "version {version}", where)
-    assert tag_message is not None
+    tag_message = _text(raw, "tag-message", "version {version}", where)
     if _formats_badly(tag_message, version="1", tag="v1"):
         raise ConfigError(
             f"{where}tag-message may only use {{version}} and {{tag}}: {tag_message!r}"
@@ -287,15 +284,20 @@ def _reject_unknown(
         raise ConfigError(f"{where}unknown key(s): {', '.join(unknown)}")
 
 
-def _string(
-    raw: Mapping[str, object], key: str, default: str | None, where: str
-) -> str | None:
-    value = raw.get(key, default)
+def _optional(raw: Mapping[str, object], key: str, where: str) -> str | None:
+    """The declared value of ``key``, or None where the table does not have it."""
+    value = raw.get(key)
     if value is None:
         return None
     if not isinstance(value, str) or not value.strip():
         raise ConfigError(f"{where}{key} must be a non-empty string")
     return value
+
+
+def _text(raw: Mapping[str, object], key: str, default: str, where: str) -> str:
+    """The declared value of ``key``, or the default this package applies."""
+    value = _optional(raw, key, where)
+    return default if value is None else value
 
 
 def _choice(
@@ -305,8 +307,7 @@ def _choice(
     default: str,
     where: str,
 ) -> str:
-    value = _string(raw, key, default, where)
-    assert value is not None
+    value = _text(raw, key, default, where)
     if value not in allowed:
         raise ConfigError(
             f"{where}{key} must be one of {', '.join(allowed)}: {value!r}"
@@ -361,7 +362,7 @@ def _pin(item: object, where: str) -> DependencyPin:
         raise ConfigError(f"{where} must be a table with file and name")
     _reject_unknown(item, _PIN_KEYS, f"{where}: ")
     file = _relative_path(item.get("file"), f"{where}.file")
-    name = _string(item, "name", None, f"{where}.")
+    name = _optional(item, "name", f"{where}.")
     if name is None or not re.fullmatch(
         r"[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?", name
     ):
@@ -373,8 +374,7 @@ def _readme(item: object, where: str) -> ReadmeConfig:
     if not isinstance(item, Mapping):
         raise ConfigError(f"{where} must be a table")
     _reject_unknown(item, _README_KEYS, f"{where}: ")
-    ref = _string(item, "ref", "refs/tags/{tag}", f"{where}.")
-    assert ref is not None
+    ref = _text(item, "ref", "refs/tags/{tag}", f"{where}.")
     if _formats_badly(ref, version="1", tag="v1"):
         raise ConfigError(f"{where}.ref may only use {{version}} and {{tag}}: {ref!r}")
     return ReadmeConfig(

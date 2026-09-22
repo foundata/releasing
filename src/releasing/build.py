@@ -151,39 +151,32 @@ def build(
         prepared = prepare_readmes(
             exported, config, version_string=found, forge=forge_for(config)
         )
+        staged = workspace / "artifacts"
+        staged.mkdir()
+        files = _build_artifacts(exported, config, staged, dry_run=dry_run)
+        produced: tuple[Path, ...] = ()
         if dry_run:
-            staged = workspace / "artifacts"
-            staged.mkdir()
-            _build_artifacts(exported, config, staged, dry_run=True)
             reporting.phase(
                 "Skipped checking the files and recording their digests: "
                 "a dry run builds nothing"
             )
-            return BuildResult(
-                directory=out,
-                files=(),
-                manifest=out / MANIFEST,
-                revision=resolved,
+        else:
+            inspected = [artifacts.inspect(path) for path in files]
+            names = tuple(version.project_names(exported, config).values())
+            reporting.phase(f"Checking {len(files)} built file(s)")
+            problems = artifacts.check(inspected, version=found, names=names)
+            if problems:
+                raise BuildError(
+                    "the built distributions are not publishable:\n  "
+                    + "\n  ".join(problems)
+                )
+            manifest = artifacts.build_manifest(
+                files,
+                repository=config.repository,
                 version=found,
-                prepared=tuple(prepared),
-                local_sources=tuple(local),
+                source_revision=resolved,
             )
-        staged = workspace / "artifacts"
-        staged.mkdir()
-        files = _build_artifacts(exported, config, staged)
-        inspected = [artifacts.inspect(path) for path in files]
-        names = tuple(version.project_names(exported, config).values())
-        reporting.phase(f"Checking {len(files)} built file(s)")
-        problems = artifacts.check(inspected, version=found, names=names)
-        if problems:
-            raise BuildError(
-                "the built distributions are not publishable:\n  "
-                + "\n  ".join(problems)
-            )
-        manifest = artifacts.build_manifest(
-            files, repository=config.repository, version=found, source_revision=resolved
-        )
-        produced = _retain(files, manifest, out)
+            produced = _retain(files, manifest, out)
     return BuildResult(
         directory=out,
         files=produced,

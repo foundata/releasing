@@ -10,6 +10,7 @@ spent and the fix needs a new one.
 """
 
 import tempfile
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -43,13 +44,7 @@ class TagState:
 
 
 def state(
-    root: Path,
-    config: ReleaseConfig,
-    forge: Forge,
-    tag: str,
-    *,
-    offline: bool = False,
-    remote: bool = True,
+    root: Path, forge: Forge, tag: str, *, offline: bool = False, remote: bool = True
 ) -> TagState:
     """Collect the local and remote facts about ``tag``.
 
@@ -124,17 +119,15 @@ def create(
         reporting.phase(f"Found artifacts built from {target[:12]} in the manifest")
     reporting.phase("Verified the working tree is clean")
     found = check_revision(root, target, version_string)
-    current = state(root, config, forge, tag, offline=offline)
+    current = state(root, forge, tag, offline=offline)
     if current.revision is not None:
         raise TagError(f"tag {tag} already exists locally at {current.revision[:12]}")
     if current.remote_revision is not None:
         raise TagError(f"tag {tag} already exists on the remote")
-    argv = ["git", "tag", "-a", tag, target, "-m", config.tag_message_for(found)]
-    if dry_run:
-        reporting.command(argv, executed=False)
-        return tag
-    processes.git(
-        root, "tag", "-a", tag, target, "-m", config.tag_message_for(found), echo=True
+    _change(
+        root,
+        ["tag", "-a", tag, target, "-m", config.tag_message_for(found)],
+        dry_run=dry_run,
     )
     return tag
 
@@ -215,7 +208,7 @@ def delete(
 ) -> list[str]:
     """Delete the release tag locally and on the remote while no release exists."""
     tag = config.tag(version_string)
-    current = state(root, config, forge, tag, offline=offline)
+    current = state(root, forge, tag, offline=offline)
     if current.release_exists:
         raise TagError(
             f"a {forge.name} release exists for {tag}; the version is spent. "
@@ -225,22 +218,31 @@ def delete(
         raise TagError(f"tag {tag} exists neither locally nor on the remote")
     deleted = []
     if current.revision is not None:
-        if dry_run:
-            reporting.command(["git", "tag", "-d", tag], executed=False)
-        else:
-            processes.git(root, "tag", "-d", tag, echo=True)
+        _change(root, ["tag", "-d", tag], dry_run=dry_run)
         deleted.append("local")
     if remote and current.remote_revision is not None:
-        if dry_run:
-            reporting.command(
-                ["git", "push", "origin", f":refs/tags/{tag}"], executed=False
-            )
-        else:
-            processes.git(
-                root, "push", "origin", f":refs/tags/{tag}", remote=True, echo=True
-            )
+        _change(
+            root,
+            ["push", "origin", f":refs/tags/{tag}"],
+            dry_run=dry_run,
+            contacts_remote=True,
+        )
         deleted.append("remote")
     return deleted
+
+
+def _change(
+    root: Path,
+    arguments: Sequence[str],
+    *,
+    dry_run: bool,
+    contacts_remote: bool = False,
+) -> None:
+    """Run a Git command that changes something, or say what a dry run declined."""
+    if dry_run:
+        reporting.command(["git", *arguments], executed=False)
+        return
+    processes.git(root, *arguments, remote=contacts_remote, echo=True)
 
 
 def check(
@@ -257,7 +259,7 @@ def check(
     target = processes.git(
         root, "rev-parse", "--verify", f"{revision}^{{commit}}"
     ).strip()
-    current = state(root, config, forge, tag, offline=offline)
+    current = state(root, forge, tag, offline=offline)
     problems = []
     if current.revision is None:
         return [f"tag {tag} does not exist"]

@@ -73,7 +73,7 @@ def collect(
     steps = [_changelog_step(root, config, forge, version_string)]
     # Local facts first, then the remote one separately: a report degrades to
     # "unknown" where a service is unreachable instead of failing outright.
-    tag_state = tagging.state(root, config, forge, tag, offline=True, remote=False)
+    tag_state = tagging.state(root, forge, tag, offline=True, remote=False)
     remote_revision: str | None = None
     remote_state: str | None = None
     if not offline:
