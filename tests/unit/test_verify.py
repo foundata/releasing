@@ -4,6 +4,7 @@
 import io
 import json
 import urllib.error
+import urllib.request
 from dataclasses import replace
 from email.message import Message
 from pathlib import Path
@@ -204,3 +205,29 @@ def test_isolated_install_refreshes_the_index_listing(
     assert verify.installed_version("example", "1.0.1", command="example") == "1.0.1"
     assert "--refresh-package" in seen[0]
     assert seen[0][-2:] == ["example", "--version"]
+
+
+def test_both_http_callers_ask_for_a_revalidated_answer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A release changes these answers and asks for them seconds later. An
+    # anonymous request may otherwise be served the state from before the
+    # change: a freshly created release reported as still missing.
+    captured: list[Any] = []
+
+    def fake(request: Any, timeout: float = 0) -> Response:
+        captured.append(request)
+        payload = {
+            "tag_name": "v1.0.0",
+            "urls": [{"filename": "example-1.0.0.tar.gz", "digests": {"sha256": "a"}}],
+        }
+        return Response(json.dumps(payload).encode())
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake)
+
+    assert verify.latest_tag(FORGE) == "v1.0.0"
+    assert verify.pypi_files("example", "1.0.0")
+
+    assert len(captured) == 2
+    for request in captured:
+        assert request.get_header("Cache-control") == "no-cache"

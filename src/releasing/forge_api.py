@@ -26,7 +26,14 @@ class ForgeError(RuntimeError):
 
 def _request(url: str) -> Any | None:
     """GET a JSON document, or None when the forge reports it does not exist."""
-    headers = {"Accept": "application/json", "User-Agent": _USER_AGENT}
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": _USER_AGENT,
+        # A release asks these questions moments after changing the answer, and
+        # an anonymous request is served from a cache that may still hold the
+        # previous one. Ask for a revalidated answer rather than a fast one.
+        "Cache-Control": "no-cache",
+    }
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"

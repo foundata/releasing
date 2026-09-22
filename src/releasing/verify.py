@@ -180,7 +180,14 @@ def latest_tag(forge: Forge) -> str | None:
 
 def _get(url: str) -> object:
     request = urllib.request.Request(
-        url, headers={"Accept": "application/json", "User-Agent": _USER_AGENT}
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": _USER_AGENT,
+            # Verification runs moments after the upload, which is exactly when
+            # a cached listing still predates the version being verified.
+            "Cache-Control": "no-cache",
+        },
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:

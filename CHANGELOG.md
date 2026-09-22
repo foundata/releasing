@@ -9,7 +9,12 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Fixed
+
+- Every request to a forge or an index asks for a revalidated answer. A release
+  changes these answers and reads them back within seconds, where an anonymous
+  request could be served the state from before the change: a release created
+  moments earlier reported as still missing.
 
 
 ## [3.0.0] - 2026-09-22
