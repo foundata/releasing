@@ -213,9 +213,8 @@ def test_a_command_line_is_quoted_the_way_its_platform_expects() -> None:
     assert reporting.render(argv, platform="win32") == (
         'git tag -a v1.0.0 -m "version 1.0.0"'
     )
-    assert reporting.render(["/usr/bin/git", "tag", "-m", "version 1.0.0"]) == (
-        "git tag -m 'version 1.0.0'"
-    )
+    posix = ["/usr/bin/git", "tag", "-m", "version 1.0.0"]
+    assert reporting.render(posix, platform="linux") == "git tag -m 'version 1.0.0'"
 
 
 def test_a_windows_console_has_the_last_word_on_colour(
