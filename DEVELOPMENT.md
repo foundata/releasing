@@ -114,12 +114,12 @@ The package supports Windows and the suite passes there: 714 passed and 19
 skipped on Windows Server 2025 with Python 3.14, measured on 2026-09-23. No
 development or release step needs Windows; a Linux run covers every test.
 
-Most of what differs between platforms is a parameter rather than a machine.
 `reporting.program()`, `reporting.render()` and `reporting.wants_colour()` take
-`platform=`, so both sets of rules are asserted from any host: the name a
-program is echoed under, the quoting of a command line, and the console's veto
-over colour. What stays native is `_enable_windows_sequences()`, which calls
-the Windows console API; only a run there covers it.
+`platform=` instead of reading `sys.platform`, so both sets of rules are
+asserted from any host: the name a program is echoed under, the quoting of a
+command line, and whether the console allows colour. What stays native is
+`_enable_windows_sequences()`, which calls the Windows console API; only a run
+there covers it.
 
 Run the suite on Windows before releasing a change to `reporting`, `processes`
 or `_source_export`. Any Windows host with Git and uv will do, reached however
@@ -196,7 +196,8 @@ excluded files.
 Measuring the subprocesses is possible in principle, with coverage's parallel
 mode and its start-up hook, but the child processes then write `.coverage`
 files into the trees under test, which breaks the assertions that a build
-leaves the working tree untouched. That trade is not worth a metric.
+leaves the working tree untouched, for a number that would say no more than
+the current one.
 
 ## Test layout
 
@@ -262,8 +263,8 @@ exceptions.
 The expectations are a change detector, not the authority on correctness. They
 were first produced by the shell script this package replaces, then audited
 against the current rules: none of the 42 files contains a repository-relative
-destination, and the current implementation reproduces each one exactly. What
-establishes correctness is separate. `tests/fixtures/cases.json` and the
+destination, and the current implementation reproduces each one exactly.
+Correctness is established elsewhere: `tests/fixtures/cases.json` and the
 mixed-content fixtures cover the behaviour that deliberately departs from the
 old shell script, and the renderer tests prepare each corpus README afresh and
 assert on the rendered HTML without consulting the frozen files. Changing an

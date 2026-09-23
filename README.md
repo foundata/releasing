@@ -99,8 +99,8 @@ The end-to-end order is in
 
 ## Output
 
-One rule for every command, so output can be redirected without knowing which
-command is in hand.
+Every command sends its result to stdout and its progress to stderr, so
+output can be redirected without knowing which command is in hand.
 
 Stdout carries what the command produced and nothing else: the tag it created,
 the files it built, the changelog section, the manifest JSON, the report. A
