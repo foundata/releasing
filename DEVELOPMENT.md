@@ -7,6 +7,48 @@ network and subprocess use so they also work inside an exported tree. Python
 3.11 to 3.14 are supported; the 3.11 floor exists for consumers that target
 Debian 12. Use `uv` for development environments and for running the command.
 
+## Glossary
+
+Vocabulary that recurs in the code and the docs and does not explain itself
+from `--help`.
+
+- **Forge**: where the source lives. It owns the tags, the release entries and
+  the URLs a prepared README points at. GitHub today; the `forge` key selects
+  it.
+- **Index**: where an artifact is published. PyPI or Ansible Galaxy; the
+  `index` key selects it, and `none` means the project publishes no artifact.
+- **Ecosystem**: which build tool and which defaults apply, `python`,
+  `ansible-collection` or `hugo-component`. It sets `index`, `version-files`
+  and the changelog format unless the declaration overrides them.
+- **Declaration**: the `[tool.releasing]` table in `pyproject.toml`, or the
+  same keys at the top level of a `releasing.toml`. Every project-aware command
+  reads it; see [The release declaration](./docs/config.md).
+- **Version site**: one line in a declared file that states the version, such
+  as `version = "1.2.3"` in `pyproject.toml` or `galaxy.yml`. Every declared
+  file must contain exactly one.
+- **Manifest**: `artifacts.json`, the list of files a build validated with
+  their SHA-256 digests, the version and the revision they came from. It
+  decides what is uploaded and what is compared afterwards.
+
+A published artifact takes its name from the packaging metadata on the index
+side, never from the repository it was built in. The forge name and the
+published name are allowed to differ, and usually do:
+
+|             Repository (forge)             |             Packaging metadata              | Published as |
+| :----------------------------------------- | :------------------------------------------ | :----------- |
+| `foundata/releasing`                       | `[project] name = "releasing"`              | `releasing-4.1.0-py3-none-any.whl` |
+| `foundata/ansible-docsmith`                | `[project] name = "ansible-docsmith"`       | `ansible_docsmith-2.2.0-py3-none-any.whl` |
+| `foundata/scanmole`                        | two members, `scanmole` and `scanmole-gui`  | `scanmole-1.2.0.tar.gz` and `scanmole_gui-1.2.0.tar.gz` |
+| `foundata/ansible-collection-apache-httpd` | `namespace: foundata`, `name: apache_httpd` | `foundata-apache_httpd-1.3.0.tar.gz` |
+
+A Python distribution therefore has three spellings: the install name
+(`ansible-docsmith`), the file name (`ansible_docsmith-...`, escaped by
+PEP 427) and the import name (`ansible_docsmith`). PyPI treats runs of `-`,
+`_` and `.` as equal, so `verify` normalizes them there; a collection name
+cannot contain a hyphen, so `foundata-apache_httpd` splits back at the first
+one without ambiguity.
+
+
 ## Setup and checks
 
 ```sh
