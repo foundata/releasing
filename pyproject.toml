@@ -79,7 +79,7 @@ dev = [
   "readme-renderer[md]>=44",
   "ruff>=0.12.11",
   "types-pyyaml>=6",
-  "rumdl>=0.2.66",
+  "rumdl>=0.2.72",
 ]
 
 [tool.ruff]

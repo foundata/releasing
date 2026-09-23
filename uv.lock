@@ -681,7 +681,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "readme-renderer", extras = ["md"], specifier = ">=44" },
     { name = "ruff", specifier = ">=0.12.11" },
-    { name = "rumdl", specifier = ">=0.2.66" },
+    { name = "rumdl", specifier = ">=0.2.72" },
     { name = "types-pyyaml", specifier = ">=6" },
 ]
 
