@@ -57,9 +57,9 @@ def test_a_configured_ssh_command_is_left_alone(
 def test_a_streamed_child_reports_to_our_standard_error(
     capfd: pytest.CaptureFixture[str],
 ) -> None:
-    # A child's own output is part of the story. Our standard output carries
-    # the product, such as a changelog section piped into a forge tool, so
-    # nothing a child prints may land there.
+    # A child's own output is a diagnostic. Our standard output carries result
+    # data, such as a changelog section piped into a forge tool, so nothing a
+    # child prints may land there.
     script = "import sys; print('to stdout'); print('to stderr', file=sys.stderr)"
     returned = processes.run([sys.executable, "-c", script], stream=True)
 

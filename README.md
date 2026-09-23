@@ -99,12 +99,13 @@ The end-to-end order is in
 
 ## Output
 
-**Stdout is the product, stderr is the story.** One rule for every command, so
-output can be redirected without knowing which command is in hand.
+One rule for every command, so output can be redirected without knowing which
+command is in hand.
 
 Stdout carries what the command produced and nothing else: the tag it created,
 the files it built, the changelog section, the manifest JSON, the report. A
-check produces nothing there and answers with its exit status.
+check writes nothing there and communicates its result through the exit
+status.
 
 Stderr carries what happened on the way: what is being done, every command
 that changed something, and every request to a forge or an index.
@@ -121,9 +122,9 @@ $ git -C /home/example/project tag -a v2.2.0 41db3420c2d6 -m 'version 2.2.0'
 v2.2.0
 ```
 
-`--quiet` (`-q`), accepted before or after the command, keeps the product and
-drops the story. It never suppresses an error. `2>/dev/null` does the same,
-and `2>&1 | tee release.log` keeps both together.
+`--quiet` (`-q`), accepted before or after the command, keeps stdout and drops
+the progress on stderr. It never suppresses an error. `2>/dev/null` does the
+same, and `2>&1 | tee release.log` keeps both together.
 
 Every command that changes something accepts `--dry-run`: it reports what it
 would do, marks the commands it would run, and changes nothing. A command that

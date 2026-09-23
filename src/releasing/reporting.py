@@ -7,7 +7,7 @@ to see what it did: which commands changed the repository, which requests went
 to the forge, and what was decided in between. The narration is also the audit
 trail when nobody watched the terminal.
 
-Standard output carries the product, standard error carries the story. A
+Result data goes to standard output and this narration to standard error. A
 library caller says nothing at all: the default reporter is silent, and the
 command-line layer installs a writer for the duration of one command.
 """
@@ -313,9 +313,9 @@ def _paint(text: str, style: str) -> str:
 def error(message: str, *, problems: Sequence[str] = (), hint: str = "") -> None:
     """Report a failure, listing each problem and how to proceed.
 
-    A failure is not part of the story and does not go through the reporter: a
-    command that refuses must say why even under ``--quiet``, and a library
-    caller never reaches this because it raises instead.
+    A failure does not go through the reporter: a command that refuses must
+    say why even under ``--quiet``, and a library caller never reaches this
+    because it raises instead.
     """
     print(f"{_paint('Error:', _RED + _BOLD)} {message}", file=sys.stderr)
     for problem in problems:

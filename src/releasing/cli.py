@@ -1367,9 +1367,9 @@ def _same_bytes_everywhere() -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the non-interactive CLI; reserve stdout for generated output.
 
-    Stdout carries the product, stderr the story: what is being done, every
+    Stdout carries the result data. Stderr carries what is being done, every
     command that changes something and every request to a forge. ``--quiet``
-    keeps the product and drops the story; errors are never dropped.
+    drops that narration; errors are never dropped.
     """
     _same_bytes_everywhere()
     args = build_parser().parse_args(argv)

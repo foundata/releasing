@@ -59,8 +59,7 @@ def _story_stream() -> int:
 
     A child writing to the caller's standard output would corrupt the one
     thing that must stay clean, such as the changelog section piped into a
-    forge tool. Its output is part of the story, so it goes where the story
-    goes.
+    forge tool. Its output is a diagnostic, so it goes to standard error.
     """
     try:
         return sys.stderr.fileno()
