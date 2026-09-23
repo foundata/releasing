@@ -9,6 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [4.1.0] - 2026-09-23
+
 ### Added
 
 - [Releasing an Ansible collection](https://github.com/foundata/releasing/blob/main/docs/ansible-collections.md),
@@ -178,7 +183,8 @@ and this project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v4.0.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v4.1.0...HEAD
+[4.1.0]: https://github.com/foundata/releasing/releases/tag/v4.1.0
 [4.0.0]: https://github.com/foundata/releasing/releases/tag/v4.0.0
 [3.0.0]: https://github.com/foundata/releasing/releases/tag/v3.0.0
 [2.2.0]: https://github.com/foundata/releasing/releases/tag/v2.2.0
