@@ -79,9 +79,12 @@ uv run --frozen python tests/check_markdown.py --format
 ```
 
 The Markdown check uses the exact foundata guide flags, with no local
-configuration. It targets the README, the command documentation under `docs/`
-and the commit-review documentation in `tools/`. Corpus snapshots and their
-expected output are deliberately excluded: formatting them would invalidate the
+configuration. `tests/unit/test_dependencies.py` compares that copy with the
+guide's own invocation whenever the guidelines are checked out beside this
+repository, or at `FOUNDATA_GUIDELINES`, and skips where they are not. It
+targets the README, the command documentation under `docs/` and the
+commit-review documentation in `tools/`. Corpus snapshots and their expected
+output are deliberately excluded: formatting them would invalidate the
 comparison.
 
 ## Shell checks
