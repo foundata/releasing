@@ -4,6 +4,7 @@
 import ast
 import io
 from pathlib import Path
+from typing import TextIO
 
 import pytest
 from typing_extensions import override
@@ -177,3 +178,63 @@ def test_without_colour_the_line_is_exactly_the_plain_text() -> None:
         "» Would run: uv build\n"
         "» GET https://example.test → 200\n"
     )
+
+
+@pytest.mark.parametrize(
+    ("path", "platform", "expected"),
+    [
+        ("/usr/bin/git", "linux", "git"),
+        ("/usr/bin/git.EXE", "linux", "git.EXE"),
+        ("C:/tools/MinGit/cmd/git.EXE", "win32", "git"),
+        ("C:/tools/uv/uv.exe", "win32", "uv"),
+        ("C:/tools/gh/gh", "win32", "gh"),
+        ("C:/tools/notes.txt", "win32", "notes.txt"),
+    ],
+    ids=[
+        "posix",
+        "posix-keeps-a-literal-name",
+        "exe",
+        "lowercase",
+        "none",
+        "not-a-program",
+    ],
+)
+def test_a_program_is_named_the_way_it_is_typed(
+    path: str, platform: str, expected: str
+) -> None:
+    # A path search on Windows appends the extension it matched, and
+    # "git.EXE failed" names a file rather than the command that ran.
+    assert reporting.program(path, platform=platform) == expected
+
+
+def test_a_command_line_is_quoted_the_way_its_platform_expects() -> None:
+    argv = ["C:/tools/MinGit/cmd/git.EXE", "tag", "-a", "v1.0.0", "-m", "version 1.0.0"]
+
+    assert reporting.render(argv, platform="win32") == (
+        'git tag -a v1.0.0 -m "version 1.0.0"'
+    )
+    assert reporting.render(["/usr/bin/git", "tag", "-m", "version 1.0.0"]) == (
+        "git tag -m 'version 1.0.0'"
+    )
+
+
+def test_a_windows_console_has_the_last_word_on_colour(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A console that will not interpret escape sequences would print them, so
+    # a terminal there is not enough on its own.
+    asked: list[TextIO] = []
+
+    def refuse(stream: TextIO) -> bool:
+        asked.append(stream)
+        return False
+
+    monkeypatch.setattr(reporting, "_enable_windows_sequences", refuse)
+
+    assert reporting.wants_colour(Terminal(), {}, platform="win32") is False
+    assert len(asked) == 1
+
+    monkeypatch.setattr(reporting, "_enable_windows_sequences", lambda stream: True)
+    assert reporting.wants_colour(Terminal(), {}, platform="win32") is True
+    # A stream that is no terminal is never asked.
+    assert reporting.wants_colour(io.StringIO(), {}, platform="win32") is False

@@ -9,7 +9,12 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Changed
+
+- `reporting.program()`, `reporting.render()` and `reporting.wants_colour()`
+  take the platform whose rules to follow, instead of reading the one they run
+  on. The behaviour is unchanged; both sets of rules can now be asserted from
+  either platform.
 
 
 ## [4.1.0] - 2026-09-23

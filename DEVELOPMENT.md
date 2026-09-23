@@ -63,6 +63,47 @@ files in the test environment. Tests never fetch real project remotes or push.
 They exercise both Dash and Bash; a missing shell is reported as a skipped
 compatibility check.
 
+## Checking on Windows
+
+The package supports Windows and the suite passes there: 714 passed and 19
+skipped on Windows Server 2025 with Python 3.14, measured on 2026-09-23. No
+development or release step needs Windows; a Linux run covers every test.
+
+Most of what differs between platforms is a parameter rather than a machine.
+`reporting.program()`, `reporting.render()` and `reporting.wants_colour()` take
+`platform=`, so both sets of rules are asserted from any host: the name a
+program is echoed under, the quoting of a command line, and the console's veto
+over colour. What stays native is `_enable_windows_sequences()`, which calls
+the Windows console API; only a run there covers it.
+
+Run the suite on Windows before releasing a change to `reporting`, `processes`
+or `_source_export`. Any Windows host with Git and uv will do, reached however
+you reach one. The work does not have to be pushed first:
+
+```sh
+git bundle create ../releasing.bundle main
+```
+
+Copy that bundle to the host by any means, then, on the host:
+
+```sh
+git clone --branch main releasing.bundle releasing
+cd releasing
+uv sync --frozen --python 3.14
+uv run --frozen pytest -q
+```
+
+Three things decide whether that run means anything:
+
+- Git and uv must be on `PATH`. The suite starts both as subprocesses, and a
+  missing one appears as dozens of fixture errors rather than as a failure.
+- Python 3.11 to 3.13 cannot create the environment there, because
+  `readme-renderer[md]` pulls `comrak`, which publishes Windows wheels for
+  cp314 only. That is a development dependency; the package itself supports
+  every declared version on that platform.
+- The POSIX-only tests skip, and the shell-review module skips as a whole for
+  want of a pseudo-terminal. A clean run reports skips, never errors.
+
 ## Dependencies
 
 The direct runtime dependencies are `markdown-it-py` and `typing-extensions` on
@@ -126,12 +167,6 @@ leaves the working tree untouched. That trade is not worth a metric.
   HTML, code and comments with exact expected Markdown and renderer assertions.
 - `tests/fixtures/corpus/`: 21 project README snapshots, the reviewed expected
   output of both modes and their provenance.
-
-The suite passes on Windows as well: 714 passed and 19 skipped on Windows
-Server 2025 with Python 3.14, measured on 2026-09-23. Python 3.11 to 3.13
-cannot create the development environment there, because `readme-renderer[md]`
-pulls `comrak`, which publishes Windows wheels for cp314 only; the package
-itself supports every declared version on that platform.
 
 Tests that need a symbolic link, a device file, a permission bit or a path
 Windows cannot name carry `POSIX_ONLY` from `tests/support.py` and skip

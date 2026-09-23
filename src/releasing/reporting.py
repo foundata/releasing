@@ -112,13 +112,21 @@ def _hue(status: int | str) -> str:
     return _RED
 
 
-def wants_colour(stream: TextIO, environ: Mapping[str, str] | None = None) -> bool:
+def wants_colour(
+    stream: TextIO,
+    environ: Mapping[str, str] | None = None,
+    *,
+    platform: str = sys.platform,
+) -> bool:
     """Whether ``stream`` should carry ANSI styling.
 
     Redirected output is the audit trail of a release and stays plain, so the
     terminal decides by default. The two conventional variables override it:
     ``NO_COLOR`` suppresses styling and wins over ``FORCE_COLOR``, which
     demands it where no terminal is detected, such as a CI log viewer.
+
+    ``platform`` is the rule to follow, not the machine to ask, so the
+    decision a Windows console adds can be read anywhere.
     """
     env = os.environ if environ is None else environ
     if env.get("NO_COLOR"):
@@ -132,7 +140,7 @@ def wants_colour(stream: TextIO, environ: Mapping[str, str] | None = None) -> bo
             return False
     except (AttributeError, ValueError):
         return False
-    if sys.platform == "win32":  # pragma: no cover - exercised on Windows only
+    if platform == "win32":
         return _enable_windows_sequences(stream)
     return True
 
@@ -231,23 +239,27 @@ class Writer:
 _PROGRAM_SUFFIXES = frozenset({".bat", ".cmd", ".com", ".exe"})
 
 
-def program(path: str) -> str:
+def program(path: str, *, platform: str = sys.platform) -> str:
     """The name to show for an executable, without a platform's suffix."""
     name = Path(path).name
-    if sys.platform == "win32" and Path(name).suffix.lower() in _PROGRAM_SUFFIXES:
+    if platform == "win32" and Path(name).suffix.lower() in _PROGRAM_SUFFIXES:
         return Path(name).stem
     return name
 
 
-def render(argv: Sequence[str]) -> str:
-    """Quote an argument list the way the running platform's shell expects.
+def render(argv: Sequence[str], *, platform: str = sys.platform) -> str:
+    """Quote an argument list the way a platform's shell expects.
 
     The first element is a resolved absolute path, because every program is
     located before it runs. The line is for a reader, and it stays runnable
-    with the plain name, since that is where it was found.
+    with the plain name, since that is where it was found. ``platform`` names
+    the quoting rules to apply, so both are readable from either.
     """
-    arguments = [program(argv[0]), *(str(argument) for argument in argv[1:])]
-    if sys.platform == "win32":  # pragma: no cover - exercised on Windows only
+    arguments = [
+        program(argv[0], platform=platform),
+        *(str(argument) for argument in argv[1:]),
+    ]
+    if platform == "win32":
         return subprocess.list2cmdline(arguments)
     return shlex.join(arguments)
 
