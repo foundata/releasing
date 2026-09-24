@@ -325,9 +325,10 @@ keeping once step 8 passes.
 
    Follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) against
    what consumers depend on: the command surface, the exit statuses, the
-   manifest format and the release declaration. A check that starts rejecting
-   input it used to accept is a major version, even when the rejection is the
-   fix.
+   manifest format, the release declaration, and the modules conclear imports
+   as a library (`releasing.artifacts`, `releasing.build` and
+   `releasing.config`). A check that starts rejecting input it used to accept
+   is a major version, even when the rejection is the fix.
 
 2. **Move the version and the changelog to the new release.**
 
