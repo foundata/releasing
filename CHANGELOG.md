@@ -9,6 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [4.2.0] - 2026-09-24
+
 ### Fixed
 
 - `publish` looks for a Galaxy credential where `ansible-galaxy` reads one.
@@ -199,7 +204,8 @@ and this project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v4.1.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v4.2.0...HEAD
+[4.2.0]: https://github.com/foundata/releasing/releases/tag/v4.2.0
 [4.1.0]: https://github.com/foundata/releasing/releases/tag/v4.1.0
 [4.0.0]: https://github.com/foundata/releasing/releases/tag/v4.0.0
 [3.0.0]: https://github.com/foundata/releasing/releases/tag/v3.0.0
