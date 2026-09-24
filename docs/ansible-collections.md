@@ -76,13 +76,17 @@ release tag create "${version}" \
   --manifest "../dist-${version}/artifacts.json"
 release push "${version}"
 
-# 5. Publish exactly the file that was validated.
+# 5. Publish exactly the file that was validated. ansible-galaxy names the
+#    token variable after the server, so the list, the URL and the token
+#    belong together; "galaxy" is a label of your choosing.
+export ANSIBLE_GALAXY_SERVER_LIST=galaxy
+export ANSIBLE_GALAXY_SERVER_GALAXY_URL=https://galaxy.ansible.com/api/
 printf 'Galaxy API token: '
-read -rs ANSIBLE_GALAXY_SERVER_TOKEN
+read -rs ANSIBLE_GALAXY_SERVER_GALAXY_TOKEN
 printf '\n'
-export ANSIBLE_GALAXY_SERVER_TOKEN
+export ANSIBLE_GALAXY_SERVER_GALAXY_TOKEN
 release publish "../dist-${version}/artifacts.json"
-unset ANSIBLE_GALAXY_SERVER_TOKEN
+unset ANSIBLE_GALAXY_SERVER_GALAXY_TOKEN
 
 # 6. Create the forge release entry from the changelog and the manifest.
 release forge release-create "${version}" \

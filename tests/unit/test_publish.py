@@ -67,8 +67,6 @@ def test_an_index_that_publishes_nothing_is_refused(tmp_path: Path) -> None:
     manifest = load_manifest(directory / "artifacts.json")
     with pytest.raises(publish.PublishError, match="publishes nothing"):
         publish.plan(manifest, directory, index="none")
-    with pytest.raises(publish.PublishError, match="publishes nothing"):
-        publish.token_variable("none")
 
 
 def test_upload_sends_the_planned_paths_and_no_credential(
@@ -98,7 +96,6 @@ def test_upload_sends_the_planned_paths_and_no_credential(
     ]
     # A credential is never an argument; the index tool reads its own.
     assert not any("token" in item.lower() for item in argv)
-    assert publish.token_variable("pypi") == "UV_PUBLISH_TOKEN"
 
 
 def test_a_collection_is_published_one_file_at_a_time(
@@ -127,7 +124,6 @@ def test_a_collection_is_published_one_file_at_a_time(
     monkeypatch.setattr(processes, "run", record)
     publish.execute(prepared)
     assert seen[0][1:3] == ["collection", "publish"]
-    assert publish.token_variable("galaxy") == "ANSIBLE_GALAXY_SERVER_TOKEN"
 
 
 def test_dry_run_sends_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -166,3 +162,38 @@ def test_a_manifest_from_another_gate_is_accepted(tmp_path: Path) -> None:
     assert publish.plan(loaded, directory, index="pypi").files == (
         directory / "example-1.0.0.tar.gz",
     )
+
+
+def test_a_galaxy_token_is_only_read_for_a_named_server() -> None:
+    # ansible-core builds the variable name from the server's own name and
+    # only for a server GALAXY_SERVER_LIST names. A token set under any other
+    # name reaches nobody, which is an unauthenticated upload rather than a
+    # working one, so the warning has to fire for it.
+    stray = {
+        "ANSIBLE_GALAXY_SERVER_TOKEN": "secret",
+        "ANSIBLE_GALAXY_TOKEN_PATH": "/nonexistent",
+    }
+    assert publish.credential_warning("galaxy", stray) is not None
+    unlisted = {
+        "ANSIBLE_GALAXY_SERVER_GALAXY_TOKEN": "secret",
+        "ANSIBLE_GALAXY_TOKEN_PATH": "/nonexistent",
+    }
+    assert publish.credential_warning("galaxy", unlisted) is not None
+    named = {**unlisted, "ANSIBLE_GALAXY_SERVER_LIST": "galaxy"}
+    assert publish.credential_warning("galaxy", named) is None
+
+
+def test_a_galaxy_credential_can_come_from_a_token_file(tmp_path: Path) -> None:
+    token = tmp_path / "galaxy_token"
+    token.write_text("", encoding="utf-8")
+    environ = {"ANSIBLE_GALAXY_TOKEN_PATH": str(token)}
+    # ansible-core creates the file empty on first use; empty is no credential.
+    assert publish.credential_warning("galaxy", environ) is not None
+    token.write_text("token: secret\n", encoding="utf-8")
+    assert publish.credential_warning("galaxy", environ) is None
+
+
+def test_a_pypi_credential_is_a_token_or_a_password() -> None:
+    assert publish.credential_warning("pypi", {}) is not None
+    assert publish.credential_warning("pypi", {"UV_PUBLISH_TOKEN": "secret"}) is None
+    assert publish.credential_warning("pypi", {"UV_PUBLISH_PASSWORD": "secret"}) is None

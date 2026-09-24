@@ -846,12 +846,11 @@ def _run_publish(args: argparse.Namespace) -> int:
         manifest_path = cast(Path, args.manifest)
         manifest = artifacts.load_manifest(manifest_path)
         prepared = publish.plan(manifest, manifest_path.parent, index=loaded.index)
-        variable = publish.token_variable(loaded.index)
-        if not args.dry_run and not os.environ.get(variable):
-            reporting.warning(
-                f"{variable} is unset; {loaded.index} may use a configured "
-                "credential instead"
-            )
+        # Also during a dry run: finding out then is the point of one.
+        found = publish.credential_warning(loaded.index)
+        if found is not None:
+            message, hints = found
+            reporting.warning(message, problems=hints)
         sent = publish.execute(prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))

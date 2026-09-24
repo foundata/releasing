@@ -25,9 +25,24 @@ skipped.
 
 ## Credentials
 
-The index's own tool reads them: from `UV_PUBLISH_TOKEN`, from
-`ANSIBLE_GALAXY_SERVER_TOKEN`, from trusted publishing, or from its own
-configuration. This command accepts no credential as an argument.
+The index's own tool reads them: from the environment, from trusted publishing,
+or from its own configuration. This command accepts no credential as an
+argument, and warns before an upload when it can find none.
+
+For PyPI that is `UV_PUBLISH_TOKEN`. For Ansible Galaxy there is no single
+variable: `ansible-galaxy` builds the name from the server's own name and reads
+it only for a server `ANSIBLE_GALAXY_SERVER_LIST` names, so all three belong
+together.
+
+```sh
+export ANSIBLE_GALAXY_SERVER_LIST=galaxy
+export ANSIBLE_GALAXY_SERVER_GALAXY_URL=https://galaxy.ansible.com/api/
+export ANSIBLE_GALAXY_SERVER_GALAXY_TOKEN="${token}"
+```
+
+The name `galaxy` is a label of your choosing; it only has to match in all
+three. A token file works too: `ANSIBLE_GALAXY_TOKEN_PATH` pointing at a file
+that holds `token: ...`.
 
 ```sh
 printf 'PyPI API token: '

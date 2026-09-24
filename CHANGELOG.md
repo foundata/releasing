@@ -9,6 +9,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- `publish` looks for a Galaxy credential where `ansible-galaxy` reads one.
+  There is no `ANSIBLE_GALAXY_SERVER_TOKEN`: ansible-core builds the variable
+  name from the server's own name and reads it only for a server
+  `ANSIBLE_GALAXY_SERVER_LIST` names. The documented variable therefore did
+  nothing, and the check that watched it stayed silent when no credential was
+  present and warned when one was. The warning now names the three variables
+  that belong together, accepts a token file, and is printed during a
+  `--dry-run` too.
+
 ### Changed
 
 - `reporting.program()`, `reporting.render()` and `reporting.wants_colour()`
