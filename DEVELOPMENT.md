@@ -51,6 +51,17 @@ one without ambiguity.
 
 ## Setup and checks
 
+[`scripts/release-check.sh`](./scripts/release-check.sh) runs everything in this
+section and under "Shell checks" on every supported Python version, then builds
+the distributions from a clean checkout of `HEAD` and smoke-tests the installed
+wheel. Run it before a release; the individual commands below stay useful while
+working:
+
+```sh
+scripts/release-check.sh            # the whole gate
+scripts/release-check.sh 3.12       # one interpreter while iterating
+```
+
 ```sh
 uv sync --frozen --python 3.11
 uv run --frozen ruff format --check .
@@ -310,17 +321,16 @@ directory. Step 7 attaches the manifest and both distributions to the GitHub
 release and PyPI serves the same bytes, so nothing in that directory needs
 keeping once step 8 passes.
 
-1. **Run the checks and decide the version.** Everything under "Setup and
-   checks" and "Shell checks" must pass on all supported Python versions
-   before a release starts.
+1. **Run the checks and decide the version.** The gate runs everything under
+   "Setup and checks" and "Shell checks" on all supported Python versions and
+   must pass before a release starts. It also builds the distributions from a
+   clean checkout and smoke-tests the installed wheel, so a broken artifact is
+   caught here rather than after the upload.
 
    ```sh
    version="<FIXME version>" # major.minor.patch
 
-   git status --short
-   uv run --frozen release config check
-   uv run --frozen release version check
-   uv run --frozen release changelog check
+   scripts/release-check.sh
    ```
 
    Follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) against
