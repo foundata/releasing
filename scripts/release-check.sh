@@ -5,8 +5,8 @@
 #
 # Runs the full quality gate (format, lint, strict type check, Markdown, shell
 # checks, tests) on every supported Python version, then builds the wheel and
-# source distribution from a pristine checkout of HEAD, installs the wheel into
-# a clean throwaway environment and smoke-tests the installed artifact.
+# source distribution with `release build`, installs the wheel into a clean
+# throwaway environment and smoke-tests the installed artifact.
 #
 # This is intended to be run before tagging a release. It does not depend on any
 # CI service; CI (if added) should call the same steps.
@@ -20,9 +20,10 @@
 #
 # Without arguments the supported version matrix below is used.
 #
-# The release artifacts themselves are built and validated by
-# "uv run release build", which exports the committed revision, prepares the
-# README that ships in them and records their digests. See DEVELOPMENT.md.
+# The artifacts are built by `release build`, which exports the committed
+# revision, prepares the README that ships in them, refuses developer litter
+# inside them and records their digests. Building with it here means the gate
+# smoke-tests what a release uploads. See DEVELOPMENT.md.
 
 # Consistent environment for predictable tool and shell behavior.
 export PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin}"
@@ -86,7 +87,8 @@ readonly COMMAND_NAME='release'
 
 WORK_DIR="$(mktemp -d)"
 readonly WORK_DIR
-trap 'rm -rf "${WORK_DIR}"; git -C "${PKG_DIR}" worktree prune >/dev/null 2>&1 || true' EXIT
+readonly DIST_DIR="${WORK_DIR}/dist"
+trap 'rm -rf "${WORK_DIR}"' EXIT
 
 ###
 # Announce the step that follows.
@@ -169,15 +171,14 @@ ensure_pythons() {
 }
 
 ###
-# Assert the declarations agree with each other before anything is built: the
-# lockfile against pyproject, and the release declaration, version and
-# changelog through the package's own checks.
+# Assert the declarations agree with each other before anything is built. Every
+# uv call in this gate passes --locked, so the first of them refuses a lockfile
+# that no longer matches pyproject.
 run_declaration_checks() {
   log "Declarations (lockfile, release config, version, changelog)"
-  uv lock --check
-  uv run --frozen release config check
-  uv run --frozen release version check
-  uv run --frozen release changelog check
+  uv run --locked release config check
+  uv run --locked release version check
+  uv run --locked release changelog check
 }
 
 ###
@@ -186,10 +187,10 @@ run_declaration_checks() {
 # pyproject.
 run_static_checks() {
   log "Static checks (format, lint, type check, Markdown)"
-  uv run --frozen ruff format --check .
-  uv run --frozen ruff check .
-  uv run --frozen mypy
-  uv run --frozen python tests/check_markdown.py
+  uv run --locked ruff format --check .
+  uv run --locked ruff check .
+  uv run --locked mypy
+  uv run --locked python tests/check_markdown.py
 }
 
 ###
@@ -200,59 +201,21 @@ run_tests_matrix() {
   local py
   for py in "${supported_pythons[@]}"; do
     log "Tests on Python ${py}"
-    uv run --python "${py}" --isolated pytest -q
+    uv run --locked --python "${py}" --isolated pytest -q
   done
 }
 
 ###
-# Build the wheel and source distribution from a pristine checkout of HEAD: the
-# developer tree carries ignored litter (tool caches, editor droppings) that
-# must never decide what ships.
+# Build the wheel and source distribution with `release build`: it exports the
+# committed revision, so the developer tree's ignored litter (tool caches,
+# editor droppings) never decides what ships, and it refuses an artifact that
+# carries caches or bytecode.
 # Globals:
-#   PKG_DIR, WORK_DIR
+#   DIST_DIR
 build_artifacts() {
-  log "Build wheel and source distribution (clean checkout of HEAD)"
-  local clean_dir="${WORK_DIR}/clean-src"
-  git worktree add --detach --quiet "${clean_dir}" HEAD
-  rm -rf dist
-  (cd "${clean_dir}" && uv build --out-dir "${PKG_DIR}/dist")
-  git worktree remove --force "${clean_dir}"
-  ls -1 dist
-  check_artifact_hygiene
-}
-
-###
-# Refuse release artifacts carrying caches or bytecode.
-# Returns:
-#   0 when every artifact in dist/ is clean, 1 otherwise.
-check_artifact_hygiene() {
-  log "Artifact hygiene (no caches or bytecode inside)"
-  uv run --frozen python - dist/* <<'PY'
-import sys
-import tarfile
-import zipfile
-
-bad: list[str] = []
-for name in sys.argv[1:]:
-    if name.endswith(".whl"):
-        entries = zipfile.ZipFile(name).namelist()
-    else:
-        with tarfile.open(name) as archive:
-            entries = archive.getnames()
-    for entry in entries:
-        parts = entry.split("/")
-        if any(
-            part == "__pycache__" or (part.startswith(".") and "cache" in part)
-            for part in parts
-        ) or entry.endswith(".pyc"):
-            bad.append(f"{name}: {entry}")
-if bad:
-    print("error: developer litter inside release artifacts:", file=sys.stderr)
-    for line in bad:
-        print(f"  {line}", file=sys.stderr)
-    raise SystemExit(1)
-print(f"clean: {len(sys.argv) - 1} artifact(s) checked")
-PY
+  log "Build wheel and source distribution (release build)"
+  uv run --locked release build --out "${DIST_DIR}"
+  ls -1 "${DIST_DIR}"
 }
 
 ###
@@ -261,19 +224,19 @@ PY
 # report the version pyproject declares, so a wheel built from stale metadata
 # is caught here rather than after the upload.
 # Globals:
-#   COMMAND_NAME, IMPORT_NAME, supported_pythons, WORK_DIR
+#   COMMAND_NAME, DIST_DIR, IMPORT_NAME, supported_pythons, WORK_DIR
 # Returns:
 #   0 when every interpreter passes, exits 1 otherwise.
 smoke_test_matrix() {
   # An unmatched glob stays literal, so the -f test below is what decides.
   local wheel
-  wheel="$(printf '%s\n' dist/*.whl | head -n 1)"
+  wheel="$(printf '%s\n' "${DIST_DIR}"/*.whl | head -n 1)"
   if [ ! -f "${wheel}" ]; then
-    printf 'error: no wheel in dist/\n' >&2
+    printf 'error: no wheel in %s\n' "${DIST_DIR}" >&2
     exit 1
   fi
   local declared
-  declared="$(uv run --frozen python -c '
+  declared="$(uv run --locked python -c '
 import tomllib
 with open("pyproject.toml", "rb") as handle:
     print(tomllib.load(handle)["project"]["version"])

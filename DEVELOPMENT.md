@@ -53,9 +53,8 @@ one without ambiguity.
 
 [`scripts/release-check.sh`](./scripts/release-check.sh) runs everything in this
 section and under "Shell checks" on every supported Python version, then builds
-the distributions from a clean checkout of `HEAD` and smoke-tests the installed
-wheel. Run it before a release; the individual commands below stay useful while
-working:
+the distributions with `release build` and smoke-tests the installed wheel. Run
+it before a release; the individual commands below stay useful while working:
 
 ```sh
 scripts/release-check.sh            # the whole gate
@@ -63,30 +62,32 @@ scripts/release-check.sh 3.12       # one interpreter while iterating
 ```
 
 ```sh
-uv sync --frozen --python 3.11
-uv run --frozen ruff format --check .
-uv run --frozen ruff check .
-uv run --frozen mypy
-uv run --frozen python tests/check_markdown.py
-uv run --frozen pytest --cov --cov-report=term-missing
-uv run --frozen --python 3.11 pytest
-uv run --frozen --python 3.12 pytest
-uv run --frozen --python 3.13 pytest
-uv run --frozen --python 3.14 pytest
+uv sync --locked --python 3.11
+uv run --locked ruff format --check .
+uv run --locked ruff check .
+uv run --locked mypy
+uv run --locked python tests/check_markdown.py
+uv run --locked pytest --cov --cov-report=term-missing
+uv run --locked --python 3.11 pytest
+uv run --locked --python 3.12 pytest
+uv run --locked --python 3.13 pytest
+uv run --locked --python 3.14 pytest
 git diff --check
 ```
 
 Run these commands sequentially: selecting another Python version replaces the
-development environment. The checks are local and include real builds of
+development environment. `--locked` refuses to run when `uv.lock` no longer
+matches `pyproject.toml`, so a changed constraint cannot be checked against the
+packages of a stale lock. The checks are local and include real builds of
 temporary sample projects and workspaces. They do not upload artifacts, run
 other projects' release gates or change other projects.
 
 Apply Python lint fixes before formatting:
 
 ```sh
-uv run --frozen ruff check --fix .
-uv run --frozen ruff format .
-uv run --frozen python tests/check_markdown.py --format
+uv run --locked ruff check --fix .
+uv run --locked ruff format .
+uv run --locked python tests/check_markdown.py --format
 ```
 
 The Markdown check runs `rumdl` with [`.rumdl.toml`](./.rumdl.toml), a verbatim
@@ -109,7 +110,7 @@ shellcheck --shell=sh --severity=style --exclude=SC2292 --exclude=SC3040 --exclu
 checkbashisms tools/git-review-unpushed.sh
 dash -n tools/git-review-unpushed.sh
 bash -n tools/git-review-unpushed.sh
-uv run --frozen pytest tests/integration/test_git_review.py
+uv run --locked pytest tests/integration/test_git_review.py
 ```
 
 Use the same shfmt flags with `--write` instead of `--diff` to format the
@@ -146,8 +147,8 @@ Copy that bundle to the host by any means, then, on the host:
 ```sh
 git clone --branch main releasing.bundle releasing
 cd releasing
-uv sync --frozen --python 3.14
-uv run --frozen pytest -q
+uv sync --locked --python 3.14
+uv run --locked pytest -q
 ```
 
 Three things decide whether that run means anything:
@@ -192,7 +193,7 @@ publishing renderer. Twine is neither required nor installed.
 ## Coverage
 
 ```sh
-uv run --frozen pytest --cov --cov-report=term-missing
+uv run --locked pytest --cov --cov-report=term-missing
 ```
 
 Coverage is measured only for the modules whose tests exercise them in the same
@@ -243,7 +244,7 @@ commit-review compatibility matrix. Pure transformation tests can run
 separately:
 
 ```sh
-uv run --frozen pytest tests/unit
+uv run --locked pytest tests/unit
 ```
 
 CLI tests run `python -I -m releasing markdown prepare` with an empty program
@@ -287,8 +288,8 @@ To deliberately refresh the snapshots from a directory containing those
 repositories:
 
 ```sh
-uv run --frozen python tests/corpus.py --refresh-from /path/to/foundata
-uv run --frozen pytest
+uv run --locked python tests/corpus.py --refresh-from /path/to/foundata
+uv run --locked pytest
 ```
 
 The refresh reads working-tree READMEs and regenerates the expected output.
@@ -324,8 +325,8 @@ keeping once step 8 passes.
 
 1. **Run the checks and decide the version.** The gate runs everything under
    "Setup and checks" and "Shell checks" on all supported Python versions and
-   must pass before a release starts. It also builds the distributions from a
-   clean checkout and smoke-tests the installed wheel, so a broken artifact is
+   must pass before a release starts. It also builds the distributions with
+   `release build` and smoke-tests the installed wheel, so a broken artifact is
    caught here rather than after the upload.
 
    ```sh
@@ -344,11 +345,11 @@ keeping once step 8 passes.
 2. **Move the version and the changelog to the new release.**
 
    ```sh
-   uv run --frozen release version bump "${version}"
-   uv run --frozen release changelog release "${version}"
+   uv run --locked release version bump "${version}"
+   uv run --locked release changelog release "${version}"
 
-   uv run --frozen release version check --expect "${version}"
-   uv run --frozen release changelog check
+   uv run --locked release version check --expect "${version}"
+   uv run --locked release changelog check
    ```
 
    `version bump` rewrites the version in [`pyproject.toml`](./pyproject.toml)
@@ -380,7 +381,7 @@ keeping once step 8 passes.
    dist="${TMPDIR:-/tmp}/releasing-${version}/dist"
    mkdir -p "$(dirname "${dist}")"
 
-   uv run --frozen release build --out "${dist}" --expect "${version}"
+   uv run --locked release build --out "${dist}" --expect "${version}"
    ```
 
    The build exports the commit with `git archive` and prepares `README.md`
@@ -395,10 +396,10 @@ keeping once step 8 passes.
 5. **Tag the revision that was built, then publish branch and tag.**
 
    ```sh
-   uv run --frozen release tag create "${version}" \
+   uv run --locked release tag create "${version}" \
      --manifest "${dist}/artifacts.json"
    git show "v${version}"
-   uv run --frozen release push "${version}"
+   uv run --locked release push "${version}"
    ```
 
    `tag create` refuses a dirty working tree, a version that the declaration,
@@ -411,7 +412,7 @@ keeping once step 8 passes.
    still be removed and the procedure restarted from step 3:
 
    ```sh
-   uv run --frozen release tag delete "${version}"
+   uv run --locked release tag delete "${version}"
    ```
 
 6. **Publish the validated files to PyPI.** Keep a token out of shell history
@@ -423,7 +424,7 @@ keeping once step 8 passes.
    printf '\n'
    export UV_PUBLISH_TOKEN
 
-   uv run --frozen release publish "${dist}/artifacts.json"
+   uv run --locked release publish "${dist}/artifacts.json"
 
    unset UV_PUBLISH_TOKEN
    ```
@@ -437,7 +438,7 @@ keeping once step 8 passes.
 7. **Create the GitHub release.**
 
    ```sh
-   uv run --frozen release forge release-create "${version}" \
+   uv run --locked release forge release-create "${version}" \
      --manifest "${dist}/artifacts.json"
    ```
 
@@ -449,10 +450,10 @@ keeping once step 8 passes.
 8. **Verify what PyPI and GitHub now serve.**
 
    ```sh
-   uv run --frozen release verify "${dist}/artifacts.json" \
+   uv run --locked release verify "${dist}/artifacts.json" \
      --version "${version}"
 
-   uv run --frozen release status "${version}" \
+   uv run --locked release status "${version}" \
      --manifest "${dist}/artifacts.json"
 
    rm -rf "${TMPDIR:-/tmp}/releasing-${version}"
@@ -470,7 +471,7 @@ been uploaded yet. After the upload, fetch the published files into `${dist}`
 and record them there instead, then continue with step 7:
 
 ```sh
-uv run --frozen release artifacts manifest \
+uv run --locked release artifacts manifest \
   "${dist}"/*.tar.gz "${dist}"/*.whl \
   --revision "${revision}" --out "${dist}/artifacts.json"
 ```
