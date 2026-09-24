@@ -100,17 +100,34 @@ commit-review documentation in `tools/`. Corpus snapshots and their expected
 output are deliberately excluded: formatting them would invalidate the
 comparison.
 
-## Shell checks
-
-For `tools/git-review-unpushed.sh`, use the foundata shell guide's exact checks:
+Every other foundata repository commits the same copy, and the ones without a
+test suite (the Ansible collections, the skeletons, the container drill) have
+nothing to notice a change in the guide.
+[`tools/markdown-config-drift.sh`](./tools/markdown-config-drift.sh) compares
+them all at once, so a guide change is one command away from naming every file
+to refresh:
 
 ```sh
-shfmt --language-dialect posix --indent 2 --case-indent --binary-next-line --simplify --diff tools/git-review-unpushed.sh
-shellcheck --shell=sh --severity=style --exclude=SC2292 --exclude=SC3040 --exclude=SC3043 --enable=all tools/git-review-unpushed.sh
-checkbashisms tools/git-review-unpushed.sh
-dash -n tools/git-review-unpushed.sh
-bash -n tools/git-review-unpushed.sh
-uv run --locked pytest tests/integration/test_git_review.py
+tools/markdown-config-drift.sh            # every repository beside this one
+tools/markdown-config-drift.sh -t ~/git   # somewhere else
+```
+
+It exits `1` when a copy drifted and prints each one, `2` on invalid usage.
+
+## Shell checks
+
+For the POSIX scripts under `tools/`, use the foundata shell guide's exact
+checks. Both scripts below take the same options:
+
+```sh
+script='tools/git-review-unpushed.sh' # or tools/markdown-config-drift.sh
+
+shfmt --language-dialect posix --indent 2 --case-indent --binary-next-line --simplify --diff "${script}"
+shellcheck --shell=sh --severity=style --exclude=SC2292 --exclude=SC3040 --exclude=SC3043 --enable=all "${script}"
+checkbashisms "${script}"
+dash -n "${script}"
+bash -n "${script}"
+uv run --locked pytest tests/integration/test_git_review.py tests/integration/test_markdown_config_drift.py
 ```
 
 Use the same shfmt flags with `--write` instead of `--diff` to format the

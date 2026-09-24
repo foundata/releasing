@@ -68,6 +68,7 @@ cd "${PKG_DIR}"
 # shell style guide prescribes for each tool.
 readonly -a POSIX_SCRIPTS=(
   'tools/git-review-unpushed.sh'
+  'tools/markdown-config-drift.sh'
 )
 readonly -a BASH_SCRIPTS=(
   'scripts/release-check.sh'
