@@ -3,7 +3,6 @@
 
 import os
 import re
-import shlex
 import tomllib
 from importlib.metadata import version
 from pathlib import Path
@@ -58,30 +57,19 @@ def _guide() -> Path | None:
     return guide if guide.is_file() else None
 
 
-def _invocation(text: str, verb: str) -> list[str]:
-    """The arguments of the guide's ``rumdl <verb>`` example, path included."""
-    start = text.index(f"rumdl {verb} \\\n")
-    lines: list[str] = []
-    for line in text[start:].splitlines():
-        lines.append(line)
-        if not line.rstrip().endswith("\\"):
-            break
-    joined = " ".join(line.rstrip().rstrip("\\").strip() for line in lines)
-    return shlex.split(joined)
+def _documented_config(text: str) -> str:
+    """The ``.rumdl.toml`` the guide's linting section shows."""
+    section = text.index("## Linting and automatic formatting")
+    start = text.index("```toml\n", section) + len("```toml\n")
+    return text[start : text.index("```\n", start)]
 
 
-def test_the_markdown_gate_runs_what_the_guide_documents() -> None:
-    # tests/check_markdown.py carries a copy of the guide's invocation, which
-    # silently goes stale when the guide moves. Read the guide where it is
-    # checked out and compare, argument for argument.
+def test_the_markdown_config_is_the_guides() -> None:
+    # .rumdl.toml is a copy of the guide's file, which goes stale without a word
+    # when the guide moves. Compare byte for byte where the guide is checked out.
     guide = _guide()
     if guide is None:
         pytest.skip(f"no {GUIDE} beside this repository or in FOUNDATA_GUIDELINES")
-    documented = guide.read_text(encoding="utf-8")
-    check = _invocation(documented, "check")
-    fmt = _invocation(documented, "fmt")
-
-    # One copy serves both verbs only for as long as the guide keeps them equal.
-    assert check[2:] == fmt[2:], "the guide's check and fmt examples differ"
-    assert check[-1] == ".", check[-1]
-    assert list(check_markdown.RULES) == check[2:-1]
+    documented = _documented_config(guide.read_text(encoding="utf-8"))
+    committed = (ROOT / check_markdown.CONFIG).read_text(encoding="utf-8")
+    assert committed == documented

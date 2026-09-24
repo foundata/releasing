@@ -89,11 +89,12 @@ uv run --frozen ruff format .
 uv run --frozen python tests/check_markdown.py --format
 ```
 
-The Markdown check uses the exact foundata guide flags, with no local
-configuration. `tests/unit/test_dependencies.py` compares that copy with the
-guide's own invocation whenever the guidelines are checked out beside this
-repository, or at `FOUNDATA_GUIDELINES`, and skips where they are not. It
-targets the README, the command documentation under `docs/` and the
+The Markdown check runs `rumdl` with [`.rumdl.toml`](./.rumdl.toml), a verbatim
+copy of the foundata guide's file; naming it explicitly makes `rumdl` ignore any
+other configuration. `tests/unit/test_dependencies.py` compares the copy with
+the guide byte for byte whenever the guidelines are checked out beside this
+repository, or at `FOUNDATA_GUIDELINES`, and skips where they are not. The
+check targets the README, the command documentation under `docs/` and the
 commit-review documentation in `tools/`. Corpus snapshots and their expected
 output are deliberately excluded: formatting them would invalidate the
 comparison.
