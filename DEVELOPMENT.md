@@ -21,8 +21,9 @@ from `--help`.
   `ansible-collection` or `hugo-component`. It sets `index`, `version-files`
   and the changelog format unless the declaration overrides them.
 - **Declaration**: the `[tool.releasing]` table in `pyproject.toml`, or the
-  same keys at the top level of a `releasing.toml`. Every project-aware command
-  reads it; see [The release declaration](./docs/config.md).
+  same keys at the top level of a `releasing.toml` or `.releasing.toml`. Every
+  project-aware command reads it; see
+  [The release declaration](./docs/config.md).
 - **Version site**: one line in a declared file that states the version, such
   as `version = "1.2.3"` in `pyproject.toml` or `galaxy.yml`. Every declared
   file must contain exactly one.

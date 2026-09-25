@@ -12,7 +12,7 @@ every command follows.
 ## Declaring the release
 
 A collection has no `pyproject.toml`, so the declaration lives in a
-`releasing.toml` beside `galaxy.yml`:
+`releasing.toml`, or a `.releasing.toml`, beside `galaxy.yml`:
 
 ```toml
 repository = "foundata/ansible-collection-example"
@@ -23,9 +23,11 @@ That ecosystem sets `index = "galaxy"`, `version-files = ["galaxy.yml"]` and
 `changelog = "antsibull"`. See [The release declaration](./config.md) for
 everything else it can say.
 
-Then keep the declaration out of the artifact. `ansible-galaxy collection
-build` reads `build_ignore` in `galaxy.yml` and knows nothing about
-`export-ignore`, so a file listed only in `.gitattributes` still ships:
+Then keep the declaration out of the artifact, under whichever name it carries.
+`ansible-galaxy collection build` reads `build_ignore` in `galaxy.yml` and knows
+nothing about `export-ignore`, so a file listed only in `.gitattributes` still
+ships. `.git` is the only dotfile the build drops on its own, so a
+`.releasing.toml` needs the same entry as a `releasing.toml`:
 
 ```yaml
 build_ignore:

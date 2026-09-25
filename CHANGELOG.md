@@ -9,7 +9,17 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Added
+
+- A standalone declaration may be named `.releasing.toml` as well as
+  `releasing.toml`, for repositories that keep their configuration in dotfiles.
+  Both names are read and mean the same thing, and a declaration that appears
+  in more than one file is refused with each of them named.
+
+### Changed
+
+- `releasing.config.STANDALONE` is now `releasing.config.STANDALONES`, the
+  accepted standalone file names in search order.
 
 
 ## [4.2.0] - 2026-09-24

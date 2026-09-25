@@ -13,11 +13,11 @@ from releasing.config import (
 )
 
 
-def project(tmp_path: Path, declaration: str, *, standalone: bool = False) -> Path:
+def project(tmp_path: Path, declaration: str, *, standalone: str | None = None) -> Path:
     (tmp_path / "README.md").write_text("# Example\n", encoding="utf-8")
     (tmp_path / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
-    if standalone:
-        (tmp_path / "releasing.toml").write_text(declaration, encoding="utf-8")
+    if standalone is not None:
+        (tmp_path / standalone).write_text(declaration, encoding="utf-8")
     else:
         (tmp_path / "pyproject.toml").write_text(
             '[project]\nname = "example"\nversion = "1.0.0"\n\n[tool.releasing]\n'
@@ -73,16 +73,19 @@ def test_minimal_declaration_applies_every_default(tmp_path: Path) -> None:
     assert config.dependency_pins == ()
 
 
-def test_standalone_file_uses_the_same_keys(tmp_path: Path) -> None:
+@pytest.mark.parametrize("name", ["releasing.toml", ".releasing.toml"])
+def test_standalone_file_uses_the_same_keys(tmp_path: Path, name: str) -> None:
+    # Both names carry the same declaration; the dotted one is for
+    # repositories that keep their configuration in dotfiles.
     (tmp_path / "VERSION").write_text("1.0.0\n", encoding="utf-8")
     config = load_release_config(
         project(
             tmp_path,
             'repository = "foundata/example"\nversion-files = ["VERSION"]\n',
-            standalone=True,
+            standalone=name,
         )
     )
-    assert config.source.name == "releasing.toml"
+    assert config.source.name == name
     assert config.version_files == ("VERSION",)
 
 
@@ -133,7 +136,7 @@ def test_ecosystem_defaults_for_collections_and_hugo(tmp_path: Path) -> None:
         tmp_path,
         'repository = "foundata/ansible-collection-example"\n'
         'ecosystem = "ansible-collection"\n',
-        standalone=True,
+        standalone="releasing.toml",
     )
     (root / "galaxy.yml").write_text("version: 1.0.0\n", encoding="utf-8")
     (root / "changelogs").mkdir()
@@ -149,7 +152,7 @@ def test_ecosystem_defaults_for_collections_and_hugo(tmp_path: Path) -> None:
         tmp_path / "hugo",
         'repository = "foundata/hugo-component-example"\n'
         'ecosystem = "hugo-component"\n',
-        standalone=True,
+        standalone="releasing.toml",
     )
     config = load_release_config(hugo)
     assert (config.index, config.version_files) == ("none", ())
@@ -208,14 +211,30 @@ def test_missing_and_ambiguous_declarations(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "x"\n', encoding="utf-8"
     )
-    with pytest.raises(ConfigError, match="no release declaration"):
+    with pytest.raises(ConfigError, match="no release declaration") as absent:
         load_release_config(tmp_path)
+    # The reason names every file that may declare one, so the reader of the
+    # message knows what to create.
+    assert "releasing.toml or .releasing.toml" in str(absent.value)
     project(tmp_path, 'repository = "foundata/example"\n')
     (tmp_path / "releasing.toml").write_text(
         'repository = "foundata/example"\n', encoding="utf-8"
     )
     with pytest.raises(ConfigError, match="ambiguous"):
         load_release_config(tmp_path)
+
+
+def test_both_standalone_spellings_are_ambiguous(tmp_path: Path) -> None:
+    # A leftover copy under the other name is reported, rather than losing to
+    # whichever file the search order reads first.
+    root = project(
+        tmp_path, 'repository = "foundata/example"\n', standalone="releasing.toml"
+    )
+    (root / ".releasing.toml").write_text(
+        'repository = "foundata/other"\n', encoding="utf-8"
+    )
+    with pytest.raises(ConfigError, match=r"ambiguous.*[\\/]\.releasing\.toml"):
+        load_release_config(root)
 
 
 def test_unreadable_toml_and_missing_root(tmp_path: Path) -> None:

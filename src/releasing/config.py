@@ -3,9 +3,10 @@
 """The release declaration shared by project-aware commands.
 
 The declaration lives in ``[tool.releasing]`` of ``pyproject.toml`` or, for
-repositories without one, at the top level of ``releasing.toml``. Every
-default is what foundata uses; an adopter overrides them in the same table.
-Loading never runs Git or external programs, so it works in an exported tree.
+repositories without one, at the top level of ``releasing.toml`` or
+``.releasing.toml``. Every default is what foundata uses; an adopter overrides
+them in the same table. Loading never runs Git or external programs, so it
+works in an exported tree.
 """
 
 import re
@@ -17,7 +18,7 @@ from pathlib import Path, PurePosixPath
 from releasing import attribution
 
 PYPROJECT = "pyproject.toml"
-STANDALONE = "releasing.toml"
+STANDALONES = ("releasing.toml", ".releasing.toml")
 FORGES = ("github",)
 INDEXES = ("pypi", "galaxy", "none")
 ECOSYSTEMS = ("python", "ansible-collection", "hugo-component")
@@ -128,7 +129,7 @@ class ReleaseConfig:
 def locate(root: Path) -> tuple[Path, Mapping[str, object]]:
     """Find the declaration table below ``root`` without validating it.
 
-    Raise ConfigError when no file declares it or both files do.
+    Raise ConfigError when no file declares it or more than one does.
     """
     candidates: list[tuple[Path, Mapping[str, object]]] = []
     pyproject = root / PYPROJECT
@@ -138,18 +139,19 @@ def locate(root: Path) -> tuple[Path, Mapping[str, object]]:
             candidates.append(
                 (pyproject, _table(tool["releasing"], pyproject, "tool.releasing"))
             )
-    standalone = root / STANDALONE
-    if standalone.is_file():
-        candidates.append((standalone, _load(standalone)))
+    for name in STANDALONES:
+        standalone = root / name
+        if standalone.is_file():
+            candidates.append((standalone, _load(standalone)))
     if not candidates:
         raise ConfigError(
-            f"no release declaration: expected [tool.releasing] in {pyproject} "
-            f"or a {STANDALONE} beside it"
+            f"no release declaration: expected [tool.releasing] in {pyproject}, "
+            f"or {' or '.join(STANDALONES)} beside it"
         )
     if len(candidates) > 1:
+        declaring = " and ".join(str(path) for path, _ in candidates)
         raise ConfigError(
-            f"ambiguous release declaration: both {pyproject} and {standalone} "
-            "declare one; keep exactly one"
+            f"ambiguous release declaration: {declaring} declare one; keep exactly one"
         )
     return candidates[0]
 

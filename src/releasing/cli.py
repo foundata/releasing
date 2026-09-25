@@ -1033,7 +1033,7 @@ def _add_project(parser: argparse.ArgumentParser) -> None:
         "--project",
         type=Path,
         default=Path.cwd(),
-        help="project root holding pyproject.toml or releasing.toml (default: .)",
+        help="project root holding the release declaration (default: .)",
     )
 
 

@@ -54,8 +54,8 @@ dependency of projects that target Debian 12, which ships Python 3.11.
 ### `release`
 
 Project-aware subcommands read the release declaration, one table in
-`pyproject.toml` or `releasing.toml`. Markdown preparation and explicit-version
-artifact operations also work independently; see
+`pyproject.toml`, `releasing.toml` or `.releasing.toml`. Markdown preparation
+and explicit-version artifact operations also work independently; see
 [The release declaration](./docs/config.md).
 
 - `release config check`: validate the declaration and every file it names,

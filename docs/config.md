@@ -3,8 +3,10 @@
 Project-aware `release` commands share one declaration: the facts that differ
 between projects, stated once. It lives in `[tool.releasing]` of
 `pyproject.toml`. A repository without a `pyproject.toml` uses the same keys at
-the top level of a `releasing.toml` beside it. Exactly one of the two must
-declare it.
+the top level of a `releasing.toml` beside it, or of a `.releasing.toml` where
+the configuration belongs with the other dotfiles. Both names are read and mean
+the same thing. Exactly one file may declare it; where two do, the refusal
+names them both instead of a search order picking one.
 
 `release config check` loads the declaration, applies every default, verifies
 that every file it names exists and prints the effective values. The
@@ -131,7 +133,7 @@ dependency-pins = [
 copies = ["packages/scanmole/README.md", "packages/scanmole-gui/README.md"]
 ```
 
-An Ansible collection, in `releasing.toml`:
+An Ansible collection, in `releasing.toml` (or `.releasing.toml`):
 
 ```toml
 repository = "foundata/ansible-collection-linux"
