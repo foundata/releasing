@@ -7,7 +7,20 @@ network and subprocess use so they also work inside an exported tree. Python
 3.11 to 3.14 are supported; the 3.11 floor exists for consumers that target
 Debian 12. Use `uv` for development environments and for running the command.
 
-## Glossary
+## Table of contents<a id="toc"></a>
+
+- [Glossary](#glossary)
+- [Setup and checks](#setup-and-checks)
+- [Shell checks](#shell-checks)
+- [Checking on Windows](#checking-on-windows)
+- [Dependencies](#dependencies)
+- [Coverage](#coverage)
+- [Test layout](#test-layout)
+- [Corpus maintenance](#corpus-maintenance)
+- [Releases](#releases)
+- [Licensing and commits](#licensing-and-commits)
+
+## Glossary<a id="glossary"></a>
 
 Vocabulary that recurs in the code and the docs and does not explain itself
 from `--help`.
@@ -50,7 +63,7 @@ cannot contain a hyphen, so `foundata-apache_httpd` splits back at the first
 one without ambiguity.
 
 
-## Setup and checks
+## Setup and checks<a id="setup-and-checks"></a>
 
 [`scripts/release-check.sh`](./scripts/release-check.sh) runs everything in this
 section and under "Shell checks" on every supported Python version, then builds
@@ -115,7 +128,7 @@ tools/markdown-config-drift.sh -t ~/git   # somewhere else
 
 It exits `1` when a copy drifted and prints each one, `2` on invalid usage.
 
-## Shell checks
+## Shell checks<a id="shell-checks"></a>
 
 For the POSIX scripts under `tools/`, use the foundata shell guide's exact
 checks. Both scripts below take the same options:
@@ -139,7 +152,7 @@ files in the test environment. Tests never fetch real project remotes or push.
 They exercise both Dash and Bash; a missing shell is reported as a skipped
 compatibility check.
 
-## Checking on Windows
+## Checking on Windows<a id="checking-on-windows"></a>
 
 The package supports Windows and the suite passes there: 714 passed and 19
 skipped on Windows Server 2025 with Python 3.14, measured on 2026-09-23. No
@@ -180,7 +193,7 @@ Three things decide whether that run means anything:
 - The POSIX-only tests skip, and the shell-review module skips as a whole for
   want of a pseudo-terminal. A clean run reports skips, never errors.
 
-## Dependencies
+## Dependencies<a id="dependencies"></a>
 
 The direct runtime dependencies are `markdown-it-py` and `typing-extensions` on
 every supported Python version. The latter supplies the `override` decorator
@@ -208,7 +221,7 @@ the range, then update the lockfile explicitly with `uv lock`. The
 development-only `readme-renderer[md]` dependency supplies an independent
 publishing renderer. Twine is neither required nor installed.
 
-## Coverage
+## Coverage<a id="coverage"></a>
 
 ```sh
 uv run --locked pytest --cov --cov-report=term-missing
@@ -230,7 +243,7 @@ files into the trees under test, which breaks the assertions that a build
 leaves the working tree untouched, for a number that would say no more than
 the current one.
 
-## Test layout
+## Test layout<a id="test-layout"></a>
 
 - `tests/unit/`: fixture transformations, parser boundaries and validation
   errors.
@@ -283,7 +296,7 @@ and timestamps. Local-file checks use disposable directory trees, including
 encoded paths, directory links, missing files, symlinks and special files. They
 never require destination files from sibling projects or contact remote URLs.
 
-## Corpus maintenance
+## Corpus maintenance<a id="corpus-maintenance"></a>
 
 Snapshots cover `conclear`, `ansible-docsmith`, `scanmole` and all 18 local
 `oci-*-itt` repositories. `manifest.json` records each repository's source
@@ -316,7 +329,7 @@ differs from its recorded commit is identified in the manifest rather than
 presented as committed content. Changes in corpus membership require updating
 the coverage assertion.
 
-## Releases
+## Releases<a id="releases"></a>
 
 A release of this package consists of:
 
@@ -498,7 +511,7 @@ Consuming projects pin `releasing` in a development dependency group and pick
 the new version up with `uv lock --upgrade-package releasing`. A major version
 additionally needs their declared upper bound raised by hand.
 
-## Licensing and commits
+## Licensing and commits<a id="licensing-and-commits"></a>
 
 New Python files use the foundata copyright and `GPL-3.0-or-later` SPDX headers.
 `REUSE.toml` supplies scoped annotations for metadata, documentation and

@@ -8,7 +8,15 @@ The project needs a release declaration; see
 [The release declaration](./config.md). Add `releasing` to a development
 dependency group, then run the commands with `uv run release ...`.
 
-## Before the release
+## Table of contents<a id="toc"></a>
+
+- [Before the release](#before-the-release)
+- [The release](#the-release)
+- [Why this order](#why-this-order)
+- [Workspaces](#workspaces)
+- [If something goes wrong](#if-something-goes-wrong)
+
+## Before the release<a id="before-the-release"></a>
 
 Run the project's own gate first: formatting, linting, type checks, the test
 matrix and whatever else the project verifies. `release` does not replace it
@@ -16,7 +24,7 @@ and knows nothing about it.
 
 Decide the version according to [Semantic Versioning](https://semver.org/).
 
-## The release
+## The release<a id="the-release"></a>
 
 ```sh
 version="<major.minor.patch>"
@@ -59,7 +67,7 @@ uv run release verify "../dist-${version}/artifacts.json"
 uv run release status "${version}" --manifest "../dist-${version}/artifacts.json"
 ```
 
-## Why this order
+## Why this order<a id="why-this-order"></a>
 
 The build runs after the commit and before the tag. Building from the commit
 means the artifacts cannot contain an uncommitted file, and the README
@@ -81,7 +89,7 @@ replaced, only [yanked](https://pypi.org/help/#yanked), so step 5 uploads the
 files whose digests the build recorded and step 7 checks that the index serves
 those same bytes.
 
-## Workspaces
+## Workspaces<a id="workspaces"></a>
 
 A repository releasing several packages in lockstep declares every member's
 version file, the requirement whose lower bound follows the version, and the
@@ -106,7 +114,7 @@ copies = ["packages/example/README.md", "packages/example-gui/README.md"]
 fails when a member falls behind. A new major version still needs the upper
 bound of the pin raised by hand.
 
-## If something goes wrong
+## If something goes wrong<a id="if-something-goes-wrong"></a>
 
 Before the tag is pushed, fix the problem and repeat from the failing step;
 delete the build directory first, since `build` refuses to write into an

@@ -7,7 +7,19 @@ a temporary copy or write a separate output file. `release build` prepares the
 declared documents inside an exported tree instead, which is what a release
 uses.
 
-## Running the command
+## Table of contents<a id="toc"></a>
+
+- [Running the command](#running-the-command)
+- [Previewing changes](#previewing-changes)
+- [Existing in-place usage](#existing-in-place-usage)
+- [Branches, tags and source paths](#branches-tags-and-source-paths)
+- [Supported transformations](#supported-transformations)
+- [Strict validation](#strict-validation)
+- [Optional local file checks](#optional-local-file-checks)
+- [Optional HTML simplification](#optional-html-simplification)
+- [Compatibility and tests](#compatibility-and-tests)
+
+## Running the command<a id="running-the-command"></a>
 
 The command is part of the `releasing` package; see the
 [README](../README.md) for installation. Its direct runtime dependencies are
@@ -36,7 +48,7 @@ operation requires explicit organization and repository names, or both custom
 URL bases. The output must not alias the input, including through a hard link or
 symlink.
 
-## Previewing changes
+## Previewing changes<a id="previewing-changes"></a>
 
 Use `--dry-run` to validate the inputs and show a unified diff without writing
 any files:
@@ -60,7 +72,7 @@ and parent-directory checks still apply; a preview does not test write access.
 The displayed diff uses LF line endings and marks missing final newlines. This
 does not change the line endings retained in the generated Markdown.
 
-## Existing in-place usage
+## Existing in-place usage<a id="existing-in-place-usage"></a>
 
 The old positional-file interface remains available, including multiple files:
 
@@ -81,7 +93,7 @@ validation failure leaves the complete batch unchanged. A later filesystem
 failure can leave earlier successful replacements in place; multi-file writes
 are not a filesystem transaction.
 
-## Branches, tags and source paths
+## Branches, tags and source paths<a id="branches-tags-and-source-paths"></a>
 
 `-b` / `--branch` accepts a branch name. `--ref` accepts `refs/heads/NAME`,
 `refs/tags/NAME`, or a full commit SHA. The options are mutually exclusive. Use
@@ -124,7 +136,7 @@ release markdown prepare \
   --strict --output /tmp/example.md ./README.md
 ```
 
-## Supported transformations
+## Supported transformations<a id="supported-transformations"></a>
 
 The parser uses CommonMark. Supported destinations include inline links and
 images, titled or angle-bracketed destinations, balanced or escaped parentheses,
@@ -151,7 +163,7 @@ understand every publishing extension. GFM tables in the corpus are covered by
 the independent publishing-renderer tests; arbitrary extensions require their
 own fixtures.
 
-## Strict validation
+## Strict validation<a id="strict-validation"></a>
 
 `--strict` fails if a parsed repository-relative destination cannot be resolved,
 such as a root-relative `/docs/file.md` or a `../` path escaping the repository.
@@ -172,7 +184,7 @@ UTF-8 without a byte-order mark or NUL characters.
 Exit status is `0` on success, `1` for transformation or file errors, and `2`
 for invalid command-line syntax.
 
-## Optional local file checks
+## Optional local file checks<a id="optional-local-file-checks"></a>
 
 `--repo-root DIRECTORY` additionally checks repository-relative destinations
 against an explicit local directory. This can be a plain exported tree with no
@@ -209,7 +221,7 @@ locations. All batch inputs are checked before writing anything. Without
 `releasing.markdown.prepare_markdown()` function remains filesystem-free;
 `validate_local_files()` provides the separate optional check.
 
-## Optional HTML simplification
+## Optional HTML simplification<a id="optional-html-simplification"></a>
 
 Two independent flags control simplification:
 
@@ -241,7 +253,7 @@ spans are also refused rather than collapsed destructively. Badge-only mode
 leaves these headers intact. Leave simplification off when the publishing
 platform already renders the original structure correctly.
 
-## Compatibility and tests
+## Compatibility and tests<a id="compatibility-and-tests"></a>
 
 All 21 frozen project READMEs match their expected output with and without
 `-s`. The corpus includes conclear, ansible-docsmith, ScanMole and 18 OCI

@@ -9,7 +9,14 @@ restored afterwards and an uncommitted file cannot reach an artifact.
 release build --out "../dist-${version}"
 ```
 
-## What it does
+## Table of contents<a id="toc"></a>
+
+- [What it does](#what-it-does)
+- [Local dependency sources](#local-dependency-sources)
+- [Output](#output)
+- [Verifying and publishing what was built](#verifying-and-publishing)
+
+## What it does<a id="what-it-does"></a>
 
 1. Resolves `--revision` (default `HEAD`) to a full commit and exports it.
    `export-ignore` in `.gitattributes` keeps a tracked file out of the
@@ -32,7 +39,7 @@ release build --out "../dist-${version}"
    `--out`, which must not exist yet. The directory appears complete or not at
    all.
 
-## Local dependency sources
+## Local dependency sources<a id="local-dependency-sources"></a>
 
 A `[tool.uv.sources]` entry with a `path` records a directory from the machine
 that wrote it, in `pyproject.toml` and in the lockfile. Both can ship inside a
@@ -48,7 +55,7 @@ artifacts would publish a path from this machine:
 throwaway build while a dependency is not published yet. Those artifacts must
 never be uploaded. Workspace sources name no directory and are not affected.
 
-## Output
+## Output<a id="output"></a>
 
 ```text
 ../dist-1.0.0/
@@ -69,7 +76,7 @@ Because the build runs before the tag exists, the prepared links point at the
 version's tag ref (`refs/tags/vX.Y.Z` by default). The tag is pushed with the
 release, or the artifacts are never uploaded.
 
-## Verifying and publishing what was built
+## Verifying and publishing what was built<a id="verifying-and-publishing"></a>
 
 `release publish` re-checks every digest against the bytes on disk and uploads
 exactly the files the manifest names, so a file beside them that nothing

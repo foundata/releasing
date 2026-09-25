@@ -20,7 +20,12 @@ version: 1.2.3
 Accepted versions are `X.Y.Z` with an optional pre-release suffix such as
 `rc1`, `.dev0` or `-rc.1`.
 
-## `release version check`
+## Table of contents<a id="toc"></a>
+
+- [`release version check`](#version-check)
+- [`release version bump X.Y.Z`](#version-bump)
+
+## `release version check`<a id="version-check"></a>
 
 Prints the one version every site states, or fails naming every
 disagreement:
@@ -36,7 +41,7 @@ disagreement:
 The check reads files only. In a checkout it also runs `git tag --points-at
 HEAD`; nothing is written or fetched.
 
-## `release version bump X.Y.Z`
+## `release version bump X.Y.Z`<a id="version-bump"></a>
 
 Rewrites every site and raises every lockstep pin's lower bound to the new
 version, keeping quoting, spacing, line endings and trailing commas as they

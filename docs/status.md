@@ -17,7 +17,13 @@ ok       index              pypi serves the validated files
 ok       forge release      github has a release for v2.0.0
 ```
 
-## The four states
+## Table of contents<a id="toc"></a>
+
+- [The four states](#the-four-states)
+- [Exit status](#exit-status)
+- [What it needs](#what-it-needs)
+
+## The four states<a id="the-four-states"></a>
 
 `ok` is done. `pending` is not done yet, with nothing wrong. `problem` is done
 wrongly and needs attention rather than continuation, such as a lightweight
@@ -26,14 +32,14 @@ built from a commit the tag does not name, or an index serving different bytes
 than were validated. `unknown` is a service that could not be reached, which
 is neither progress nor breakage.
 
-## Exit status
+## Exit status<a id="exit-status"></a>
 
 `0` only when every fact is `ok`, otherwise `1`. Mid-release a non-zero exit
 is the normal answer, so a script that only wants the report should append
 `|| true`. Whether the release is unfinished or broken is in the report, not
 the exit code.
 
-## What it needs
+## What it needs<a id="what-it-needs"></a>
 
 The version, and the release declaration for the repository, tag format and
 index. With `--manifest` it also compares the recorded digests against what

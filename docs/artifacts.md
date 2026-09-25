@@ -5,7 +5,13 @@ wheels, source distributions and Ansible collection tarballs. The checks cover
 the defects these projects have shipped before: an index page whose relative
 links were never rewritten, and a wheel carrying a tool cache directory.
 
-## `release artifacts check FILE...`
+## Table of contents<a id="toc"></a>
+
+- [`release artifacts check FILE...`](#artifacts-check)
+- [`release artifacts manifest FILE... --out artifacts.json`](#artifacts-manifest)
+- [`release artifacts verify artifacts.json`](#artifacts-verify)
+
+## `release artifacts check FILE...`<a id="artifacts-check"></a>
 
 Fails, naming every problem, when any file:
 
@@ -27,7 +33,7 @@ sites state (`release version check`). With a project, every declared
 distribution name must have an artifact. For collection tarballs the README
 named in `MANIFEST.json` is the description.
 
-## `release artifacts manifest FILE... --out artifacts.json`
+## `release artifacts manifest FILE... --out artifacts.json`<a id="artifacts-manifest"></a>
 
 Checks the supplied files, then records the SHA-256 and size of every file.
 Unlike `artifacts check` with a project declaration, this command does not
@@ -59,7 +65,7 @@ hexadecimal, the spelling package indexes serve; an algorithm prefix such as
 `sha256:<hex>` is refused. A manifest without a `version` needs `--version`
 when verifying.
 
-## `release artifacts verify artifacts.json`
+## `release artifacts verify artifacts.json`<a id="artifacts-verify"></a>
 
 Fails when a listed file is missing or altered, or when an unlisted wheel or
 tarball lies beside the manifest. Run it directly before uploading, so exactly

@@ -17,13 +17,18 @@ for the tag, and when no release tool is known for the declared forge.
 skips the question of whether a release already exists, for a forge that
 cannot be reached.
 
-## Credentials
+## Table of contents<a id="toc"></a>
+
+- [Credentials](#credentials)
+- [Collections](#collections)
+
+## Credentials<a id="credentials"></a>
 
 The forge's own command-line tool performs the write, so it must be installed
 and authenticated: `gh auth status` for GitHub. No credential is passed to it,
 and none is read here.
 
-## Collections
+## Collections<a id="collections"></a>
 
 A collection's notes come from `changelogs/changelog.yaml`, rendered as
 Markdown with the section titles set in `changelogs/config.yaml`.

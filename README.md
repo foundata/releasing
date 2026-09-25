@@ -29,7 +29,19 @@ Components and tools:
 <!-- rumdl-enable MD033 -->
 
 
-## Installation
+## Table of contents<a id="toc"></a>
+
+- [Installation](#installation)
+- [Commands](#commands)
+  - [`release`](#release)
+- [Output](#output)
+- [Releasing this package](#releasing-this-package)
+- [Development](#development)
+- [Licensing, copyright](#licensing-copyright)
+- [Author information](#author-information)
+
+
+## Installation<a id="installation"></a>
 
 Add it to a development dependency group of the project that releases:
 
@@ -49,9 +61,9 @@ baseline of the foundata Python guide because the package is a development
 dependency of projects that target Debian 12, which ships Python 3.11.
 
 
-## Commands
+## Commands<a id="commands"></a>
 
-### `release`
+### `release`<a id="release"></a>
 
 Project-aware subcommands read the release declaration, one table in
 `pyproject.toml`, `releasing.toml` or `.releasing.toml`. Markdown preparation
@@ -97,7 +109,7 @@ The end-to-end order is in
 [Releasing an Ansible collection](./docs/ansible-collections.md).
 
 
-## Output
+## Output<a id="output"></a>
 
 Every command sends its result to stdout and its progress to stderr, so
 output can be redirected without knowing which command is in hand.
@@ -134,7 +146,7 @@ Every command exits with `0` on success, `1` when a check or operation fails
 and `2` on invalid usage.
 
 
-## Releasing this package
+## Releasing this package<a id="releasing-this-package"></a>
 
 `releasing` releases itself with its own commands. The procedure is in the
 [development guide](./DEVELOPMENT.md#releases); the recipe it follows is
@@ -142,7 +154,7 @@ and `2` on invalid usage.
 the `[tool.releasing]` table in `pyproject.toml`.
 
 
-## Development
+## Development<a id="development"></a>
 
 See the [development guide](./DEVELOPMENT.md) for the checks, the test layout
 and the corpus maintenance.

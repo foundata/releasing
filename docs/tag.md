@@ -4,7 +4,14 @@ A release tag is annotated, carries the project's message convention and points
 at the revision whose artifacts were built. The `tag` commands enforce that,
 and they keep the escape hatch in the release procedures usable.
 
-## `release tag create X.Y.Z`
+## Table of contents<a id="toc"></a>
+
+- [`release tag create X.Y.Z`](#tag-create)
+- [`release tag check X.Y.Z`](#tag-check)
+- [`release tag delete X.Y.Z`](#tag-delete)
+- [The remote these commands ask](#the-remote-these-commands-ask)
+
+## `release tag create X.Y.Z`<a id="tag-create"></a>
 
 Creates the annotated tag, by default `vX.Y.Z` with the message
 `version X.Y.Z`; both come from the declaration. It refuses when:
@@ -36,14 +43,14 @@ export, including its lockfile and dependency pins. The current declaration
 supplies the tag name and message. The working tree is left untouched.
 Pushing is a separate step.
 
-## `release tag check X.Y.Z`
+## `release tag check X.Y.Z`<a id="tag-check"></a>
 
 Reports why an existing tag cannot serve as the release tag: it is lightweight
 instead of annotated, its message departs from the convention, it points
 somewhere other than the revision, or the remote's tag differs from the local
 one.
 
-## `release tag delete X.Y.Z`
+## `release tag delete X.Y.Z`<a id="tag-delete"></a>
 
 Deletes the tag locally and on the remote, but only while no forge release
 exists for it. That is what keeps the documented "delete the tag and start
@@ -60,7 +67,7 @@ release tag delete "${version}"     # refused once a release exists
 forge query for a repository whose forge is unreachable. It also skips the
 release condition, so use it only when you know no release exists.
 
-## The remote these commands ask
+## The remote these commands ask<a id="the-remote-these-commands-ask"></a>
 
 `create`, `check` and `delete` ask a remote whether it already has the tag, and
 `delete` removes it there. That remote is the one the current branch tracks,

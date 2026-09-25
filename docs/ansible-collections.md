@@ -9,7 +9,18 @@ in `galaxy.yml`, antsibull-changelog owns the changelog, and the artifact is
 one tarball published to Ansible Galaxy. The declaration says so once and
 every command follows.
 
-## Declaring the release
+## Table of contents<a id="toc"></a>
+
+- [Declaring the release](#declaring-the-release)
+- [What the release needs](#what-the-release-needs)
+- [Before the release](#before-the-release)
+- [The release](#the-release)
+- [The changelog](#the-changelog)
+- [The README on the Galaxy page](#the-readme-on-the-galaxy-page)
+- [Why this order](#why-this-order)
+- [If something goes wrong](#if-something-goes-wrong)
+
+## Declaring the release<a id="declaring-the-release"></a>
 
 A collection has no `pyproject.toml`, so the declaration lives in a
 `releasing.toml`, or a `.releasing.toml`, beside `galaxy.yml`:
@@ -38,7 +49,7 @@ build_ignore:
 `release config check` prints the effective declaration and fails on a file it
 names but cannot find.
 
-## What the release needs
+## What the release needs<a id="what-the-release-needs"></a>
 
 - `ansible-galaxy`, which builds and publishes the collection.
 - `antsibull-changelog`, which owns `changelogs/`. Only
@@ -46,7 +57,7 @@ names but cannot find.
 - `gh` for the GitHub release entry, already authenticated.
 - A Galaxy API token for the upload.
 
-## Before the release
+## Before the release<a id="before-the-release"></a>
 
 Run the project's own gate first: `ansible-lint`, the sanity tests, molecule
 and whatever else the collection verifies. `release` does not replace it and
@@ -54,7 +65,7 @@ knows nothing about it.
 
 Decide the version according to [Semantic Versioning](https://semver.org/).
 
-## The release
+## The release<a id="the-release"></a>
 
 ```sh
 version="<major.minor.patch>"
@@ -101,7 +112,7 @@ release verify "../dist-${version}/artifacts.json"
 release status "${version}" --manifest "../dist-${version}/artifacts.json"
 ```
 
-## The changelog
+## The changelog<a id="the-changelog"></a>
 
 antsibull-changelog collects fragments and writes
 `changelogs/changelog.yaml`; the commands read that file and never edit it.
@@ -120,7 +131,7 @@ the section titles set in `changelogs/config.yaml`. That is the same text
 changelog. reStructuredText inline literals become code spans; other markup is
 passed through as written.
 
-## The README on the Galaxy page
+## The README on the Galaxy page<a id="the-readme-on-the-galaxy-page"></a>
 
 Galaxy renders the collection's `README.md`, where a repository-relative link
 resolves against galaxy.ansible.com and breaks. `release build` prepares the
@@ -131,7 +142,7 @@ the forge. Nothing has to be restored afterwards.
 A collection whose roles carry their own READMEs can prepare those too; see
 `readmes` in [The release declaration](./config.md).
 
-## Why this order
+## Why this order<a id="why-this-order"></a>
 
 The build runs after the commit and before the tag, so the artifact cannot
 contain an uncommitted file. Passing the manifest to `tag create` closes the
@@ -143,7 +154,7 @@ A version can be uploaded to Galaxy only once, and a published version cannot
 be replaced. Step 5 uploads the file whose digest the build recorded and step
 7 checks that Galaxy serves that same digest.
 
-## If something goes wrong
+## If something goes wrong<a id="if-something-goes-wrong"></a>
 
 Before the tag is pushed, fix the problem and repeat from the failing step;
 delete the build directory first, since `build` refuses to write into an

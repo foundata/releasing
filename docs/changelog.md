@@ -30,7 +30,13 @@ the file: `release` runs `antsibull-changelog release`, `check --version`
 confirms the version is recorded in `changelogs/changelog.yaml`, and `show`
 renders that version's changes as Markdown.
 
-## `release changelog check [--version X.Y.Z]`
+## Table of contents<a id="toc"></a>
+
+- [`release changelog check [--version X.Y.Z]`](#changelog-check)
+- [`release changelog show X.Y.Z`](#changelog-show)
+- [`release changelog release X.Y.Z [--date YYYY-MM-DD]`](#changelog-release)
+
+## `release changelog check [--version X.Y.Z]`<a id="changelog-check"></a>
 
 Reports every structural problem: a first section that is not `Unreleased`, a
 heading without a valid date, a label that is not a version, duplicate or
@@ -39,7 +45,7 @@ misordered sections, a version without a link definition, and an
 `--version`, the latest released section must be that version. `release
 version check` runs the same check for the version it found.
 
-## `release changelog show X.Y.Z`
+## `release changelog show X.Y.Z`<a id="changelog-show"></a>
 
 Prints the section body to stdout, without the heading, for example as the
 description of a forge release:
@@ -51,7 +57,7 @@ gh release create "v${version}" --title "v${version}" \
 
 `Unreleased` is accepted as the version.
 
-## `release changelog release X.Y.Z [--date YYYY-MM-DD]`
+## `release changelog release X.Y.Z [--date YYYY-MM-DD]`<a id="changelog-release"></a>
 
 Turns the entries under `Unreleased` into the section for the version, dated
 today unless `--date` is given, puts a fresh `Unreleased` section with a

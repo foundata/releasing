@@ -19,7 +19,15 @@ exported source tree.
 omitted; supplying that option makes the artifact operations independent of
 the project configuration.
 
-## Keys
+## Table of contents<a id="toc"></a>
+
+- [Keys](#keys)
+  - [`readmes`](#readmes)
+  - [`dependency-pins`](#dependency-pins)
+  - [`allowed-attribution`](#allowed-attribution)
+- [Examples](#examples)
+
+## Keys<a id="keys"></a>
 
 |          Key          |          Default          | Meaning |
 | :-------------------- | :------------------------ | :------ |
@@ -46,7 +54,7 @@ Ecosystem defaults:
 Unknown keys are rejected, so a misspelled key cannot silently fall back to a
 default. Paths must be relative, inside the project and without `..`.
 
-### `readmes`
+### `readmes`<a id="readmes"></a>
 
 An array of tables, one per document that ships in an artifact:
 
@@ -62,14 +70,14 @@ The tag ref is the default because the index page of version X should link to
 the files of version X. The tag is pushed with the release, or the artifacts are
 never uploaded.
 
-### `dependency-pins`
+### `dependency-pins`<a id="dependency-pins"></a>
 
 An array of tables with `file` and `name`. On a version bump, the lower bound
 of the named requirement in that file is raised to the new version. This
 encodes a lockstep release of workspace members, such as a frontend package
 that requires its own engine version or newer.
 
-### `allowed-attribution`
+### `allowed-attribution`<a id="allowed-attribution"></a>
 
 Before `tag create`, `push` and `forge release-create` publish anything, they
 read the commits that would become public and that the remote does not have
@@ -106,7 +114,7 @@ rule is refused for the same reason.
 `--allow-tool-attribution` permits everything for one invocation and names in
 a warning what it let through.
 
-## Examples
+## Examples<a id="examples"></a>
 
 A single-package Python project:
 
