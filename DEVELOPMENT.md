@@ -109,10 +109,9 @@ copy of the foundata guide's file; naming it explicitly makes `rumdl` ignore any
 other configuration. `tests/unit/test_dependencies.py` compares the copy with
 the guide byte for byte whenever the guidelines are checked out beside this
 repository, or at `FOUNDATA_GUIDELINES`, and skips where they are not. The
-check targets the README, the command documentation under `docs/` and the
-commit-review documentation in `tools/`. Corpus snapshots and their expected
-output are deliberately excluded: formatting them would invalidate the
-comparison.
+check covers every Markdown file in the repository except those under
+`tests/fixtures`: the corpus snapshots and their expected output are
+deliberately excluded, because formatting them would invalidate the comparison.
 
 Every other foundata repository commits the same copy, and the ones without a
 test suite (the Ansible collections, the skeletons, the container drill) have
