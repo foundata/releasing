@@ -39,9 +39,10 @@ renders that version's changes as Markdown.
 ## `release changelog check [--version X.Y.Z]`<a id="changelog-check"></a>
 
 Reports every structural problem: a first section that is not `Unreleased`, a
-heading without a valid date, a label that is not a version, duplicate or
-misordered sections, a version without a link definition, and an
-`[unreleased]` link that does not compare the latest tag with `HEAD`. With
+heading without a valid date or with a date in the future, a label that is not
+a version, duplicate or misordered sections, a version without a link
+definition, and an `[unreleased]` link that does not compare the latest tag
+with `HEAD`. With
 `--version`, the latest released section must be that version. `release
 version check` runs the same check for the version it found.
 

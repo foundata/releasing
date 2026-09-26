@@ -105,10 +105,20 @@ def show(text: str, version: str) -> str:
 
 
 def check(
-    text: str, *, forge: Forge, tag_format: str, version: str | None = None
+    text: str,
+    *,
+    forge: Forge,
+    tag_format: str,
+    version: str | None = None,
+    today: date | None = None,
 ) -> list[str]:
-    """Return every structural problem, and for ``version`` that it is the latest release."""
+    """Return every structural problem, and for ``version`` that it is the latest release.
+
+    ``today`` is the day a release date may not lie after; it defaults to the
+    machine's date and exists so a test can pin it.
+    """
     changelog = parse(text)
+    limit = today or _today()
     problems: list[str] = []
     sections = changelog.sections
     if not sections or not sections[0].unreleased:
@@ -123,6 +133,8 @@ def check(
             continue
         if section.date is None or not _valid_date(section.date):
             problems.append(f"{where}: needs a release date as YYYY-MM-DD")
+        elif date.fromisoformat(section.date) > limit:
+            problems.append(f"{where}: release date {section.date} is in the future")
         if section.label in seen:
             problems.append(f"{where}: duplicate section")
         seen.add(section.label)
@@ -185,7 +197,7 @@ def release(
             f"{version} is not newer than the latest release {released[0].label}"
         )
     tag = tag_format.format(version=version)
-    day = (when or datetime.now().astimezone().date()).isoformat()
+    day = (when or _today()).isoformat()
     gap = _trailing_blank_lines(unreleased.body) or 2
     lines = list(changelog.lines)
     heading = unreleased.line - 1
@@ -221,6 +233,10 @@ def antsibull_has_release(changelog_yaml: str, version: str) -> bool:
         )
         is not None
     )
+
+
+def _today() -> date:
+    return datetime.now().astimezone().date()
 
 
 def _valid_date(value: str) -> bool:

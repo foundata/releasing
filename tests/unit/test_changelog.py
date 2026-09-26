@@ -101,6 +101,10 @@ def test_check_accepts_the_convention_and_the_latest_version() -> None:
         (("## [1.1.0] - 2026-08-20", "## [1.3.0] - 2026-08-20"), "newest first"),
         (("## [1.1.0] - 2026-08-20", "## [one] - 2026-08-20"), "not a version"),
         (
+            ("## [1.2.0] - 2026-08-27", "## [1.2.0] - 2999-01-01"),
+            "release date 2999-01-01 is in the future",
+        ),
+        (
             ("[1.1.0]: https://github.com/foundata/example/releases/tag/v1.1.0\n", ""),
             "no link definition [1.1.0]",
         ),
@@ -120,6 +124,18 @@ def test_check_accepts_the_convention_and_the_latest_version() -> None:
 def test_check_names_each_problem(mutation: tuple[str, str], expected: str) -> None:
     problems = check(EMPTY.replace(*mutation), forge=FORGE, tag_format="v{version}")
     assert any(expected in problem for problem in problems), problems
+
+
+def test_a_release_date_is_measured_against_the_given_day() -> None:
+    # A section dated tomorrow is a typo today and correct tomorrow, so the
+    # day is a parameter rather than a hidden clock.
+    dated = EMPTY.replace("## [1.2.0] - 2026-08-27", "## [1.2.0] - 2026-09-01")
+    assert (
+        check(dated, forge=FORGE, tag_format="v{version}", today=date(2026, 9, 1)) == []
+    )
+    assert check(
+        dated, forge=FORGE, tag_format="v{version}", today=date(2026, 8, 31)
+    ) == ["line 11: [1.2.0]: release date 2026-09-01 is in the future"]
 
 
 def test_release_moves_unreleased_into_a_dated_section_with_links() -> None:

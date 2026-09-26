@@ -18,6 +18,8 @@ and this project adheres to
 
 ### Changed
 
+- `changelog check`, and every command that runs it, refuses a release date in
+  the future. A section dated tomorrow is a typo today.
 - `releasing.config.STANDALONE` is now `releasing.config.STANDALONES`, the
   accepted standalone file names in search order.
 
