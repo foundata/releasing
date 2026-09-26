@@ -68,6 +68,15 @@ def calls(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return seen
 
 
+def test_an_index_that_serves_files_needs_the_manifest(
+    project: Path, calls: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert cli.main(["verify", "--project", str(project)]) == 1
+    output = capsys.readouterr()
+    assert "needs the manifest" in output.err
+    assert calls == []
+
+
 @pytest.mark.parametrize("name", ["example", "example-gui", "Example.GUI"])
 @pytest.mark.parametrize("no_install", [False, True])
 def test_workspace_verifies_only_the_selected_distribution(

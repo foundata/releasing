@@ -6,6 +6,10 @@ Three questions after an upload. Does the index serve, for this version, files
 whose digests match the manifest the build recorded? Does an isolated install
 of that version report it? Does the forge report the version's tag as the
 latest release? A release that cannot answer all three is not finished.
+
+A project that publishes no artifact has no index to ask. Its release is the
+tag, so the questions become whether the remote holds the release tag and
+whether the forge reports it as latest.
 """
 
 import re

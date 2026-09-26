@@ -131,7 +131,9 @@ copies = ["packages/gui/README.md"]
     )
 
 
-def test_ecosystem_defaults_for_collections_and_hugo(tmp_path: Path) -> None:
+def test_ecosystem_defaults_for_collections_and_source_repositories(
+    tmp_path: Path,
+) -> None:
     root = project(
         tmp_path,
         'repository = "foundata/ansible-collection-example"\n'
@@ -147,15 +149,34 @@ def test_ecosystem_defaults_for_collections_and_hugo(tmp_path: Path) -> None:
     assert (config.index, config.version_files) == ("galaxy", ("galaxy.yml",))
     assert (config.changelog, config.changelog_format) == ("antsibull", "antsibull")
 
-    (tmp_path / "hugo").mkdir()
+    # A source repository is released as its tag: no index, no version site.
+    # The development-only pyproject.toml beside the declaration is not a site.
+    (tmp_path / "source").mkdir()
+    source = project(
+        tmp_path / "source",
+        'repository = "foundata/skeletons"\necosystem = "source-repository"\n',
+        standalone=".releasing.toml",
+    )
+    (tmp_path / "source" / "pyproject.toml").write_text(
+        '[project]\nname = "skeletons-development"\nversion = "0.0.0"\n',
+        encoding="utf-8",
+    )
+    config = load_release_config(source)
+    assert (config.index, config.version_files) == ("none", ())
+    assert config.changelog == "CHANGELOG.md"
+
+
+def test_the_former_hugo_ecosystem_is_named_a_source_repository(
+    tmp_path: Path,
+) -> None:
     hugo = project(
-        tmp_path / "hugo",
+        tmp_path,
         'repository = "foundata/hugo-component-example"\n'
         'ecosystem = "hugo-component"\n',
         standalone="releasing.toml",
     )
-    config = load_release_config(hugo)
-    assert (config.index, config.version_files) == ("none", ())
+    with pytest.raises(ConfigError, match="source-repository"):
+        load_release_config(hugo)
 
 
 @pytest.mark.parametrize(

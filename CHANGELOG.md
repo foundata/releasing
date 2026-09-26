@@ -11,6 +11,15 @@ and this project adheres to
 
 ### Added
 
+- `source-repository`, the ecosystem for a repository that publishes no
+  artifact and is released as its tag. It has no version site by default:
+  `version check` reports the changelog's newest released section and compares
+  `--expect` with it, `tag create` and `push` check that section, `verify`
+  takes no manifest and checks that the remote holds the release tag and the
+  forge reports it as latest, and `build`, `publish` and `version bump` refuse
+  and name the step to take instead. See
+  [Releasing a source repository](https://github.com/foundata/releasing/blob/main/docs/source-repositories.md).
+- `release verify --remote` names the remote that must hold the release tag.
 - A standalone declaration may be named `.releasing.toml` as well as
   `releasing.toml`, for repositories that keep their configuration in dotfiles.
   Both names are read and mean the same thing, and a declaration that appears
@@ -20,8 +29,16 @@ and this project adheres to
 
 - `changelog check`, and every command that runs it, refuses a release date in
   the future. A section dated tomorrow is a typo today.
+- `version bump` refuses a project without version sites instead of rewriting
+  nothing, running `uv lock` and reporting success.
 - `releasing.config.STANDALONE` is now `releasing.config.STANDALONES`, the
   accepted standalone file names in search order.
+
+### Removed
+
+- The `hugo-component` ecosystem. A Hugo component is a repository released as
+  its tag; declare `ecosystem = "source-repository"` instead, which applies the
+  same defaults.
 
 
 ## [4.2.0] - 2026-09-24

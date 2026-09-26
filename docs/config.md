@@ -33,7 +33,7 @@ the project configuration.
 | :-------------------- | :------------------------ | :------ |
 | `repository`          | required                  | `owner/name` on the forge. |
 | `forge`               | `github`                  | Where tags and releases live. |
-| `ecosystem`           | `python`                  | `python`, `ansible-collection` or `hugo-component`; sets other defaults. |
+| `ecosystem`           | `python`                  | `python`, `ansible-collection` or `source-repository`; sets other defaults. |
 | `index`               | by ecosystem              | `pypi`, `galaxy` or `none`. |
 | `version-files`       | by ecosystem              | Files carrying the version, relative to the project root. |
 | `changelog`           | by ecosystem              | A Keep a Changelog file, or `antsibull` for antsibull-changelog. |
@@ -49,7 +49,13 @@ Ecosystem defaults:
 | :------------------- | :------- | :------------------- | :---------- |
 | `python`             | `pypi`   | `["pyproject.toml"]` | `CHANGELOG.md` |
 | `ansible-collection` | `galaxy` | `["galaxy.yml"]`     | `antsibull` |
-| `hugo-component`     | `none`   | `[]`                 | `CHANGELOG.md` |
+| `source-repository`  | `none`   | `[]`                 | `CHANGELOG.md` |
+
+A `source-repository` is released as its tag: nothing is built or uploaded,
+and consumers take the repository at that tag. It has no version site by
+default, so its version is the newest released section of the changelog;
+`version-files` may still name a file when the repository keeps one. See
+[Releasing a source repository](./source-repositories.md).
 
 Unknown keys are rejected, so a misspelled key cannot silently fall back to a
 default. Paths must be relative, inside the project and without `..`.
@@ -115,6 +121,14 @@ rule is refused for the same reason.
 a warning what it let through.
 
 ## Examples<a id="examples"></a>
+
+A repository released as its tag, declared in `.releasing.toml` beside a
+development-only `pyproject.toml` whose version is not the project's:
+
+```toml
+repository = "foundata/ansible-skeletons"
+ecosystem = "source-repository"
+```
 
 A single-package Python project:
 

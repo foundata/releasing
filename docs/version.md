@@ -41,6 +41,12 @@ disagreement:
 The check reads files only. In a checkout it also runs `git tag --points-at
 HEAD`; nothing is written or fetched.
 
+A project without version sites, such as a `source-repository`, states its
+version in the changelog. The command prints the newest released section,
+compares `--expect` with it, and still runs the lockfile, pin and tag checks
+against that version. Before the first release there is no version to print
+and the command fails saying so.
+
 ## `release version bump X.Y.Z`<a id="version-bump"></a>
 
 Rewrites every site and raises every lockstep pin's lower bound to the new
@@ -53,3 +59,7 @@ The bump refuses to run while a version file or pinned file has uncommitted
 changes, because it rewrites them; `--force` overrides that. Other uncommitted
 changes, such as an edited changelog, do not block it. `--no-lock` skips the
 lockfile update. The changelog is not touched; see `release changelog`.
+
+A project without version sites has nothing to rewrite. The command refuses
+and names `release changelog release X.Y.Z` as the step that moves the
+version, since the dated section it creates is where the version lives.

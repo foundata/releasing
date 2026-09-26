@@ -104,6 +104,23 @@ def show(text: str, version: str) -> str:
     raise ChangelogError(f"no changelog section for {version}")
 
 
+def latest_release(text: str) -> str | None:
+    """The version of the newest released section, or None before the first release.
+
+    A project without version sites, such as a source repository released as
+    its tag, states its version here and nowhere else in a file.
+    """
+    for section in parse(text).sections:
+        if section.unreleased:
+            continue
+        if not is_version(section.label):
+            raise ChangelogError(
+                f"line {section.line}: [{section.label}] is not a version"
+            )
+        return section.label
+    return None
+
+
 def check(
     text: str,
     *,

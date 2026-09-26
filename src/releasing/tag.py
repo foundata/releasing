@@ -250,6 +250,43 @@ def _change(
     processes.git(root, *arguments, remote=contacts_remote, echo=True)
 
 
+def check_published(
+    root: Path,
+    config: ReleaseConfig,
+    forge: Forge,
+    version_string: str,
+    *,
+    remote: str = processes.DEFAULT_REMOTE,
+) -> str:
+    """Return the revision the release tag names, once ``remote`` holds the same tag.
+
+    For a project that publishes no artifact, the tag is the release, and
+    this is its publication check: the tag exists here as the annotated
+    release tag, and the remote has the identical tag object.
+    """
+    tag = config.tag(version_string)
+    current = state(root, forge, tag, offline=True, remote=remote)
+    if current.revision is None:
+        raise TagError(f"tag {tag} does not exist; create and push it first")
+    problems = []
+    if not current.annotated:
+        problems.append(f"tag {tag} is lightweight; release tags are annotated")
+    expected = config.tag_message_for(version_string)
+    if current.annotated and current.message != expected:
+        problems.append(f"tag {tag} says {current.message!r}, expected {expected!r}")
+    if current.remote_revision is None:
+        problems.append(f"tag {tag} is not on {remote}; push it first")
+    else:
+        local_object = processes.git(root, "rev-parse", f"refs/tags/{tag}").strip()
+        if current.remote_revision != local_object:
+            problems.append(f"tag {tag} differs between {remote} and this repository")
+    if problems:
+        raise TagError(
+            f"{tag} is not published as the release tag:\n  " + "\n  ".join(problems)
+        )
+    return current.revision
+
+
 def check(
     root: Path,
     config: ReleaseConfig,

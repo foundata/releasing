@@ -26,7 +26,8 @@ release build --out "../dist-${version}"
    repository declares still decides.
 2. Loads the release declaration from the export and runs `version check`
    there, so the version that ships is the committed one. `--expect X.Y.Z`
-   pins what that version has to be.
+   pins what that version has to be. A `source-repository` stops here: it is
+   released as its tag and builds no artifact, and the command says so.
 3. Runs the changelog check for that version.
 4. Prepares every declared document: relative destinations are validated
    against the exported tree, rewritten against the forge at the version's tag

@@ -9,6 +9,7 @@ from releasing.changelog import (
     ChangelogError,
     antsibull_has_release,
     check,
+    latest_release,
     parse,
     release,
     show,
@@ -136,6 +137,17 @@ def test_a_release_date_is_measured_against_the_given_day() -> None:
     assert check(
         dated, forge=FORGE, tag_format="v{version}", today=date(2026, 8, 31)
     ) == ["line 11: [1.2.0]: release date 2026-09-01 is in the future"]
+
+
+def test_latest_release_is_the_newest_released_section() -> None:
+    # A project without version sites states its version here and nowhere else.
+    assert latest_release(EMPTY) == "1.2.0"
+    assert latest_release(PENDING) == "1.2.0"
+    assert latest_release("# Changelog\n\n## [Unreleased]\n\n- Everything.\n") is None
+    with pytest.raises(ChangelogError, match=r"\[one\] is not a version"):
+        latest_release(
+            EMPTY.replace("## [1.2.0] - 2026-08-27", "## [one] - 2026-08-27")
+        )
 
 
 def test_release_moves_unreleased_into_a_dated_section_with_links() -> None:

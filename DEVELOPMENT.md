@@ -31,8 +31,9 @@ from `--help`.
 - **Index**: where an artifact is published. PyPI or Ansible Galaxy; the
   `index` key selects it, and `none` means the project publishes no artifact.
 - **Ecosystem**: which build tool and which defaults apply, `python`,
-  `ansible-collection` or `hugo-component`. It sets `index`, `version-files`
-  and the changelog format unless the declaration overrides them.
+  `ansible-collection` or `source-repository`. It sets `index`,
+  `version-files` and the changelog format unless the declaration overrides
+  them. A source repository builds nothing and is released as its tag.
 - **Declaration**: the `[tool.releasing]` table in `pyproject.toml`, or the
   same keys at the top level of a `releasing.toml` or `.releasing.toml`. Every
   project-aware command reads it; see
@@ -48,12 +49,13 @@ A published artifact takes its name from the packaging metadata on the index
 side, never from the repository it was built in. The forge name and the
 published name are allowed to differ, and usually do:
 
-|             Repository (forge)             |             Packaging metadata              | Published as |
-| :----------------------------------------- | :------------------------------------------ | :----------- |
-| `foundata/releasing`                       | `[project] name = "releasing"`              | `releasing-4.1.0-py3-none-any.whl` |
-| `foundata/ansible-docsmith`                | `[project] name = "ansible-docsmith"`       | `ansible_docsmith-2.2.0-py3-none-any.whl` |
-| `foundata/scanmole`                        | two members, `scanmole` and `scanmole-gui`  | `scanmole-1.2.0.tar.gz` and `scanmole_gui-1.2.0.tar.gz` |
-| `foundata/ansible-collection-apache-httpd` | `namespace: foundata`, `name: apache_httpd` | `foundata-apache_httpd-1.3.0.tar.gz` |
+|             Repository (forge)             |                      Packaging metadata                      | Published as |
+| :----------------------------------------- | :----------------------------------------------------------- | :----------- |
+| `foundata/releasing`                       | `[project] name = "releasing"`                               | `releasing-4.1.0-py3-none-any.whl` |
+| `foundata/ansible-docsmith`                | `[project] name = "ansible-docsmith"`                        | `ansible_docsmith-2.2.0-py3-none-any.whl` |
+| `foundata/scanmole`                        | two members, `scanmole` and `scanmole-gui`                   | `scanmole-1.2.0.tar.gz` and `scanmole_gui-1.2.0.tar.gz` |
+| `foundata/ansible-collection-apache-httpd` | `namespace: foundata`, `name: apache_httpd`                  | `foundata-apache_httpd-1.3.0.tar.gz` |
+| `foundata/ansible-skeletons`               | none; its `pyproject.toml` is development tooling at `0.0.0` | nothing, the tag `v2.7.0` is the release |
 
 A Python distribution therefore has three spellings: the install name
 (`ansible-docsmith`), the file name (`ansible_docsmith-...`, escaped by

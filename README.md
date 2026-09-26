@@ -95,7 +95,9 @@ and explicit-version artifact operations also work independently; see
   changelog and the manifest. See
   [The forge's release entry](./docs/forge-release.md).
 - `release verify`: the index serves the validated files, an isolated install
-  reports the version and the forge reports the tag as latest. See
+  reports the version and the forge reports the tag as latest; for a project
+  that publishes no artifact, the remote holds the release tag and the forge
+  reports it as latest. See
   [Verifying a published release](./docs/verify.md).
 - `release artifacts check`, `manifest` and `verify`: distributions carry
   the right version, a description without relative links and no litter; their
@@ -105,8 +107,9 @@ and explicit-version artifact operations also work independently; see
   [Preparing Markdown for package indexes](./docs/markdown.md).
 
 The end-to-end order is in
-[Releasing a Python package](./docs/python-packages.md) and
-[Releasing an Ansible collection](./docs/ansible-collections.md).
+[Releasing a Python package](./docs/python-packages.md),
+[Releasing an Ansible collection](./docs/ansible-collections.md) and
+[Releasing a source repository](./docs/source-repositories.md).
 
 
 ## Output<a id="output"></a>

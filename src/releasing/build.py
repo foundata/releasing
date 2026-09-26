@@ -137,6 +137,11 @@ def build(
         exported = workspace / "source"
         export(root, resolved, exported)
         config = load_release_config(exported)
+        if config.ecosystem == "source-repository":
+            raise BuildError(
+                "a source repository is released as its tag and builds no "
+                "artifact; there is nothing to build"
+            )
         local = local_path_sources(exported, config)
         if local and not allow_local_sources:
             raise BuildError(

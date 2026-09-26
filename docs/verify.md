@@ -1,7 +1,8 @@
 # Verifying a published release
 
 `release verify` runs three checks after an upload and stops at the first one
-that fails.
+that fails. A project that uploads nothing has a shorter list; see
+[A release that is a tag](#a-release-that-is-a-tag).
 
 ```sh
 release verify "../dist-${version}/artifacts.json"
@@ -36,6 +37,22 @@ The manifest needs no additional fields and the local artifacts are not needed.
 `--version` supplies the version for a compatible manifest without one, or
 asserts which version the manifest records, so a stale manifest cannot be
 verified by accident.
+
+## A release that is a tag<a id="a-release-that-is-a-tag"></a>
+
+A project with `index = "none"` publishes no artifact, so there is no index to
+ask and the command takes no manifest. The tag is the release, and the checks
+are what that leaves to verify: the release tag exists here as an annotated
+tag with the project's message, the remote holds the identical tag object, and
+the forge reports it as latest.
+
+```sh
+release verify --version "${version}"
+```
+
+Without `--version`, the newest released section of the changelog names the
+release. The remote is the one the current branch tracks, and `origin` when
+the branch tracks nothing; `--remote NAME` names another one.
 
 The command only reads. It creates no release and uploads nothing. A
 `GITHUB_TOKEN` in the environment is used only when the repository is private.

@@ -21,7 +21,7 @@ PYPROJECT = "pyproject.toml"
 STANDALONES = ("releasing.toml", ".releasing.toml")
 FORGES = ("github",)
 INDEXES = ("pypi", "galaxy", "none")
-ECOSYSTEMS = ("python", "ansible-collection", "hugo-component")
+ECOSYSTEMS = ("python", "ansible-collection", "source-repository")
 CHANGELOG_FORMATS = ("keep-a-changelog", "antsibull")
 _REPOSITORY = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*")
 _ECOSYSTEM_DEFAULTS: dict[str, dict[str, object]] = {
@@ -31,7 +31,9 @@ _ECOSYSTEM_DEFAULTS: dict[str, dict[str, object]] = {
         "version-files": ["galaxy.yml"],
         "changelog": "antsibull",
     },
-    "hugo-component": {"index": "none", "version-files": []},
+    # A source repository is released as its tag: nothing is built or uploaded,
+    # and the version lives in the changelog and the tag rather than in a file.
+    "source-repository": {"index": "none", "version-files": []},
 }
 _KEYS = frozenset(
     {
@@ -180,7 +182,7 @@ def load_release_config(root: Path) -> ReleaseConfig:
     index = _choice(raw, "index", INDEXES, str(defaults["index"]), where)
     default_files = [str(item) for item in _as_list(defaults["version-files"])]
     version_files = _relative_paths(raw, "version-files", default_files, where)
-    if not version_files and ecosystem != "hugo-component":
+    if not version_files and ecosystem != "source-repository":
         raise ConfigError(f"{where}version-files must name at least one file")
     changelog = _text(
         raw, "changelog", str(defaults.get("changelog", "CHANGELOG.md")), where

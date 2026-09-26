@@ -341,8 +341,7 @@ def _run_version_check(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
         tags = _git(loaded.root, "tag", "--points-at", "HEAD")
-        found = version.check(
-            loaded.root,
+        found = _stated_version(
             loaded,
             expect=args.expect,
             tags_on_head=None if tags is None else tags.split(),
@@ -363,6 +362,12 @@ def _run_version_check(args: argparse.Namespace) -> int:
 def _run_version_bump(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
+        if not loaded.version_files:
+            raise ValueError(
+                "this project declares no version sites; its version is the "
+                f"latest release in {loaded.changelog_path} and the tag. Run "
+                "`release changelog release X.Y.Z` to move it"
+            )
         touched = [*loaded.version_files, *(pin.file for pin in loaded.dependency_pins)]
         changed = _git(loaded.root, "status", "--porcelain", "--", *touched)
         if changed and not args.force:
@@ -432,6 +437,41 @@ def _check_changelog(loaded: config.ReleaseConfig, found: str | None) -> None:
     )
     if problems:
         raise changelog.ChangelogError(f"{loaded.changelog}:\n" + "\n".join(problems))
+
+
+def _stated_version(
+    loaded: config.ReleaseConfig,
+    *,
+    expect: str | None = None,
+    tags_on_head: Sequence[str] | None = None,
+) -> str:
+    """The version the project states: in its sites, or without any, its changelog.
+
+    A source repository has no version site. Its version is the newest
+    released section of the changelog and the tag that names it, so that
+    section is what ``expect`` is compared with and what the lockfile, pin and
+    tag checks then run against.
+    """
+    if loaded.version_files:
+        return version.check(
+            loaded.root, loaded, expect=expect, tags_on_head=tags_on_head
+        )
+    if loaded.changelog_format == "antsibull":
+        raise ValueError(
+            "the project declares no version sites and antsibull-changelog owns "
+            "its changelog; pass the version"
+        )
+    latest = changelog.latest_release(_read(loaded.root / loaded.changelog))
+    if latest is None:
+        raise version.VersionError(
+            f"{loaded.changelog} records no release yet; a project without "
+            "version sites states its version there"
+        )
+    if expect is not None and latest != expect:
+        raise version.VersionError(
+            f"expected {expect}, the latest release in {loaded.changelog} is {latest}"
+        )
+    return version.check(loaded.root, loaded, expect=latest, tags_on_head=tags_on_head)
 
 
 def _run_changelog_check(args: argparse.Namespace) -> int:
@@ -520,7 +560,7 @@ def _expected_version(
             raise ValueError(f"not a version: {args.version!r}")
         return None, args.version
     loaded = _load_config(args)
-    return loaded, version.check(loaded.root, loaded)
+    return loaded, _stated_version(loaded)
 
 
 def _run_artifacts_check(args: argparse.Namespace) -> int:
@@ -743,24 +783,49 @@ def _run_verify(args: argparse.Namespace) -> int:
     try:
         loaded = _load_config(args)
         forge = forges.forge_for(loaded)
-        manifest = artifacts.load_manifest(cast(Path, args.manifest))
-        found = manifest.version or args.version
-        if args.version is not None and found != args.version:
-            raise ValueError(f"the manifest records {found}, not {args.version}")
-        distribution, selected = verify.select_distribution(
-            manifest, index=loaded.index, version=found, distribution=args.distribution
-        )
-        problems = verify.compare_with_manifest(
-            selected, verify.index_files(loaded.index, distribution, found)
-        )
-        if problems:
-            raise verify.VerificationError(
-                f"{loaded.index} serves other files than were validated:\n  "
-                + "\n  ".join(problems)
+        if loaded.index == "none":
+            # The tag is the release: nothing was uploaded, so the questions
+            # are whether the remote has that tag and the forge calls it latest.
+            if args.manifest is not None:
+                raise ValueError(
+                    "this project publishes no artifact; verify takes no "
+                    "manifest here, name the version with --version instead"
+                )
+            found = args.version or _stated_version(loaded)
+            remote = _remote(args, loaded)
+            revision = tag.check_published(
+                loaded.root, loaded, forge, found, remote=remote
             )
-        reporting.phase(
-            f"Verified {loaded.index} serves the validated files for {found}"
-        )
+            reporting.phase(
+                f"Verified {remote} has {loaded.tag(found)} at {revision[:12]}"
+            )
+        else:
+            if args.manifest is None:
+                raise ValueError(
+                    f"verify needs the manifest release build wrote, to compare "
+                    f"it with what {loaded.index} serves"
+                )
+            manifest = artifacts.load_manifest(cast(Path, args.manifest))
+            found = manifest.version or args.version
+            if args.version is not None and found != args.version:
+                raise ValueError(f"the manifest records {found}, not {args.version}")
+            distribution, selected = verify.select_distribution(
+                manifest,
+                index=loaded.index,
+                version=found,
+                distribution=args.distribution,
+            )
+            problems = verify.compare_with_manifest(
+                selected, verify.index_files(loaded.index, distribution, found)
+            )
+            if problems:
+                raise verify.VerificationError(
+                    f"{loaded.index} serves other files than were validated:\n  "
+                    + "\n  ".join(problems)
+                )
+            reporting.phase(
+                f"Verified {loaded.index} serves the validated files for {found}"
+            )
         if loaded.index == "pypi" and not args.no_install:
             reported = verify.installed_version(distribution, found)
             if reported != found:
@@ -1257,11 +1322,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_project(verify_parser)
     verify_parser.add_argument(
-        "manifest", type=Path, help="the manifest written by release build"
+        "manifest",
+        nargs="?",
+        type=Path,
+        help="the manifest written by release build; none for a project that "
+        "publishes no artifact",
     )
     verify_parser.add_argument(
-        "--version", metavar="X.Y.Z", help="the version the manifest must record"
+        "--version",
+        metavar="X.Y.Z",
+        help="the version the manifest must record, or the version to verify "
+        "for a project without a manifest",
     )
+    _add_remote(verify_parser, "the remote that must hold the release tag")
     verify_parser.add_argument(
         "--distribution", metavar="NAME", help="which distribution to install and query"
     )
