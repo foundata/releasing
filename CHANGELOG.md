@@ -9,6 +9,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [5.0.0] - 2026-09-26
+
 ### Added
 
 - `source-repository`, the ecosystem for a repository that publishes no
@@ -233,7 +238,8 @@ and this project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v4.2.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v5.0.0...HEAD
+[5.0.0]: https://github.com/foundata/releasing/releases/tag/v5.0.0
 [4.2.0]: https://github.com/foundata/releasing/releases/tag/v4.2.0
 [4.1.0]: https://github.com/foundata/releasing/releases/tag/v4.1.0
 [4.0.0]: https://github.com/foundata/releasing/releases/tag/v4.0.0
