@@ -139,8 +139,10 @@ See [`CONTRIBUTING.md`](https://github.com/foundata/oci-fedora41-itt/blob/main/C
 ### Container configuration, repository<a id="licensing-copyright-project"></a>
 
 <!--REUSE-IgnoreStart-->
-<!-- rumdl-disable-next-line MD034 --><!-- should match SPDX-PackageSupplier -->
-Copyright (c) 2025, 2026 foundata GmbH (https://foundata.com)
+<!-- rumdl-disable MD034 --><!-- should match SPDX-PackageSupplier -->
+Copyright (c) 2025, 2026, [foundata GmbH](https://foundata.com/)
+(https://foundata.com)
+<!-- rumdl-enable MD034 -->
 
 This project is licensed under the GNU General Public License v3.0 or later
 (SPDX-License-Identifier: `GPL-3.0-or-later`), see

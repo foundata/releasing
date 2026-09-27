@@ -2,12 +2,12 @@
 
 ConClear builds, tests and scans OCI container images, then signs and releases
 the digest that passed its checks. It applies the technical requirements of
-[foundata's OCI container image build and release guide](https://github.com/foundata/guidelines/blob/main/oci-container-image-guide.md)
+[foundata's OCI container image build and release guide](https://foundata.com/en/guidelines/oci-container-image-guide/)
 without requiring you to maintain your own release scripts or CI service.
 
-> **Important:** ConClear is built for foundata's release process. You are
-> welcome to use it if you adopt the linked guide's requirements. Pull requests
-> to adapt ConClear to different release policies are out of scope.
+> **Important:** ConClear is built for foundata's own release processes. You are
+> welcome to use it if you adopt the linked guide's requirements. Requests to
+> adapt ConClear to different release policies are out of scope.
 
 <!-- rumdl-disable MD033 -->
 <!-- HTML for consistent rendering across limited platform parsers -->
@@ -28,9 +28,9 @@ without requiring you to maintain your own release scripts or CI service.
 
 - [Features](#features)
 - [Installation](#installation)
-  - [Fedora](#installation-fedora)
+  - [Fedora (x86_64)](#installation-fedora)
   - [Updating](#installation-update)
-  - [Miscellaneous notes](#installation-misc)
+  - [Next steps](#installation-misc)
 - [Usage](#usage)
   - [Configuration (Host)](#usage-host-config)
   - [Configuration (Container repos)](#usage-repo-config)
@@ -38,6 +38,8 @@ without requiring you to maintain your own release scripts or CI service.
   - [Quick start: Running a release](#usage-release)
   - [Advanced](#usage-advanced)
     - [Checking locally](#usage-check)
+    - [Tools from their images](#usage-tool-images)
+    - [Accepting a stale Java database](#usage-stale-java-database)
     - [Resuming an interrupted run](#usage-resume)
     - [Archives](#usage-archives)
     - [Verifying a release without ConClear](#usage-independent-verification)
@@ -46,7 +48,7 @@ without requiring you to maintain your own release scripts or CI service.
     - [Retiring a published tag](#usage-retire-tag)
     - [Distributed qualification](#usage-distributed)
     - [Command help](#usage-commands)
-    - [JSON output and exit codes](#usage-json-exit-codes)
+    - [Output, JSON and exit codes](#usage-json-exit-codes)
 - [Records and schemas](#records-schemas)
 - [Backup](#backup)
 - [Conformance](#conformance)
@@ -71,9 +73,10 @@ without requiring you to maintain your own release scripts or CI service.
 
 ## Installation<a id="installation"></a>
 
-ConClear is published on PyPI as
-[`conclear`](https://pypi.org/project/conclear/) and requires Python 3.12 or
-newer. Install it as a tool with [uv](https://docs.astral.sh/uv/):
+ConClear runs on a native Linux host with rootless Podman and Buildah. It is
+published on PyPI as [`conclear`](https://pypi.org/project/conclear/) and
+requires Python 3.12 or newer. Install it as a tool with
+[uv](https://docs.astral.sh/uv/):
 
 ```sh
 uv tool install conclear
@@ -88,18 +91,22 @@ downloads. Use versions within the accepted ranges, avoiding excluded versions.
 
 <!-- supported-tools:begin -->
 
-|   Tool   |     Accepted versions      | Excluded versions | Real-tool tested versions |
-| -------- | -------------------------- | ----------------- | ------------------------- |
-| Git      | 2.43.0 <= version < 3.0.0  | none              | 2.55.0                    |
-| Buildah  | 1.40.0 <= version < 1.44.0 | none              | 1.43.2                    |
-| Podman   | 5.8.4 <= version < 6.0.0   | none              | 5.8.4                     |
-| Skopeo   | 1.14.0 <= version < 2.0.0  | none              | 1.22.2                    |
-| Hadolint | 2.12.0 <= version < 3.0.0  | none              | 2.14.0                    |
-| Trivy    | 0.74.0 <= version < 0.75.0 | none              | 0.74.0                    |
-| Cosign   | 3.1.3 <= version < 4.0.0   | none              | 3.1.3                     |
+|   Tool   |     Accepted versions      | Excluded versions | Real-tool tested versions | Pinned image |
+| -------- | -------------------------- | ----------------- | ------------------------- | ------------ |
+| Git      | 2.43.0 <= version < 3.0.0  | none              | 2.55.0                    | none         |
+| Buildah  | 1.40.0 <= version < 1.44.0 | none              | 1.43.4                    | none         |
+| Podman   | 5.8.4 <= version < 6.0.0   | none              | 5.8.7                     | none         |
+| Skopeo   | 1.14.0 <= version < 2.0.0  | none              | 1.22.3                    | none         |
+| Hadolint | 2.12.0 <= version < 3.0.0  | none              | 2.14.0                    | ghcr.io/hadolint/hadolint |
+| Trivy    | 0.74.0 <= version < 0.75.0 | none              | 0.74.0                    | ghcr.io/aquasecurity/trivy |
+| Cosign   | 3.1.3 <= version < 4.0.0   | none              | 3.1.3                     | none         |
 
 <!-- supported-tools:end -->
 
+Trivy and Hadolint need not be installed at all: name them in
+`CONCLEAR_TOOL_IMAGES` and ConClear runs them from the pinned publisher images
+above instead, in a read-only container without network unless the call needs
+one. See [Tools from their images](#usage-tool-images).
 
 Install them and other dependencies as follows:
 
@@ -169,10 +176,10 @@ which trivy && trivy --version
 Update ConClear with `uv tool upgrade conclear`. For host tools, repeat the
 installation steps with supported versions. Finish active runs before updating.
 
-### Miscellaneous notes<a id="installation-misc"></a>
+### Next steps<a id="installation-misc"></a>
 
-ConClear runs on a native Linux host with rootless Podman and Buildah. Continue
-with [host configuration](#usage-host-config) before your first release.
+Continue with [host configuration](#usage-host-config) before your first
+release.
 
 
 ## Usage<a id="usage"></a>
@@ -180,6 +187,10 @@ with [host configuration](#usage-host-config) before your first release.
 The examples use a release profile named `foundata`. Run repository commands
 from the image repository's root; add `--image <id>` when it has multiple
 release images.
+
+`conclear adopt`, `conclear check` and `conclear doctor --scope check` work
+before any credentials exist: they need no release profile and no registry
+access. Use them to assess a repository first, then set up the host below.
 
 
 ### Configuration (Host)<a id="usage-host-config"></a>
@@ -210,20 +221,36 @@ podman login --authfile "${HOME}/.config/conclear/auth.json" quay.io
 cosign generate-key-pair --output-key-prefix "${HOME}/.config/conclear/cosign"
 ```
 
-Obtain a Quay API token with tag read, write and delete access and store it in
-`~/.config/conclear/quay.token`. Create `~/.config/conclear/foundata.toml` (or
+Obtain a [Quay API](https://docs.quay.io/api/) token with tag read, write and
+delete access and store it in `~/.config/conclear/quay.token`. Quay issues such
+tokens only through an OAuth 2 application: create one under your organization's
+*Applications* tab, then generate an access token for it.
+
+**Quay creates the token on behalf of the user who generates it, not the
+organization whose application it belongs to.** Its scopes limit which endpoints
+the token may call, but within those scopes it reaches every repository that
+user can reach. Create a dedicated Red Hat account for releasing, generate the
+token as that account, and add the account to a team whose permissions cover
+only the repositories it maintains. As of 2026-Q4 a robot account cannot stand
+in for it: robot tokens authenticate against the registry endpoints, while the
+API accepts only application tokens.
+
+Create `~/.config/conclear/foundata.toml` (or
 `$XDG_CONFIG_HOME/conclear/foundata.toml` if set; adapt the name to fit your
 organization if not working for foundata), adjusting paths, ownership and policy
 choices:
 
 ```toml
-schema_version = 1
+schema_version = 2
 ci_context = "observe"
 # Git origins your release checkouts may have; the list never leaves this file.
 allowed_source_origins = ["https://github.com/foundata/"]
 auth_file = "~/.config/conclear/auth.json"
 cosign_private_key = "~/.config/conclear/cosign.key"
 cosign_public_key = "~/.config/conclear/cosign.pub"
+# Protected file holding the signing key's passphrase; --cosign-passphrase-fd
+# supplies it instead.
+# cosign_passphrase_file = "~/.config/conclear/cosign.passphrase"
 # Durable, backed-up directory for release and rescan archives; --archive-dir overrides it.
 archive_dir = "/srv/archives/conclear"
 
@@ -259,9 +286,9 @@ policy-read access. Cleanup can use `manual` or `auto-prune` instead of
 [registry options](./ARCHITECTURE.md#publication-and-promotion).
 
 ConClear prompts for the signing passphrase. For automation, configure a
-protected `passphrase_file` or use `--passphrase-fd`. **Never put secrets in
-command-line values, ordinary environment variables or repository files.
-Policy descriptions appear in public release evidence.**
+protected `cosign_passphrase_file` or use `--cosign-passphrase-fd`. **Never put
+secrets in command-line values, ordinary environment variables or repository
+files. Policy descriptions appear in public release evidence.**
 
 Create an archive directory on durable, backed-up storage writable by your
 release user, outside source repositories and ConClear working directories:
@@ -335,7 +362,7 @@ Prepare the build inputs:
 - Pin external images in the Containerfile as `image:tag@sha256:<digest>` and
   declare each tag and its intent under `[[images.pins]]`.
 - Supply the
-  [required OCI labels](https://github.com/foundata/guidelines/blob/main/oci-container-image-guide.md#image-metadata).
+  [required OCI labels](https://foundata.com/en/guidelines/oci-container-image-guide/#image-metadata).
   Declare and use the `IMAGE_CREATED`, `IMAGE_REVISION` and `IMAGE_VERSION`
   build arguments for their corresponding labels.
 - Match the numeric `USER` to `images.runtime.user`. Declare writable paths
@@ -421,6 +448,10 @@ conclear pins check
 conclear doctor --scope qualify
 ```
 
+`config show` and `check` stay local. `pins check` reads the registry to compare
+the declared base digests, and `doctor --scope qualify` reads it too and expects
+the build and scan tools to be installed.
+
 Fix errors and commit changes. To build, test and scan one platform without
 publishing:
 
@@ -429,6 +460,53 @@ conclear qualify --revision HEAD --version "${version}" --platform linux/amd64
 ```
 
 This separate qualification is optional; `release` runs its own checks.
+
+
+#### Tools from their images<a id="usage-tool-images"></a>
+
+Trivy and Hadolint can run from their publishers' images instead of host
+executables, which avoids installing them and confines Trivy while it parses
+untrusted layer content:
+
+```sh
+CONCLEAR_TOOL_IMAGES=trivy,hadolint conclear qualify --revision HEAD \
+  --version "${version}"
+```
+
+Each image is pinned by the digest of its index, which this ConClear release
+carries; the version inside the image must equal the pinned one. Trivy's index
+signature is verified against the publisher's keyless workflow identity, and
+Hadolint publishes none, so its pin is the whole trust anchor. A command using
+an image also resolves Podman, and Cosign for a signed image, and records them
+among the run's tools. Records name the pinned index and the platform manifest
+that ran, so evidence states exactly what produced it. Findings are identical to
+the host tools of the same version; the local integration tier proves that
+against the real images.
+
+No other tool has an image, and the host executable stays the default.
+
+
+#### Accepting a stale Java database<a id="usage-stale-java-database"></a>
+
+Trivy keeps a second index, the Java database, that identifies jar artifacts by
+content when they carry no Maven coordinates. Its publisher sometimes lets it
+expire for days. `CC0507` rejects a qualification only when the image's SBOM
+actually inventories Java artifacts and that index has passed its next-update
+time; images without Java are never affected. When it blocks a release you need,
+record the risk and continue:
+
+```sh
+conclear release --revision HEAD --version "${version}" --profile foundata \
+  --accept-stale-java-database
+```
+
+The option also exists on `qualify` and `rescan`. Every affected record keeps
+`javaDatabase` with the acceptance and the artifact count, and the rejection
+becomes a `CC0507` warning, so the decision stays visible in the evidence. A
+resumed release reuses the decision the run recorded.
+
+`conclear doctor --scope qualify` reports the installed database's freshness and
+warns about an expired Java database before any image is built.
 
 
 #### Resuming an interrupted run<a id="usage-resume"></a>
@@ -452,13 +530,14 @@ and SHA-256 digest. Release archives contain exact source
 and configuration, SBOMs, scan and test reports, image metadata and signed
 attestations. Add `--include-image-layers` to retain image layers too.
 
-Signing keys, credentials, protected profiles, raw logs, private test outputs
-and scanner database caches are excluded. Source and reports may still be
-sensitive; review archives before sharing them.
+Nothing else travels: the
+[archive contract](./ARCHITECTURE.md#records-and-workspaces) lists the members
+and names what stays out, among them signing keys, credentials, protected
+profiles, raw logs, private test outputs and the scanner database cache. Source
+and reports may still be sensitive; review archives before sharing them.
 
-Keep archives while the release is supported and for your chosen review period
-afterward. Keep referenced source archives beside their rescans. See
-[backup](./docs/backup.md) for retention and separate key backups.
+How long to keep an archive, what to keep beside it and how to back up keys are
+covered in [backup](./docs/backup.md).
 
 Verify an archive against your trusted profile key:
 
@@ -608,10 +687,31 @@ promotion commands are listed in the
 [command reference](./ARCHITECTURE.md#command-model).
 
 
-#### JSON output and exit codes<a id="usage-json-exit-codes"></a>
+#### Output, JSON and exit codes<a id="usage-json-exit-codes"></a>
 
-Add `--format json` for machine-readable results on stdout. Diagnostics go to
-stderr.
+Stdout carries what a command produced and nothing else: the result, or with
+`--format json` one machine-readable result document. Stderr carries what
+happened on the way: a dim `»` opens each phase under way, and a bold `$` marks
+every external command that really ran. A build, qualification or release is
+minutes of container work, so that narration is how you see it move.
+
+```console
+$ conclear qualify --revision HEAD --version 1.2.3 --platform linux/amd64
+» Building app for linux/amd64
+$ buildah --root … build --platform linux/amd64 …
+» Testing app for linux/amd64
+$ podman --root … run --rm …
+» Scanning app for linux/amd64
+» Recorded the accepted qualification of app for linux/amd64
+Platform qualification is accepted
+```
+
+`-q`/`--quiet` before the command keeps stdout and drops the narration on
+stderr; it never suppresses an error or a warning. `2>/dev/null` does the same,
+and `2>&1 | tee run.log` keeps both together. Redirected output stays plain;
+`NO_COLOR` disables color on a terminal and `FORCE_COLOR` demands it where no
+terminal is detected. Nothing narrated ever enters a record, an archive or the
+release-gate artifacts.
 
 | Exit code | Meaning |
 | --------: | ------- |
@@ -643,9 +743,8 @@ It also identifies guide requirements that need manual review or external
 controls. The [guide options](./docs/conformance.md#guide-options) section lists
 supported and unsupported choices.
 
-For implementation details, see [ARCHITECTURE.md](./ARCHITECTURE.md), the
-[implementation matrix](./docs/implementation.md) and the
-[compatibility inventory](./docs/compatibility-inventory.json).
+For implementation details, see [ARCHITECTURE.md](./ARCHITECTURE.md) and the
+[implementation matrix](./docs/implementation.md).
 
 
 ## Contributing<a id="contributing"></a>
@@ -658,15 +757,17 @@ and the clean-checkout release gate.
 ## Licensing, copyright<a id="licensing-copyright"></a>
 
 <!--REUSE-IgnoreStart-->
-<!-- rumdl-disable-next-line MD034 --><!-- should match SPDX-PackageSupplier -->
-Copyright (c) 2026, foundata GmbH (https://foundata.com)
+<!-- rumdl-disable MD034 --><!-- should match SPDX-PackageSupplier -->
+Copyright (c) 2026, [foundata GmbH](https://foundata.com/)
+(https://foundata.com)
+<!-- rumdl-enable MD034 -->
 
 This project is licensed under the GNU General Public License v3.0 or later
 (SPDX-License-Identifier: `GPL-3.0-or-later`), see
-[`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt) for the full
+[`LICENSES/GPL-3.0-or-later.txt`](./LICENSES/GPL-3.0-or-later.txt) for the full
 text.
 
-The [`REUSE.toml`](REUSE.toml) file provides detailed licensing and copyright
+The [`REUSE.toml`](./REUSE.toml) file provides detailed licensing and copyright
 information in a human- and machine-readable format. This includes parts that
 may be subject to different licensing or usage terms, such as third-party
 components. The repository conforms to the

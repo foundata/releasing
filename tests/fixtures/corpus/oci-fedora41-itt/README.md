@@ -148,15 +148,17 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution workflow and
 ### Container configuration, repository<a id="licensing-copyright-project"></a>
 
 <!--REUSE-IgnoreStart-->
-<!-- rumdl-disable-next-line MD034 --><!-- should match SPDX-PackageSupplier -->
-Copyright (c) 2025, 2026 foundata GmbH (https://foundata.com)
+<!-- rumdl-disable MD034 --><!-- should match SPDX-PackageSupplier -->
+Copyright (c) 2025, 2026, [foundata GmbH](https://foundata.com/)
+(https://foundata.com)
+<!-- rumdl-enable MD034 -->
 
 This project is licensed under the GNU General Public License v3.0 or later
 (SPDX-License-Identifier: `GPL-3.0-or-later`), see
-[`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt) for the full
+[`LICENSES/GPL-3.0-or-later.txt`](./LICENSES/GPL-3.0-or-later.txt) for the full
 text.
 
-The [`REUSE.toml`](REUSE.toml) file provides detailed licensing and copyright
+The [`REUSE.toml`](./REUSE.toml) file provides detailed licensing and copyright
 information in a human- and machine-readable format. This includes parts that
 may be subject to different licensing or usage terms, such as third-party
 components. The repository conforms to the

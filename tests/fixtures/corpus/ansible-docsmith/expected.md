@@ -12,6 +12,8 @@ and within
 [collections](https://docs.ansible.com/ansible/latest/collections_guide/index.html).
 
 
+<!-- rumdl-disable MD033 -->
+<!-- HTML for consistent rendering across limited platform parsers -->
 <div align="center" id="project-readme-header">
 <br>
 <br>
@@ -27,6 +29,7 @@ and within
 
 <br>
 </div>
+<!-- rumdl-enable MD033 -->
 
 
 ## Table of contents<a id="toc"></a>
@@ -55,17 +58,19 @@ and within
 - Ansible role: `foundata.acmesh.run`:
   1. [`README.md` with generated variable documentation](https://github.com/foundata/ansible-collection-acmesh/blob/main/roles/run/README.md#role-variables)
   2. [`defaults/main.yml` entry point with generated YAML comments](https://github.com/foundata/ansible-collection-acmesh/blob/main/roles/run/defaults/main.yml)
-  3. [`argument_specs.yaml`](https://github.com/foundata/ansible-collection-acmesh/blob/main/roles/run/meta/argument_specs.yml)
+  3. [`argument_specs.yml`](https://github.com/foundata/ansible-collection-acmesh/blob/main/roles/run/meta/argument_specs.yml)
      (source of truth)
 - Ansible role: `foundata.sshd.run`:
   1. [`README.md` with generated variable documentation](https://github.com/foundata/ansible-collection-sshd/blob/main/roles/run/README.md#role-variables)
   2. [`defaults/main.yml` entry point with generated YAML comments](https://github.com/foundata/ansible-collection-sshd/blob/main/roles/run/defaults/main.yml)
-  3. [`argument_specs.yaml`](https://github.com/foundata/ansible-collection-sshd/blob/main/roles/run/meta/argument_specs.yml)
+  3. [`argument_specs.yml`](https://github.com/foundata/ansible-collection-sshd/blob/main/roles/run/meta/argument_specs.yml)
      (source of truth)
 
 
 ### Screenshots<a id="demo-screenshots"></a>
 
+<!-- rumdl-disable MD033 -->
+<!-- HTML for image dimensions, which Markdown cannot express -->
 [<img src="https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/assets/images/screenshots/ansible-docsmith-cli-01-help.png" alt="Screenshot: DocSmith CLI, help" height="128" />](https://github.com/foundata/ansible-docsmith/blob/main/assets/images/screenshots/ansible-docsmith-cli-01-help.png)
 &#160;
 [<img src="https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/assets/images/screenshots/ansible-docsmith-cli-sshd-01-validate.png" alt="Screenshot: DocSmith CLI, validate; Results for foundata.sshd.run" height="128" />](https://github.com/foundata/ansible-docsmith/blob/main/assets/images/screenshots/ansible-docsmith-cli-sshd-01-validate.png)
@@ -77,23 +82,24 @@ and within
 [<img src="https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/assets/images/screenshots/ansible-docsmith-readme-sshd-01-toc.png" alt="Screenshot: Part of a README.md ToC, generated with DocSmith" height="128" />](https://github.com/foundata/ansible-docsmith/blob/main/assets/images/screenshots/ansible-docsmith-readme-sshd-01-toc.png)
 &#160;
 [<img src="https://raw.githubusercontent.com/foundata/ansible-docsmith/refs/heads/main/assets/images/screenshots/ansible-docsmith-readme-sshd-02-main.png" alt="Screenshot: Part of a README.md's main content describing role variables, generated with DocSmith" height="128" />](https://github.com/foundata/ansible-docsmith/blob/main/assets/images/screenshots/ansible-docsmith-readme-sshd-02-main.png)
+<!-- rumdl-enable MD033 -->
 
 
 ## Features<a id="features"></a>
 
-- **Efficient and simple:** Uses the `argument_specs.yml` from
-  [Ansible's built‑in role argument validation](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_reuse_roles.html#role-argument-validation)
-  as the single source of truth, generating human‑readable documentation in
-  multiple places while maintaining just one file.
-- **Built-in validation:** Verifies that argument specs are complete, correct,
-  and in sync with entry-point `defaults/`.
-- **Automation‑friendly:** Works seamlessly in CI/CD pipelines and pre‑commit
-  hooks.
-- **Supports Markdown and reStructuredText**.
-- **Understands
-  [Ansible markup](https://docs.ansible.com/projects/ansible/latest/dev_guide/ansible_markup.html):**
-  Constructs like `C(...)`, `O(...)`, `V(...)` or `M(...)` in descriptions are
-  converted to the target format.
+- Uses the `argument_specs.yml` from
+  [Ansible's built-in role argument validation](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_reuse_roles.html#role-argument-validation)
+  as the source for documentation in READMEs and entry-point files.
+- Checks argument specs for structural errors and inconsistencies with
+  entry-point `defaults/`. See [validation](#usage-validate) for checks and
+  severity levels.
+- Provides read-only checks and [exit codes](#usage-exit-codes) for CI/CD
+  pipelines and pre-commit hooks.
+- Supports Markdown and reStructuredText.
+- Converts
+  [Ansible markup](https://docs.ansible.com/projects/ansible/latest/dev_guide/ansible_markup.html),
+  such as `C(...)`, `O(...)`, `V(...)` and `M(...)`, in descriptions to the
+  target format.
 
 
 ## Installation<a id="installation"></a>
@@ -111,10 +117,13 @@ package manager of your choice.
 uv tool install ansible-docsmith
 ```
 
-**Using `pip` or `pipx`:**
+Alternatively, choose one of the following commands:
 
 ```bash
 pip install ansible-docsmith
+```
+
+```bash
 pipx install ansible-docsmith
 ```
 
@@ -127,45 +136,45 @@ most of our projects) so DocSmith runs on
 
 ### Preparations<a id="usage-preparations"></a>
 
-1. If not already existing, simply **create an `argument_specs.yml`** for
-   [Ansible’s role argument validation](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_reuse_roles.html#role-argument-validation).
-   Try to add `description:` to your variables. The more complete your
-   specification, the better the argument validation and documentation.
-2. **Add simple markers in your role's `README.md`** where DocSmith shall
-   maintain the human-readable documentation. All content between these markers
-   will be removed and updated on each `ansible-docsmith generate` run:
+1. Create `meta/argument_specs.yml` for
+   [Ansible's role argument validation](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_reuse_roles.html#role-argument-validation)
+   if it does not exist. Add `description:` to your variables to make the
+   generated documentation useful. A complete specification also improves
+   argument validation.
+2. Add the mandatory `MAIN` markers to your role's existing `README.md` where
+   the variable descriptions should appear. Each `ansible-docsmith generate` run
+   replaces all content between them:
 
    ```markdown
    <!-- ANSIBLE DOCSMITH MAIN START -->
    <!-- ANSIBLE DOCSMITH MAIN END -->
    ```
 
-   where the variable descriptions shall be placed (mandatory) and
+   Optionally, add `TOC` markers inside a hand-written table of contents (ToC).
+   These generate list entries for only the DocSmith-managed variable
+   documentation:
 
    ```markdown
    <!-- ANSIBLE DOCSMITH TOC START -->
    <!-- ANSIBLE DOCSMITH TOC END -->
    ```
 
-   for putting list entries for a table of contents (ToC) (optional). These list
-   only the DocSmith-managed variable documentation and are designed to be
-   placed inside a hand-written ToC list. Alternatively, use
+   Alternatively, add `TOC-FULL` markers to generate a complete ToC of all
+   README headings, including hand-written ones:
 
    ```markdown
    <!-- ANSIBLE DOCSMITH TOC-FULL START -->
    <!-- ANSIBLE DOCSMITH TOC-FULL END -->
    ```
 
-   to generate a complete ToC of *all* headings of the README, including
-   hand-written ones (optional). Headings with an explicit anchor (like
-   `## Usage<a id="usage"></a>`) are linked exactly; for other headings, the
-   anchor is derived from the heading text and `validate` emits a notice, as the
-   derivation cannot be guaranteed to match your rendering platform for exotic
-   titles.
+   Headings with an explicit anchor (like `## Usage<a id="usage"></a>`) are
+   linked exactly; for other headings, the anchor is derived from the heading
+   text and `validate` emits a notice, as the derivation cannot be guaranteed to
+   match your rendering platform for exotic titles.
 
-That's it. The entry-point variable files below the `/defaults` directory of
-your role do *not* need additional preparations. The tool will automatically
-(re)place formatted inline comment blocks above variables defined there.
+The entry-point variable files in your role's `defaults/` directory need no
+additional preparation. DocSmith adds or replaces formatted inline comment
+blocks above the variables defined there.
 
 **The marker contract** in short:
 
@@ -276,27 +285,35 @@ ansible-docsmith generate /path/to/collection --check
 
 ### Validate `argument_specs.yml` and `/defaults`<a id="usage-validate"></a>
 
+Validate the argument specifications and their consistency with role entry-point
+files in `defaults/`:
+
 ```bash
-# Validate argument_specs.yml structure as well as role entry-point files in /defaults/.
-# These validation checks include:
-#
-# - ERROR:   Variables present in "defaults/" but missing from "argument_specs.yml".
-# - ERROR:   Variables with "default:" values defined in "argument_specs.yml" but
-#            missing from the entry-point files in "defaults/".
-# - WARNING: Unknown keys in "argument_specs.yml".
-# - WARNING: Invalid Ansible markup in descriptions (like "M()" without a FQCN).
-# - NOTICE:  Potential mismatches, where variables are listed in "argument_specs.yml"
-#            but not in "defaults/", for user awareness.
-# - NOTICE:  Variables whose name suggests a secret (like "*_password", "*_token")
-#            but do not set "no_log: true".
 ansible-docsmith validate /path/to/role
+```
 
-# Treat warnings as errors (exit code 1). Useful for CI/CD pipelines and
-# pre-commit hooks. Notices do not fail validation.
+Checks include:
+
+- Errors for variables present in `defaults/` but missing from
+  `argument_specs.yml`, or variables with a `default:` in the specification but
+  missing from the entry-point files.
+- Warnings for unknown keys in `argument_specs.yml` and invalid Ansible markup
+  in descriptions, such as `M()` without a fully qualified collection name
+  (FQCN).
+- Notices for non-required variables listed in the specification but absent from
+  an otherwise populated entry-point defaults file, and names suggesting secrets
+  (such as `*_password` or `*_token`) without `no_log: true`.
+
+Use `--strict` to make warnings fail validation with exit code `1`, for example
+in CI/CD pipelines or pre-commit hooks. Notices do not fail validation.
+
+```bash
 ansible-docsmith validate /path/to/role --strict
+```
 
-# Validate only parts of a role:
-#
+To validate selected parts of a role:
+
+```bash
 # Skip the README checks (markers and ToC). Useful when only maintaining
 # comments in entry-point files.
 ansible-docsmith validate /path/to/role --no-readme
@@ -349,26 +366,36 @@ ansible-docsmith generate /path/to/role --template-readme ./templates/my-readme.
 ```
 
 Template files must use the `.j2` extension (for example, `simple-readme.md.j2`)
-and follow Jinja2 syntax. Below is a basic example:
+and follow Jinja2 syntax. This Markdown example documents top-level options from
+every entry point. It uses the built-in anchor convention so generated ToC
+entries and option links can resolve:
 
 ```jinja
-# {{ role_name | title }} Ansible Role
+{% set multiple_entry_points = specs | length > 1 %}
+{% for entry_point, entry_spec in specs.items() %}
+{% set short_anchors = (not multiple_entry_points) or entry_point == "main" %}
+{% set prefix = anchor_ns ~ ("" if short_anchors else entry_point ~ "-") %}
+## Role variables: `{{ entry_point }}`<a id="{{ prefix }}variables"></a>
 
-{% if has_options %}
-## Role variables
+{% if entry_spec.options %}
+{% for var_name, var_spec in entry_spec.options.items() %}
+### `{{ var_name }}`<a id="{{ prefix }}variable-{{ var_name }}"></a>
 
-{% for var_name, var_spec in options.items() %}
-- **{{ var_name }}** ({{ var_spec.type }}): {{ var_spec.description }}
+Type: `{{ var_spec.type }}`
+
+{{ var_spec.description | format_description }}
+
 {% endfor %}
 {% else %}
-The role has no configurable variables.
+This entry point has no configurable variables.
 {% endif %}
+{% endfor %}
 ```
 
-**Check out the
-[`readme/default.md.j2`](https://github.com/foundata/ansible-docsmith/blob/main/src/ansible_docsmith/templates/readme/default.md.j2)**
-template that DocSmith uses as an advanced example with conditional sections.
-Copying this file is often the easiest way to get started.
+Copy the built-in
+[`readme/default.md.j2`](https://github.com/foundata/ansible-docsmith/blob/main/src/ansible_docsmith/templates/readme/default.md.j2)
+template for a starting point that also includes nested options, defaults and
+other option metadata, with conditional sections.
 
 **Available template variables** (the context contract):
 
@@ -403,30 +430,37 @@ specification with the keys `type`, `required`, `default`, `description`,
 **Stability:** the variables and filters documented above are the supported
 contract and only change with a major release (deprecated values like `options`
 may then disappear). Anything else you might discover by reading DocSmith's
-internals — undocumented context values, filter internals, module layout — can
-change in any release.
+internals, including undocumented context values, filter internals and module
+layout, can change in any release.
 
-If you are creative, you may even maintain non-obvious parts of your `README.md`
-between the markers:
+Templates can also generate playbook examples and author information between the
+markers. The following example uses the compatibility context to document only
+the first entry point as a task snippet for a playbook. It renders
+JSON-compatible defaults with Jinja2's `tojson` filter, whose output is also
+valid YAML, and leaves variables without a non-null default commented out.
+Supply values for required variables before running the example:
 
 ````jinja
-## Example Playbook
+## Example playbook
 
 ```yaml
-[...]
 - ansible.builtin.include_role:
     name: "{{ role_name }}"
+    tasks_from: "{{ primary_entry_point }}"
+    defaults_from: "{{ primary_entry_point }}"
+{% if options.values() | rejectattr('default', 'none') | list %}
   vars:
+{% endif %}
 {% for var_name, var_spec in options.items() %}
 {% if var_spec.default is not none %}
-    {{ var_name }}: {{ var_spec.default }}
+    {{ var_name }}: {{ var_spec.default | tojson }}
 {% else %}
-    # {{ var_name }}: # {{ var_spec.description }}
+    # {{ var_name }}: # {{ var_spec.description | format_description | replace('\n', ' ') }}
 {% endif %}
 {% endfor %}
 ```
 
-## Author Information
+## Author information
 
 {% if primary_spec.author %}
 {% for author in primary_spec.author %}
@@ -440,8 +474,10 @@ between the markers:
 ## Licensing, copyright<a id="licensing-copyright"></a>
 
 <!--REUSE-IgnoreStart-->
-Copyright (c) 2025, 2026 [foundata GmbH](https://foundata.com/)
-(<https://foundata.com>)
+<!-- rumdl-disable MD034 --><!-- should match SPDX-PackageSupplier -->
+Copyright (c) 2025, 2026, [foundata GmbH](https://foundata.com/)
+(https://foundata.com)
+<!-- rumdl-enable MD034 -->
 
 This project is licensed under the GNU General Public License v3.0 or later
 (SPDX-License-Identifier: `GPL-3.0-or-later`), see
@@ -474,8 +510,8 @@ endorsement by the trademark holders.
 
 ## Author information<a id="author-information"></a>
 
-This project was created and is maintained by [foundata](https://foundata.com/).
-If you like it, you might
+This [project](https://foundata.com/en/projects/) was created and is maintained
+by [foundata](https://foundata.com/). If you like it, you might
 [buy us a coffee](https://buy-me-a.coffee/ansible-docsmith/).
 
 The Ansible DocSmith project is *not* associated with

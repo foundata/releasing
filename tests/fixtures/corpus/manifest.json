@@ -2,129 +2,129 @@
   "readmes": [
     {
       "repository": "ansible-docsmith",
-      "revision": "ac2f807e1d6c51d5c4311ef8815145de6120c7e5",
+      "revision": "5aeea2a0362bb692fc36b59f6e40272ffb0ae380",
       "matches_committed_readme": true,
-      "sha256": "0e14fc81ce85bf16e3269ca08ddb7fcf3731bb8dbb613830b100c55e599a26fc"
+      "sha256": "ba095589f48b97eb084b11a3db2ec8c7d5462bc44efe65eab35fae7b9263a9c0"
     },
     {
       "repository": "conclear",
-      "revision": "93692472fdb99cc2d3ea0e9c8aa8332d92d6ac63",
+      "revision": "34f0841c6a0359133f0fa918cc4dcae8521d5ad5",
       "matches_committed_readme": true,
-      "sha256": "e48a19e980c8901e830c58db38d3676d076fba8f612a527d5f22330400af6333"
+      "sha256": "b94bf753dc0a5ac8ee9bc3b2adb06ec2d35dbd36ed731bed0d2fe24a6aaf8948"
     },
     {
       "repository": "oci-almalinux10-itt",
-      "revision": "994fbd87226959147628ac6207a67d62b24f9d9a",
+      "revision": "a9787874c26e17aa84a4a67501e339316333e5b3",
       "matches_committed_readme": true,
-      "sha256": "c3b1f2b15f86a9e6b90cad18260d391c2f5b9e6ab26e9072f70993d68d62908f"
+      "sha256": "938128eb8354c3f808fbb4df32e4d71e0a00ce55a3d9ee07b7dc12f4d324393f"
     },
     {
       "repository": "oci-almalinux8-itt",
-      "revision": "e7bbea4eaaed7d92cc5d00201d7acd5e0bc56680",
+      "revision": "d52d368a9d56ea27c4c7a114974a4f4a111d60da",
       "matches_committed_readme": true,
-      "sha256": "2ae1ac66d8f1db23198214a1c97c8fa9d0ed475ef713aad83261862f41fd7d73"
+      "sha256": "d79044a558ea19620f96ca3f4e80cfe6e17785313d6937d67b279f285c46e55d"
     },
     {
       "repository": "oci-almalinux9-itt",
-      "revision": "2ece39ac37221269c0b5c28c1310b46ff11c3ac5",
+      "revision": "d59f41b6d23a25918586497d2b8580198a205702",
       "matches_committed_readme": true,
-      "sha256": "4ee9f8adcae33d7bb524490bc7d6110b265d55ae3681631d2b2e4e452faf2641"
+      "sha256": "f50619a1fb882d13b4bf309864c436bc4f445492deb24b1115aa47aa2aa8ca8d"
     },
     {
       "repository": "oci-centosstream10-itt",
-      "revision": "e165e60c847c3617597a5947a2a6e10ad8b1d438",
+      "revision": "ec3cd3cc6af062abe1932ed3ed22573463c940bb",
       "matches_committed_readme": true,
-      "sha256": "6c261f8caf059f0b3a113059683e5a52b4b42a5698a790ceaf99d61277b63a23"
+      "sha256": "6d7fd8f137bc972be47556ee9281c5057812c9b86e352d0f2297c689187a5e30"
     },
     {
       "repository": "oci-centosstream9-itt",
-      "revision": "b09ade8672a218ff4ffa90b2db86b9c37aa340a1",
+      "revision": "037dd55b82bf40e2e22871f0005daf0fc994b2bc",
       "matches_committed_readme": true,
-      "sha256": "8269f337e8a38c567e518c4ca3fc7e2157ca2a3feeefe78b8cdb11a39c37e0de"
+      "sha256": "118ee364c84cb395cc63c875cd0c7369b1d3cf97095fc2a1327c34c2ae784e64"
     },
     {
       "repository": "oci-debian11-itt",
-      "revision": "e8b82caf90d06265b4b6790ccd07b27ef0d267a0",
+      "revision": "b306125bb693377a4c6c8ba243c54215302336ad",
       "matches_committed_readme": true,
-      "sha256": "9c0f6818e0d0fd1ca258ce10f01d8bffc0c673c287416459e37b971c3168cb02"
+      "sha256": "7038414d93d84a4b9ef2ed02736d4adfea3abd7e67010d1b412f88371cd29dc5"
     },
     {
       "repository": "oci-debian12-itt",
-      "revision": "d10946de555bed8463c3dff4f1cecaacaae8fe64",
+      "revision": "1cbf928e4598b71439cc6dd4d9ad67c00558be13",
       "matches_committed_readme": true,
-      "sha256": "728c5da7e4399c21a7fc0288fef94dda9b2e2a9037653d23501674fd4cecdb06"
+      "sha256": "6e698b82cc73fd4b235b134c2d6d13d89f50f62ddebe3f8be4e1f31fce5adf79"
     },
     {
       "repository": "oci-debian13-itt",
-      "revision": "5a3ec33ea1f74d91fda880ef3e7df0833c04090e",
+      "revision": "a33ca13d0ea831d923b5b39780ad1e884ad408ed",
       "matches_committed_readme": true,
-      "sha256": "2acfefbe5859476da83434726d21039bd41dff6c7090c43c635f7202bd7e0d63"
+      "sha256": "f0c85cab71835f56d4a50e55af2144cc76b9cea9b26f368214afde28e794bc8e"
     },
     {
       "repository": "oci-fedora40-itt",
-      "revision": "55ee3d83ee1f75176e5af5d646772ab1f98d286f",
+      "revision": "54b2e8f5a7ab2f12ffa5497edfe5c2c76d749a3d",
       "matches_committed_readme": true,
-      "sha256": "2bdf14e6010a1130960cf7a7f3f0db8823a7b7df4b52d13c5d7489999842cea4"
+      "sha256": "a4d46fc03b5c301cdc4ac40d961608730c235ce7e6e11581efe462c214829046"
     },
     {
       "repository": "oci-fedora41-itt",
-      "revision": "3805d119386607ce40ea9b31766793aefe112674",
+      "revision": "a10f0fa41e95e0746dd54e29785551195f43ae87",
       "matches_committed_readme": true,
-      "sha256": "d7d2bbe01d204b7bee2976c52fa71e99a6b861b5b460a55f4290e73af810d923"
+      "sha256": "ce5c9a07bd85752620fc5a5130032af2f8e50a305e0e7eefedcb75e2538893eb"
     },
     {
       "repository": "oci-fedora42-itt",
-      "revision": "d50f5b69b470c149ec7c6094bfe15ef46b366da2",
+      "revision": "a0ab11ce15222fef8f1c4f3d0c281ccbca1c029e",
       "matches_committed_readme": true,
-      "sha256": "075771cefd0961cc142f78d7bdb3a1c645f7c3f7975bf60f229692a3aac0977b"
+      "sha256": "491c3f93e9fea0d6b5b59ea526cd6f6a593228ea0d61b6e45f6dfe290cbdc6da"
     },
     {
       "repository": "oci-fedora43-itt",
-      "revision": "a1e5606910d231c4025c2db479a3662c6dea52cd",
+      "revision": "e3c34a69ee420df66b96ed88d6644d29624fcfec",
       "matches_committed_readme": true,
-      "sha256": "334ae6fa2eeda85b1ddd6976d01bb8c5b5cda2321b42ffed1037ddb539bbafa9"
+      "sha256": "92af390a7efd0db8176d2422fa48a04c966090b556e8e16301bc5007f92de78f"
     },
     {
       "repository": "oci-fedora44-itt",
-      "revision": "be129734e3c2b5a210d46335e203a7c929110fb8",
+      "revision": "965b47d7b90690010dcae1e3ac56ce78167e6fe4",
       "matches_committed_readme": true,
-      "sha256": "5c38a373d16c53cca1e98772bd5341430c8568ca8d85f3f5528561efc8ab8157"
+      "sha256": "159530e7f5e1c439d7ef831c35ff0bba0b06839a9d3efe31b19cec68188e93db"
     },
     {
       "repository": "oci-opensuseleap156-itt",
-      "revision": "0f4f9f21112c8cdc5111486364c58d2ae6235f9b",
+      "revision": "ac089d2ebe058d970114bd3b8095f6f6d73c4f83",
       "matches_committed_readme": true,
-      "sha256": "f1fd4307d609a149ee94a6259b79fc0e59c3ecf205f0612fc5355b7aded714f6"
+      "sha256": "ade9491ff098ddae21fe8f6882c757d379c3aface28d10ee9844c87d9f7ed7d3"
     },
     {
       "repository": "oci-opensuseleap160-itt",
-      "revision": "6e5066177dc6bd16d04facc05c71162f2ff1a959",
+      "revision": "e544eb10c92c2c7a593c5c82bdd2be8534fffadc",
       "matches_committed_readme": true,
-      "sha256": "b4cf10e277cd6d1e20985dbf5e9481f9436d780cacc516c21844c638b57d672c"
+      "sha256": "541d30f8ff18694dc2b335818f4ddfc52422dbfedde1ca6f7077c85180ba87ce"
     },
     {
       "repository": "oci-ubuntu2204-itt",
-      "revision": "4f469d9beebec765c0616f1301c0105ae41db79a",
+      "revision": "aabfbf29bcf0c5818ee61eeddebf7eed6133d929",
       "matches_committed_readme": true,
-      "sha256": "e2524cfb5423804e6e68d36b77bcde6a822b775fef27fb779ad9cfb367fbab84"
+      "sha256": "fb18a2e7a61a3ec277cd4201c285e69a3f1fb9adccb747453416f8e80c490e76"
     },
     {
       "repository": "oci-ubuntu2404-itt",
-      "revision": "5b7826ef16e9ef28a2f7a6dc1dfa82e7f6196071",
+      "revision": "aa2d31e675a834afc3d842505e6222b24182307c",
       "matches_committed_readme": true,
-      "sha256": "bbf791166488004312eb5488c70e18db8be60dcd8b32a9d6b3e9a12c650d8086"
+      "sha256": "657459c5b36b2ceba17361358358309b87d233dcb22aef68b199b5bc76062a20"
     },
     {
       "repository": "oci-ubuntu2604-itt",
-      "revision": "c22d54dd8350d45d5d7703194cbd3882971e662c",
+      "revision": "09d82461f0fff6217c3cf92370381778281a8f0e",
       "matches_committed_readme": true,
-      "sha256": "f4080a07da683aa8dd5a481588a9520e6a6613adf7554390f306656db4a72f2b"
+      "sha256": "b7b2af757ae7a9d2ceebe94fd21410f3e2014e9c10a7ca082075b10f9ebfd250"
     },
     {
       "repository": "scanmole",
-      "revision": "d7ba09102772fa0012ab07e10531a36f374bad48",
-      "matches_committed_readme": false,
-      "sha256": "c1437de7bb88940cc3f1eaeac69f8195dc0af2fcc63ea1b6aaba0a79bac76292"
+      "revision": "854e5dbc1f37d34584a5da9d7f342706fd2251d5",
+      "matches_committed_readme": true,
+      "sha256": "e85e7c76c0d38a50f6245974e3f219e90b7baac6f1d90c0d0de052f5f0e95cbb"
     }
   ]
 }
