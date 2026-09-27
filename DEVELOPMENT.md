@@ -115,9 +115,10 @@ check covers every Markdown file in the repository except those under
 `tests/fixtures`: the corpus snapshots and their expected output are
 deliberately excluded, because formatting them would invalidate the comparison.
 
-Every other foundata repository commits the same copy, and the ones without a
-test suite (the Ansible collections, the skeletons, the container drill) have
-nothing to notice a change in the guide.
+Every other foundata repository commits the same copy. The container drill
+compares it in its own `hack/check.sh`, using the same guide-checkout convention
+as the test above; the Ansible collections and the skeletons have nothing to
+notice a change in the guide.
 [`tools/markdown-config-drift.sh`](./tools/markdown-config-drift.sh) compares
 them all at once, so a guide change is one command away from naming every file
 to refresh:
