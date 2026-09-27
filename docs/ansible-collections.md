@@ -156,15 +156,21 @@ be replaced. Step 5 uploads the file whose digest the build recorded and step
 
 ## If something goes wrong<a id="if-something-goes-wrong"></a>
 
-Before the tag is pushed, fix the problem and repeat from the failing step;
-delete the build directory first, since `build` refuses to write into an
-existing one.
+Run `release status` with the version and, if available, the manifest to
+identify the unfinished or broken steps.
 
-After the tag is pushed but before a forge release exists:
+If no artifact has been uploaded and no forge release exists, fix the problem
+and repeat from the affected step. Source changes need a new commit and build;
+delete the old build directory first, since `build` refuses to write into an
+existing one. If a tag already names the old commit, delete it before tagging
+the rebuilt revision:
 
 ```sh
 release tag delete "${version}"   # local and remote
 ```
 
-After a forge release exists, or after the upload, the version is spent. Use a
-new patch version.
+If the artifact has been uploaded or a forge release exists, keep the tag and
+validated artifact. For an interrupted publication of a correct artifact, resume
+the missing steps, such as creating the forge release, then run verification. If
+the published content is wrong, the version is spent: prepare a new patch
+version instead of rebuilding or retagging that version.

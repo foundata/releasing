@@ -155,9 +155,10 @@ compatibility check.
 
 ## Checking on Windows<a id="checking-on-windows"></a>
 
-The package supports Windows and the suite passes there: 714 passed and 19
-skipped on Windows Server 2025 with Python 3.14, measured on 2026-09-23. No
-development or release step needs Windows; a Linux run covers every test.
+The package supports Windows. A run on Windows Server 2025 with Python 3.14 on
+2026-09-23 recorded 714 passed and 19 skipped tests. Development and release
+commands can run on Linux; checking native Windows behavior requires a Windows
+run.
 
 `reporting.program()`, `reporting.render()` and `reporting.wants_colour()` take
 `platform=` instead of reading `sys.platform`, so both sets of rules are
@@ -196,11 +197,13 @@ Three things decide whether that run means anything:
 
 ## Dependencies<a id="dependencies"></a>
 
-The direct runtime dependencies are `markdown-it-py` and `typing-extensions` on
-every supported Python version. The latter supplies the `override` decorator
-through one unconditional import, including on Python 3.11. Everything else
-comes from the standard library, including the archive, JSON, hashing and HTTP
-handling. Every question put to a forge or a package index goes through the
+The direct runtime dependencies are `markdown-it-py`, `typing-extensions` and
+`PyYAML` on every supported Python version. `typing-extensions` supplies the
+`override` decorator through one unconditional import, including on Python 3.11.
+`PyYAML` reads collection changelog data and is imported only when that data is
+needed. Archive, JSON, hashing and HTTP handling use the standard library.
+
+Every question put to a forge or a package index goes through the
 `fetch` module, so one place decides how a request is made: a revalidated GET, a
 bounded wait and one narrated line per request. The parser decides which text is
 a link, reference definition, code block, code span or HTML region. The private
@@ -435,13 +438,14 @@ keeping once step 8 passes.
    ```
 
    `tag create` refuses a dirty working tree, a version that the declaration,
-   the lockfile and the changelog do not all state, or a revision other than
-   the one the manifest's artifacts were built from. `push` sends
-   the branch first and the tag second, and refuses when the branch does not
-   contain the tagged commit.
+   the lockfile and the changelog do not all state, or a revision other than the
+   one the manifest's artifacts were built from. `push` sends the branch first
+   and the tag second, and refuses when the branch does not contain the tagged
+   commit.
 
-   While no GitHub release exists, a tag that named the wrong revision can
-   still be removed and the procedure restarted from step 3:
+   Before any artifact is uploaded to PyPI and while no GitHub release exists, a
+   tag that named the wrong revision can be removed and the procedure restarted
+   from step 3:
 
    ```sh
    uv run --locked release tag delete "${version}"

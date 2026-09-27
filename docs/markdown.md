@@ -21,9 +21,10 @@ uses.
 
 ## Running the command<a id="running-the-command"></a>
 
-The command is part of the `releasing` package; see the
-[README](../README.md) for installation. Its direct runtime dependencies are
-`markdown-it-py` and `typing-extensions`.
+The command is part of the `releasing` package; see the [README](../README.md)
+for installation. Markdown preparation uses `markdown-it-py` and
+`typing-extensions`. The package also depends on `PyYAML` for collection
+changelog data; see [Dependencies](../DEVELOPMENT.md#dependencies).
 
 ```sh
 release markdown prepare \

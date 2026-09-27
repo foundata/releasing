@@ -26,6 +26,9 @@ Decide the version according to [Semantic Versioning](https://semver.org/).
 
 ## The release<a id="the-release"></a>
 
+For a workspace, replace step 7 with the per-distribution commands under
+[Workspaces](#workspaces).
+
 ```sh
 version="<major.minor.patch>"
 
@@ -80,9 +83,10 @@ commit made in it leaves the tree clean and the version sites correct, so only
 the manifest's source revision can tell that the tag would name something no
 artifact came from.
 
-While no forge release exists, `release tag delete` can still remove a tag
-that named the wrong revision; after the release is created, the version is
-spent and the fix needs a new one.
+Before any artifact is uploaded and while no forge release exists,
+`release tag delete` can remove a tag that named the wrong revision. Once an
+artifact is uploaded or a forge release exists, correcting the published content
+needs a new version.
 
 A version can be uploaded to PyPI only once. A broken release cannot be
 replaced, only [yanked](https://pypi.org/help/#yanked), so step 5 uploads the
@@ -114,17 +118,32 @@ copies = ["packages/example/README.md", "packages/example-gui/README.md"]
 fails when a member falls behind. A new major version still needs the upper
 bound of the pin raised by hand.
 
+In step 7, verify each distribution separately. A manifest with several
+distributions requires `--distribution`; the command checks only the selected
+package:
+
+```sh
+uv run release verify "../dist-${version}/artifacts.json" --distribution example
+uv run release verify "../dist-${version}/artifacts.json" --distribution example-gui
+```
+
 ## If something goes wrong<a id="if-something-goes-wrong"></a>
 
-Before the tag is pushed, fix the problem and repeat from the failing step;
-delete the build directory first, since `build` refuses to write into an
-existing one.
+Run `release status` with the version and, if available, the manifest to
+identify the unfinished or broken steps.
 
-After the tag is pushed but before a forge release exists:
+If no artifact has been uploaded and no forge release exists, fix the problem
+and repeat from the affected step. Source changes need a new commit and build;
+delete the old build directory first, since `build` refuses to write into an
+existing one. If a tag already names the old commit, delete it before tagging
+the rebuilt revision:
 
 ```sh
 uv run release tag delete "${version}"   # local and remote
 ```
 
-After a forge release exists, or after the upload, the version is spent. Use a
-new patch version.
+If any artifact has been uploaded or a forge release exists, keep the tag and
+validated artifacts. For an interrupted publication of correct artifacts, resume
+the missing steps, such as creating the forge release, then run verification. If
+the published content is wrong, the version is spent: prepare a new patch
+version instead of rebuilding or retagging that version.

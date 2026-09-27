@@ -1,7 +1,8 @@
 # Verifying a published release
 
-`release verify` runs three checks after an upload and stops at the first one
-that fails. A project that uploads nothing has a shorter list; see
+`release verify` checks the published artifacts and the forge release, stopping
+at the first failure. For PyPI, it also checks an isolated installation. A
+project that uploads nothing verifies its tag instead of artifacts; see
 [A release that is a tag](#a-release-that-is-a-tag).
 
 ```sh
@@ -16,16 +17,17 @@ the bytes the index hands to users, which a version number alone cannot do.
 PyPI reports a digest per file; Ansible Galaxy reports one for the collection
 artifact.
 
-Second, an isolated install has to report the version. `uv run --isolated
---no-project --refresh-package NAME --with NAME==VERSION` installs the
-published distribution into a throwaway environment and reads its installed
-metadata. The index listing is refreshed rather than taken from the local
-cache, because this check runs moments after an upload, when a cached listing
-still predates the version and the resolver would report it as nonexistent.
-`--no-install` skips the step, for example on a machine without access to the
-index.
+For PyPI only, an isolated install then has to report the version.
+`uv run --isolated --no-project --refresh-package NAME --with NAME==VERSION`
+installs the published distribution into a throwaway environment and reads its
+installed metadata. The index listing is refreshed rather than taken from the
+local cache, because this check runs moments after an upload, when a cached
+listing still predates the version and the resolver would report it as
+nonexistent. `--no-install` skips this step; the index and forge checks still
+require network access. Ansible Galaxy verification does not install the
+collection.
 
-Third, the forge has to report the version's tag as its latest release. That
+Finally, the forge has to report the version's tag as its latest release. That
 catches a release someone forgot to create, or left as a draft.
 
 `--distribution` selects which name to query and which manifest entries to

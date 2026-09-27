@@ -94,10 +94,10 @@ and explicit-version artifact operations also work independently; see
 - `release forge release-create`: create the forge's release entry from the
   changelog and the manifest. See
   [The forge's release entry](./docs/forge-release.md).
-- `release verify`: the index serves the validated files, an isolated install
-  reports the version and the forge reports the tag as latest; for a project
-  that publishes no artifact, the remote holds the release tag and the forge
-  reports it as latest. See
+- `release verify`: check that the index serves the validated files and the
+  forge reports the tag as latest. For PyPI, also check that an isolated install
+  reports the version. For a project that publishes no artifact, check the
+  remote release tag and the forge's latest release. See
   [Verifying a published release](./docs/verify.md).
 - `release artifacts check`, `manifest` and `verify`: distributions carry
   the right version, a description without relative links and no litter; their
@@ -117,10 +117,12 @@ The end-to-end order is in
 Every command sends its result to stdout and its progress to stderr, so
 output can be redirected without knowing which command is in hand.
 
-Stdout carries what the command produced and nothing else: the tag it created,
-the files it built, the changelog section, the manifest JSON, the report. A
-check writes nothing there and communicates its result through the exit
-status.
+Stdout carries what the command produced: the tag it created, the files it
+built, the changelog section, the manifest JSON or the report. Checks can
+produce results too: `config check` prints the effective configuration,
+`version check` prints the version, and `artifacts check` prints a summary per
+artifact. Checks without result data leave stdout empty. Every check
+communicates success or failure through its exit status.
 
 Stderr carries what happened on the way: what is being done, every command
 that changed something, and every request to a forge or an index.
@@ -138,8 +140,9 @@ v2.2.0
 ```
 
 `--quiet` (`-q`), accepted before or after the command, keeps stdout and drops
-the progress on stderr. It never suppresses an error. `2>/dev/null` does the
-same, and `2>&1 | tee release.log` keeps both together.
+the progress on stderr. It never suppresses an error. Redirecting stderr with
+`2>/dev/null` discards errors as well as progress. Use `2>&1 | tee release.log`
+to keep both streams together.
 
 Every command that changes something accepts `--dry-run`: it reports what it
 would do, marks the commands it would run, and changes nothing. A command that
