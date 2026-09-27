@@ -362,7 +362,7 @@ keeping once step 8 passes.
    caught here rather than after the upload.
 
    ```sh
-   version="<FIXME version>" # major.minor.patch
+   version="CHANGEME version" # major.minor.patch
 
    scripts/release-check.sh
    ```
