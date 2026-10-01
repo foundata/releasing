@@ -45,9 +45,7 @@ def fleet(tmp_path: Path, *, guide: str = GUIDE) -> Path:
     """A directory of repositories, one copy each, plus litter to ignore."""
     root = tmp_path / "fleet"
     (root / "guidelines").mkdir(parents=True)
-    (root / "guidelines" / "markdown-style-guide.md").write_text(
-        guide, encoding="utf-8"
-    )
+    (root / "guidelines" / "markdown.md").write_text(guide, encoding="utf-8")
     (root / "project").mkdir()
     (root / "project" / ".rumdl.toml").write_text(CONFIG, encoding="utf-8")
     (root / "skeletons" / "role_default").mkdir(parents=True)
@@ -122,12 +120,12 @@ def test_a_guide_without_the_block_is_an_error(shell: str, tmp_path: Path) -> No
 
 def test_a_missing_guide_names_the_override(shell: str, tmp_path: Path) -> None:
     root = fleet(tmp_path)
-    (root / "guidelines" / "markdown-style-guide.md").unlink()
+    (root / "guidelines" / "markdown.md").unlink()
 
     result = run(shell, root)
 
     assert result.returncode == 1
-    assert "No markdown-style-guide.md at" in result.stderr
+    assert "No markdown.md at" in result.stderr
     assert "FOUNDATA_GUIDELINES" in result.stderr
 
 

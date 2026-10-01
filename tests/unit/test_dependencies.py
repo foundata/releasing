@@ -14,7 +14,7 @@ from markdown_it.rules_inline import html_inline, image, link
 from tests import check_markdown
 from tests.support import ROOT
 
-GUIDE = "markdown-style-guide.md"
+GUIDE = "markdown.md"
 
 
 def _declared_parser_range() -> tuple[tuple[int, ...], int]:

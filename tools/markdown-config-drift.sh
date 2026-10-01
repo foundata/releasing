@@ -144,7 +144,7 @@ guide_file=''
 search_directory=''
 temporary_directory=''
 
-readonly GUIDE_NAME='markdown-style-guide.md'
+readonly GUIDE_NAME='markdown.md'
 readonly CONFIG_NAME='.rumdl.toml'
 readonly TEMPLATE_NAME='.rumdl.toml.j2'
 
