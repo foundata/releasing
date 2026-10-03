@@ -192,6 +192,29 @@ create a
 [![REUSE status](https://api.reuse.software/badge/github.com/foundata/releasing)](https://api.reuse.software/info/github.com/foundata/releasing)
 
 
+### Trademarks<a id="trademarks"></a>
+
+Third-party trademarks used in this repository:
+
+- Ansible® is a trademark of Red Hat, Inc., registered in the United States and
+  other countries.
+- Debian® is a trademark of Software in the Public Interest, Inc., registered in
+  Germany and the United States.
+- Linux® is a trademark of Linus Torvalds, registered in Germany, the European
+  Union and the United States.
+- Windows® is a trademark of Microsoft Corporation, registered in Germany, the
+  European Union and the United States.
+
+Their use here is purely descriptive and does not imply any affiliation with or
+endorsement by the trademark holders.
+
+Own and licensed trademarks used in this repository:
+
+- foundata® is a trademark of [IPAM GmbH](https://ipam-services.com/),
+  registered in Germany and the European Union, licensed to
+  [foundata GmbH](https://foundata.com/).
+
+
 ## Author information<a id="author-information"></a>
 
 This [project](https://foundata.com/en/projects/) was created and is maintained
