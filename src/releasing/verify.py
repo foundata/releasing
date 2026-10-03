@@ -15,7 +15,7 @@ whether the forge reports it as latest.
 import re
 from dataclasses import dataclass, replace
 
-from releasing import fetch, forge_api, processes
+from releasing import fetch, forge_api, processes, reporting
 from releasing.artifacts import Manifest, ManifestEntry
 from releasing.forges import Forge
 
@@ -30,6 +30,53 @@ class IndexFile:
 
     filename: str
     sha256: str
+
+
+def check_distribution(
+    manifest: Manifest,
+    *,
+    index: str,
+    version: str,
+    distribution: str | None = None,
+    install: bool = True,
+) -> None:
+    """Verify one distribution's published files and, for PyPI, installed version.
+
+    Stop at the first failure, reporting each completed check as it succeeds.
+    ``install=False`` skips only the isolated installation; the published
+    files must still match the manifest exactly.
+    """
+    distribution, selected = select_distribution(
+        manifest, index=index, version=version, distribution=distribution
+    )
+    problems = compare_with_manifest(
+        selected, index_files(index, distribution, version)
+    )
+    if problems:
+        raise VerificationError(
+            f"{index} serves other files than were validated:\n  "
+            + "\n  ".join(problems)
+        )
+    reporting.phase(f"Verified {index} serves the validated files for {version}")
+    if index == "pypi" and install:
+        reported = installed_version(distribution, version)
+        if reported != version:
+            raise VerificationError(
+                f"an isolated install of {distribution} reports {reported}, not {version}"
+            )
+        reporting.phase(
+            f"Verified an isolated install reports {distribution} {reported}"
+        )
+
+
+def check_latest(forge: Forge, tag: str) -> None:
+    """Verify that the forge reports ``tag`` as its latest release."""
+    latest = latest_tag(forge)
+    if latest != tag:
+        raise VerificationError(
+            f"{forge.name} reports {latest or 'no release'} as latest, not {tag}"
+        )
+    reporting.phase(f"Verified {forge.name} reports {tag} as the latest release")
 
 
 def pypi_files(name: str, version: str) -> list[IndexFile]:

@@ -197,3 +197,86 @@ def test_verification_preserves_progress_before_a_later_failure(
         assert "» Verified an isolated install reports example 1.0.0" in output.err
     assert "0.9.0" in output.err
     assert "forge:foundata/example" not in calls
+
+
+@pytest.mark.parametrize("no_install", [False, True])
+def test_galaxy_verifies_the_collection_without_installing_it(
+    project: Path,
+    calls: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_install: bool,
+) -> None:
+    declaration = project / "pyproject.toml"
+    declaration.write_text(
+        declaration.read_text(encoding="utf-8") + 'index = "galaxy"\n',
+        encoding="utf-8",
+    )
+    manifest = replace(
+        MANIFEST,
+        artifacts=(ManifestEntry("foundata-example-1.0.0.tar.gz", "5" * 64, 50),),
+    )
+
+    def index_files(index: str, name: str, version: str) -> list[verify.IndexFile]:
+        calls.append(f"index:{index}:{name}:{version}")
+        return [verify.IndexFile("foundata-example-1.0.0.tar.gz", "5" * 64)]
+
+    monkeypatch.setattr(verify, "index_files", index_files)
+
+    assert invoke(project, manifest, *(["--no-install"] if no_install else [])) == 0
+    assert calls == ["index:galaxy:foundata.example:1.0.0", "forge:foundata/example"]
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err == (
+        "» Verified galaxy serves the validated files for 1.0.0\n"
+        "» Verified github reports v1.0.0 as the latest release\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "recorded, requested, error",
+    [
+        ("", "1.0.0", None),
+        ("", None, "the manifest has no version; pass --version"),
+        ("1.0.0", "0.9.0", "the manifest records 1.0.0, not 0.9.0"),
+    ],
+)
+def test_explicit_version_fills_only_a_missing_manifest_version(
+    project: Path,
+    calls: list[str],
+    capsys: pytest.CaptureFixture[str],
+    recorded: str,
+    requested: str | None,
+    error: str | None,
+) -> None:
+    manifest = replace(MANIFEST, version=recorded, artifacts=MANIFEST.artifacts[:2])
+    result = invoke(
+        project, manifest, *([] if requested is None else ["--version", requested])
+    )
+
+    output = capsys.readouterr()
+    assert output.out == ""
+    if error is not None:
+        assert result == 1
+        assert error in output.err
+        assert calls == []
+    else:
+        assert result == 0
+        assert calls == [
+            "index:pypi:example:1.0.0",
+            "install:example:1.0.0",
+            "forge:foundata/example",
+        ]
+
+
+def test_quiet_verification_still_runs_every_check(
+    project: Path, calls: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert invoke(project, MANIFEST, "--distribution", "example", "--quiet") == 0
+    assert calls == [
+        "index:pypi:example:1.0.0",
+        "install:example:1.0.0",
+        "forge:foundata/example",
+    ]
+    output = capsys.readouterr()
+    assert (output.out, output.err) == ("", "")

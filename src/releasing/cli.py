@@ -809,41 +809,14 @@ def _run_verify(args: argparse.Namespace) -> int:
             found = manifest.version or args.version
             if args.version is not None and found != args.version:
                 raise ValueError(f"the manifest records {found}, not {args.version}")
-            distribution, selected = verify.select_distribution(
+            verify.check_distribution(
                 manifest,
                 index=loaded.index,
                 version=found,
                 distribution=args.distribution,
+                install=not args.no_install,
             )
-            problems = verify.compare_with_manifest(
-                selected, verify.index_files(loaded.index, distribution, found)
-            )
-            if problems:
-                raise verify.VerificationError(
-                    f"{loaded.index} serves other files than were validated:\n  "
-                    + "\n  ".join(problems)
-                )
-            reporting.phase(
-                f"Verified {loaded.index} serves the validated files for {found}"
-            )
-        if loaded.index == "pypi" and not args.no_install:
-            reported = verify.installed_version(distribution, found)
-            if reported != found:
-                raise verify.VerificationError(
-                    f"an isolated install of {distribution} reports {reported}, not {found}"
-                )
-            reporting.phase(
-                f"Verified an isolated install reports {distribution} {reported}"
-            )
-        expected = loaded.tag(found)
-        latest = verify.latest_tag(forge)
-        if latest != expected:
-            raise verify.VerificationError(
-                f"{loaded.forge} reports {latest or 'no release'} as latest, not {expected}"
-            )
-        reporting.phase(
-            f"Verified {loaded.forge} reports {expected} as the latest release"
-        )
+        verify.check_latest(forge, loaded.tag(found))
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
         return 1
