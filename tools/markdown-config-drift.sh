@@ -9,6 +9,10 @@
 # the skeletons and the drill have no suite to catch it, which is what this
 # script is for.
 #
+# With -w, each stale copy is overwritten with the guide's block, so a change
+# to the guide reaches every repository in one run. Nothing is committed; each
+# repository's own commit stays a deliberate step.
+#
 # Scratch and generated directories are skipped wherever they are: a clone in
 # tmp/ or a build tree in .nox/ holds a copy nobody maintains, and reporting it
 # would bury the copies that matter.
@@ -147,6 +151,7 @@ script_name="${0##*/}"
 guide_file=''
 search_directory=''
 temporary_directory=''
+write_mode='0'
 # Directory names skipped at any depth: scratch space, and the build and
 # environment trees of tools that copy a project into themselves.
 readonly SKIPPED_NAMES='.git .nox .tox .venv node_modules tmp'
@@ -166,10 +171,10 @@ readonly TEMPLATE_NAME='.rumdl.toml.j2'
 #   Writes usage information to STDOUT.
 usage() {
   printf '%s\n' \
-    "Usage: ${script_name} [-g guide] [-t directory] [-x directory]..." \
+    "Usage: ${script_name} [-w] [-g guide] [-t directory] [-x directory]..." \
     '' \
-    "Compare every committed ${CONFIG_NAME} below a directory of repositories" \
-    'with the one the foundata Markdown style guide shows.' \
+    "Compare every ${CONFIG_NAME} below a directory of repositories with the" \
+    'one the foundata Markdown style guide shows.' \
     '' \
     'Options:' \
     "  -g guide       Path to ${GUIDE_NAME} (default: the copy in" \
@@ -177,14 +182,17 @@ usage() {
     '                 searched directory).' \
     '  -t directory   Directory holding the repositories (default: the' \
     '                 directory holding this repository).' \
+    '  -w             Overwrite each stale copy with the guide'"'"'s block.' \
+    '                 Nothing is committed.' \
     '  -x directory   Skip a directory below the searched one, given relative' \
     '                 to it; repeatable. Directories named tmp, .nox, .tox,' \
     '                 .venv and node_modules are always skipped.' \
     '  -h             Print this help.' \
     '' \
     'Exit status:' \
-    '  0  Every copy matches the guide.' \
-    '  1  A copy drifted, or the guide or the copies could not be read.' \
+    '  0  Every copy matches the guide, or with -w now does.' \
+    '  1  A copy drifted or could not be written, or the guide or the copies' \
+    '     could not be read.' \
     '  2  Invalid usage.'
 }
 
@@ -204,6 +212,7 @@ print_error() {
 #   excluded_directories - Extended by every -x.
 #   guide_file           - Updated from -g.
 #   search_directory     - Updated from -t.
+#   write_mode           - Set by -w.
 # Arguments:
 #   $@ - Command-line arguments.
 # Returns:
@@ -212,13 +221,16 @@ parse_args() {
   local option
 
   OPTIND='1'
-  while getopts ':g:t:x:h' option; do
+  while getopts ':g:t:wx:h' option; do
     case "${option}" in
       'g')
         guide_file="${OPTARG}"
         ;;
       't')
         search_directory="${OPTARG}"
+        ;;
+      'w')
+        write_mode='1'
         ;;
       'x')
         add_exclusion "${OPTARG}" || return 2
@@ -346,19 +358,21 @@ EOF
 }
 
 ###
-# Compare every copy with the guide and report each one.
+# Compare every copy with the guide and report each one, rewriting the stale
+# ones with -w.
 # Globals:
 #   guide_file
 #   search_directory
 #   temporary_directory
+#   write_mode
 # Outputs:
 #   Writes one line per copy and a summary to STDOUT, errors to STDERR.
 # Returns:
-#   0 when every copy matches, 1 otherwise.
+#   0 when every copy matches (with -w: now matches), 1 otherwise.
 run_check() {
   local expected="${temporary_directory}/expected"
   local copies="${temporary_directory}/copies"
-  local copy relative state total='0' stale='0'
+  local copy relative state total='0' stale='0' written='0' failed='0'
 
   if [ ! -f "${guide_file}" ]; then
     print_error "No ${GUIDE_NAME} at: ${guide_file}"
@@ -383,16 +397,34 @@ run_check() {
     relative="${copy#"${search_directory}"/}"
     if cmp -s "${copy}" "${expected}"; then
       state='ok'
-    else
+    elif [ "${write_mode}" -eq 0 ]; then
       state='stale'
       stale=$((stale + 1))
+    # Redirecting into the existing file keeps its mode and ownership.
+    elif cat "${expected}" >"${copy}"; then
+      state='wrote'
+      written=$((written + 1))
+    else
+      state='error'
+      failed=$((failed + 1))
     fi
     printf '%-5s %s\n' "${state}" "${relative}"
   done <"${copies}"
 
+  if [ "${write_mode}" -eq 1 ]; then
+    printf '%s copy/copies checked, %s rewritten' "${total}" "${written}"
+    [ "${failed}" -eq 0 ] || printf ', %s could not be written' "${failed}"
+    printf '\n'
+    if [ "${failed}" -ne 0 ]; then
+      print_error 'Fix the access to the file(s) marked error above.'
+      return 1
+    fi
+    return 0
+  fi
+
   printf '%s copy/copies checked, %s stale\n' "${total}" "${stale}"
   if [ "${stale}" -ne 0 ]; then
-    print_error "Copy the guide's block over the stale file(s) above."
+    print_error "Copy the guide's block over the stale file(s) above, or run with -w."
     return 1
   fi
 

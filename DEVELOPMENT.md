@@ -126,7 +126,11 @@ to refresh:
 ```sh
 tools/markdown-config-drift.sh            # every repository beside this one
 tools/markdown-config-drift.sh -t ~/git   # somewhere else
+tools/markdown-config-drift.sh -w         # rewrite the stale copies
 ```
+
+`-w` overwrites each stale copy with the guide's block and keeps the file's
+mode; it commits nothing, so each repository's commit stays a deliberate step.
 
 Directories named `tmp`, `.nox`, `.tox`, `.venv` and `node_modules` are
 skipped wherever they are, because scratch clones and tool build trees keep

@@ -3,11 +3,15 @@
 
 """The drift tool finds every copy of the guide's .rumdl.toml and judges it."""
 
+import os
 import shutil
+import stat
 import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.support import POSIX_ONLY
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "tools" / "markdown-config-drift.sh"
@@ -199,6 +203,60 @@ def test_the_searched_directory_may_be_given_relative_or_with_a_slash(
 
     assert result.returncode == 0, result.stdout
     assert "ok    project/.rumdl.toml" in result.stdout
+
+
+def test_write_mode_rewrites_only_the_stale_copies(shell: str, tmp_path: Path) -> None:
+    root = fleet(tmp_path)
+    stale = root / "project" / ".rumdl.toml"
+    stale.write_text("# an older header\n" + CONFIG, encoding="utf-8")
+    current = root / "skeletons" / "role_default" / ".rumdl.toml.j2"
+    os.utime(current, (1_000_000_000, 1_000_000_000))
+    scratch = root / "tmp" / "experiment"
+    scratch.mkdir(parents=True)
+    (scratch / ".rumdl.toml").write_text("drifted\n", encoding="utf-8")
+
+    result = run(shell, root, "-w")
+
+    assert result.returncode == 0, result.stderr
+    assert "wrote project/.rumdl.toml" in result.stdout
+    assert "ok    skeletons/role_default/.rumdl.toml.j2" in result.stdout
+    assert "2 copy/copies checked, 1 rewritten" in result.stdout
+    assert stale.read_bytes() == CONFIG.encode("utf-8")
+    # A copy that already matches is not written, so its timestamp stays.
+    assert current.stat().st_mtime == 1_000_000_000
+    # Skipped directories are skipped for writing too.
+    assert (scratch / ".rumdl.toml").read_text(encoding="utf-8") == "drifted\n"
+    assert run(shell, root).returncode == 0
+
+
+@POSIX_ONLY
+def test_write_mode_keeps_the_file_mode(shell: str, tmp_path: Path) -> None:
+    root = fleet(tmp_path)
+    stale = root / "project" / ".rumdl.toml"
+    stale.write_text("drifted\n", encoding="utf-8")
+    stale.chmod(0o640)
+
+    assert run(shell, root, "-w").returncode == 0
+    assert stat.S_IMODE(stale.stat().st_mode) == 0o640
+
+
+@POSIX_ONLY
+@pytest.mark.skipif(
+    hasattr(os, "geteuid") and os.geteuid() == 0,
+    reason="root writes through a read-only mode",
+)
+def test_write_mode_reports_a_copy_it_cannot_write(shell: str, tmp_path: Path) -> None:
+    root = fleet(tmp_path)
+    locked = root / "project" / ".rumdl.toml"
+    locked.write_text("drifted\n", encoding="utf-8")
+    locked.chmod(0o444)
+
+    result = run(shell, root, "-w")
+
+    assert result.returncode == 1
+    assert "error project/.rumdl.toml" in result.stdout
+    assert "1 could not be written" in result.stdout
+    assert locked.read_text(encoding="utf-8") == "drifted\n"
 
 
 def test_invalid_usage_exits_two(shell: str, tmp_path: Path) -> None:
