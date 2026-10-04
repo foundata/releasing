@@ -13,6 +13,9 @@ Components and tools:
   entry, post-publish verification, and the repository Markdown a package index
   needs. Each step is one subcommand; the order of steps stays in each project's
   own procedure.
+- **`tools/`: small helpers for maintainers:** reviewing unpushed commit
+  messages, and keeping the Markdown configuration of many repositories in
+  step. They run from a clone; see [Repository tools](#repository-tools).
 
 <!-- rumdl-disable MD033 -->
 <!-- HTML for consistent rendering across limited platform parsers -->
@@ -35,6 +38,7 @@ Components and tools:
 - [Commands](#commands)
   - [`release`](#release)
 - [Output](#output)
+- [Repository tools](#repository-tools)
 - [Releasing this package](#releasing-this-package)
 - [Development](#development)
 - [Licensing, copyright](#licensing-copyright)
@@ -150,6 +154,23 @@ only reads does not offer the flag.
 
 Every command exits with `0` on success, `1` when a check or operation fails
 and `2` on invalid usage.
+
+
+## Repository tools<a id="repository-tools"></a>
+
+This repository also carries small helpers for recurring work before a release
+and for maintaining several projects at once. They live in
+[`tools/`](./tools/) and are not part of the installed package; run them from a
+clone of this repository.
+
+- [`git-review-unpushed.sh`](./tools/git-review-unpushed.sh): visit the
+  commits the current branch has not pushed yet, oldest first, and edit their
+  messages before they are published. Works in any Git repository and never
+  pushes. See its [README](./tools/git-review-unpushed-README.md).
+- [`markdown-config-drift.sh`](./tools/markdown-config-drift.sh): compare every
+  repository's `.rumdl.toml` with the one the foundata Markdown guide shows,
+  name the stale copies, and with `-w` rewrite them. See
+  [Setup and checks](./DEVELOPMENT.md#setup-and-checks).
 
 
 ## Releasing this package<a id="releasing-this-package"></a>
