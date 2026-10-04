@@ -140,12 +140,75 @@ def test_a_directory_without_copies_is_an_error(shell: str, tmp_path: Path) -> N
     assert "No .rumdl.toml below" in result.stderr
 
 
+@pytest.mark.parametrize(
+    "place",
+    [
+        "tmp/experiment",
+        "collections/tmp/experiment",
+        "project/.nox/build/tmp/collection",
+        "project/.tox/py312",
+        "project/.venv/lib",
+        "project/node_modules/theme",
+    ],
+)
+def test_scratch_and_generated_directories_are_skipped(
+    shell: str, tmp_path: Path, place: str
+) -> None:
+    # A clone made to try something, or a tool's copy of the project, keeps
+    # whatever copy it was made with. Reporting it, or rewriting it with -w,
+    # would bury the copies someone maintains.
+    root = fleet(tmp_path)
+    (root / place).mkdir(parents=True)
+    (root / place / ".rumdl.toml").write_text("drifted\n", encoding="utf-8")
+
+    result = run(shell, root)
+
+    assert result.returncode == 0, result.stdout
+    assert place not in result.stdout
+    assert "2 copy/copies checked, 0 stale" in result.stdout
+
+
+@pytest.mark.parametrize("given", ["archive", "archive/", "archive//"])
+def test_named_directories_are_skipped(shell: str, tmp_path: Path, given: str) -> None:
+    root = fleet(tmp_path)
+    (root / "archive" / "old").mkdir(parents=True)
+    (root / "archive" / "old" / ".rumdl.toml").write_text("drifted\n", encoding="utf-8")
+
+    assert run(shell, root).returncode == 1
+    result = run(shell, root, "-x", given)
+
+    assert result.returncode == 0, result.stdout
+    assert "archive" not in result.stdout
+
+
+def test_the_searched_directory_may_be_given_relative_or_with_a_slash(
+    shell: str, tmp_path: Path
+) -> None:
+    root = fleet(tmp_path)
+    (root / "tmp").mkdir()
+    (root / "tmp" / ".rumdl.toml").write_text("drifted\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [shell, str(SCRIPT), "-t", "fleet/"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout
+    assert "ok    project/.rumdl.toml" in result.stdout
+
+
 def test_invalid_usage_exits_two(shell: str, tmp_path: Path) -> None:
     root = fleet(tmp_path)
 
     assert run(shell, root, "-Z").returncode == 2
     assert run(shell, root, "positional").returncode == 2
     assert run(shell, root, "-g").returncode == 2
+    for outside in ("", "/", "/etc", "../elsewhere", "a/../b", "./a"):
+        assert run(shell, root, "-x", outside).returncode == 2, outside
 
     helped = run(shell, root, "-h")
     assert helped.returncode == 0

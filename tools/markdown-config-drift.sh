@@ -9,6 +9,10 @@
 # the skeletons and the drill have no suite to catch it, which is what this
 # script is for.
 #
+# Scratch and generated directories are skipped wherever they are: a clone in
+# tmp/ or a build tree in .nox/ holds a copy nobody maintains, and reporting it
+# would bury the copies that matter.
+#
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -143,6 +147,12 @@ script_name="${0##*/}"
 guide_file=''
 search_directory=''
 temporary_directory=''
+# Directory names skipped at any depth: scratch space, and the build and
+# environment trees of tools that copy a project into themselves.
+readonly SKIPPED_NAMES='.git .nox .tox .venv node_modules tmp'
+# Further directories below the searched one to skip, one per line, relative
+# to it; each -x adds one.
+excluded_directories=''
 
 readonly GUIDE_NAME='markdown.md'
 readonly CONFIG_NAME='.rumdl.toml'
@@ -156,7 +166,7 @@ readonly TEMPLATE_NAME='.rumdl.toml.j2'
 #   Writes usage information to STDOUT.
 usage() {
   printf '%s\n' \
-    "Usage: ${script_name} [-g guide] [-t directory]" \
+    "Usage: ${script_name} [-g guide] [-t directory] [-x directory]..." \
     '' \
     "Compare every committed ${CONFIG_NAME} below a directory of repositories" \
     'with the one the foundata Markdown style guide shows.' \
@@ -167,6 +177,9 @@ usage() {
     '                 searched directory).' \
     '  -t directory   Directory holding the repositories (default: the' \
     '                 directory holding this repository).' \
+    '  -x directory   Skip a directory below the searched one, given relative' \
+    '                 to it; repeatable. Directories named tmp, .nox, .tox,' \
+    '                 .venv and node_modules are always skipped.' \
     '  -h             Print this help.' \
     '' \
     'Exit status:' \
@@ -188,8 +201,9 @@ print_error() {
 ###
 # Parse command-line options.
 # Globals:
-#   guide_file       - Updated from -g.
-#   search_directory - Updated from -t.
+#   excluded_directories - Extended by every -x.
+#   guide_file           - Updated from -g.
+#   search_directory     - Updated from -t.
 # Arguments:
 #   $@ - Command-line arguments.
 # Returns:
@@ -198,13 +212,16 @@ parse_args() {
   local option
 
   OPTIND='1'
-  while getopts ':g:t:h' option; do
+  while getopts ':g:t:x:h' option; do
     case "${option}" in
       'g')
         guide_file="${OPTARG}"
         ;;
       't')
         search_directory="${OPTARG}"
+        ;;
+      'x')
+        add_exclusion "${OPTARG}" || return 2
         ;;
       'h')
         usage
@@ -234,6 +251,33 @@ parse_args() {
     return 2
   fi
 
+  return 0
+}
+
+###
+# Add one directory to skip, relative to the searched directory.
+# Globals:
+#   excluded_directories - Extended by the directory.
+# Arguments:
+#   $1 - The directory, relative to the searched one.
+# Returns:
+#   0 when accepted, 1 when it is empty, absolute or leaves the searched one.
+add_exclusion() {
+  local directory="${1}"
+
+  # A trailing slash names the same directory; find prints it without one.
+  while [ "${directory}" != "${directory%/}" ]; do
+    directory="${directory%/}"
+  done
+  case "/${directory}/" in
+    '//' | /'/'* | */../* | */./*)
+      print_error "-x needs a directory below the searched one: ${1}"
+      return 1
+      ;;
+    *) ;;
+  esac
+  excluded_directories="${excluded_directories}
+${directory}"
   return 0
 }
 
@@ -273,12 +317,30 @@ documented_config() {
 
 ###
 # Print every committed copy below a directory, one path per line.
+# Globals:
+#   excluded_directories
+#   SKIPPED_NAMES
 # Arguments:
-#   $1 - Directory to search.
+#   $1 - Directory to search, as an absolute path without a trailing slash.
 # Outputs:
 #   Writes sorted paths to STDOUT.
 find_copies() {
-  find "${1}" -name '.git' -prune -o -type f \
+  local directory="${1}" excluded name
+
+  # The prune expression is assembled in the positional parameters, the one
+  # array POSIX sh has.
+  set --
+  for name in ${SKIPPED_NAMES}; do
+    [ "$#" -eq 0 ] || set -- "$@" -o
+    set -- "$@" -name "${name}"
+  done
+  while IFS= read -r excluded; do
+    [ -n "${excluded}" ] || continue
+    set -- "$@" -o -path "${directory}/${excluded}"
+  done <<EOF
+${excluded_directories}
+EOF
+  find "${directory}" \( "$@" \) -prune -o -type f \
     \( -name "${CONFIG_NAME}" -o -name "${TEMPLATE_NAME}" \) -print \
     | sort
 }
@@ -362,6 +424,12 @@ main() {
   fi
   if [ ! -d "${search_directory}" ]; then
     print_error "Not a directory: ${search_directory}"
+    exit 1
+  fi
+  # find prints paths the way it was given the directory, and the exclusions
+  # are matched against those paths.
+  if ! search_directory="$(CDPATH='' cd -- "${search_directory}" && pwd -P)"; then
+    print_error "Unable to resolve: ${search_directory}"
     exit 1
   fi
   if [ -z "${guide_file}" ]; then

@@ -128,7 +128,11 @@ tools/markdown-config-drift.sh            # every repository beside this one
 tools/markdown-config-drift.sh -t ~/git   # somewhere else
 ```
 
-It exits `1` when a copy drifted and prints each one, `2` on invalid usage.
+Directories named `tmp`, `.nox`, `.tox`, `.venv` and `node_modules` are
+skipped wherever they are, because scratch clones and tool build trees keep
+copies nobody maintains; `-x DIR` skips another directory, given relative to
+the searched one. The command exits `1` when a copy drifted and prints each
+one, `2` on invalid usage.
 
 ## Shell checks<a id="shell-checks"></a>
 
