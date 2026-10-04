@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from releasing import cli, forge_api, verify
+from releasing import cli, forge_api, status, verify
 from tests.support import write_lf
 
 pytestmark = pytest.mark.integration
@@ -180,6 +180,8 @@ def test_status_has_nothing_to_publish(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    sleeps: list[float] = []
+    monkeypatch.setattr(status, "sleep", sleeps.append)
     monkeypatch.setattr(forge_api, "release_exists", lambda forge, tag: False)
     git(repository, "tag", "-a", "v2.7.0", "-m", "version 2.7.0")
     git(repository, "push", "-q", "origin", "refs/tags/v2.7.0")
@@ -191,6 +193,8 @@ def test_status_has_nothing_to_publish(
     assert "ok       tag pushed" in output
     assert "ok       index          this ecosystem publishes nothing" in output
     assert "pending  forge release" in output
+    assert "not visible after 4 checks" in output
+    assert sleeps == [5.0, 5.0, 5.0]
 
 
 def test_a_declared_version_file_still_counts(

@@ -14,8 +14,9 @@ is neither progress nor breakage.
 
 from dataclasses import dataclass
 from pathlib import Path
+from time import sleep
 
-from releasing import changelog, forge_api, processes, verify
+from releasing import changelog, forge_api, processes, reporting, verify
 from releasing import tag as tagging
 from releasing.artifacts import Manifest
 from releasing.config import ReleaseConfig
@@ -24,6 +25,8 @@ from releasing.forges import Forge
 # A report is run interactively; an unreachable remote should not hold it for
 # the full bound that a correctness-critical command accepts.
 REMOTE_QUERY_TIMEOUT = 20.0
+_FORGE_RETRIES = 3
+_FORGE_RETRY_DELAY = 5.0
 
 OK = "ok"
 PENDING = "pending"
@@ -68,8 +71,13 @@ def collect(
     manifest: Manifest | None = None,
     remote: str = processes.DEFAULT_REMOTE,
     offline: bool = False,
+    wait_for_forge: bool = True,
 ) -> Status:
-    """Gather what is true of ``version_string`` locally, on the index and the forge."""
+    """Gather what is true of ``version_string`` locally, on the index and the forge.
+
+    Retry a missing forge release only when every other step is complete and
+    ``wait_for_forge`` is true.
+    """
     tag = config.tag(version_string)
     steps = [_changelog_step(root, config, forge, version_string)]
     # Local facts first, then the remote one separately: a report degrades to
@@ -113,7 +121,12 @@ def collect(
         steps.append(Step("forge release", UNKNOWN, "not queried"))
         return Status(version_string, tag, tuple(steps))
     steps.append(_index_step(config, version_string, manifest))
-    steps.append(_forge_step(forge, tag))
+    retries = (
+        _FORGE_RETRIES
+        if wait_for_forge and all(step.state == OK for step in steps)
+        else 0
+    )
+    steps.append(_forge_step(forge, tag, retries=retries))
     return Status(version_string, tag, tuple(steps))
 
 
@@ -232,11 +245,23 @@ def _index_step(
     return Step("index", OK, f"{config.index} serves the validated files")
 
 
-def _forge_step(forge: Forge, tag: str) -> Step:
-    try:
-        exists = forge_api.release_exists(forge, tag)
-    except forge_api.ForgeError as exc:
-        return Step("forge release", UNKNOWN, str(exc))
-    if exists:
-        return Step("forge release", OK, f"{forge.name} has a release for {tag}")
-    return Step("forge release", PENDING, f"{forge.name} has no release for {tag}")
+def _forge_step(forge: Forge, tag: str, *, retries: int) -> Step:
+    for attempt in range(retries + 1):
+        if attempt:
+            reporting.phase(
+                f"Re-checking {forge.name} release {tag} in {_FORGE_RETRY_DELAY:g}s "
+                f"({attempt}/{retries}): not visible yet"
+            )
+            sleep(_FORGE_RETRY_DELAY)
+        try:
+            exists = forge_api.release_exists(forge, tag)
+        except forge_api.ForgeError as exc:
+            return Step("forge release", UNKNOWN, str(exc))
+        if exists:
+            return Step("forge release", OK, f"{forge.name} has a release for {tag}")
+    detail = (
+        f"{forge.name} release for {tag} is not visible after {retries + 1} checks"
+        if retries
+        else f"{forge.name} has no release for {tag}"
+    )
+    return Step("forge release", PENDING, detail)

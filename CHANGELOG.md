@@ -9,7 +9,10 @@ and the project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Changed
+
+- `release status` retries a missing forge release three times at five-second
+  intervals when every other step is `ok`; `--no-wait` checks once.
 
 
 ## [5.0.0] - 2026-09-26

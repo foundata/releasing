@@ -49,6 +49,13 @@ that catches artifacts built from the wrong commit.
 The remote asked about the tag is the one the current branch tracks, and
 `origin` when the branch tracks nothing; `--remote NAME` names another one.
 
+When every other step is `ok`, a missing forge release is checked up to three
+more times, waiting five seconds between attempts. Success stops the retries;
+API errors stop them with `unknown`. `--no-wait` checks once.
+
+Retries add at most 15 seconds of waiting, plus HTTP request time. Progress
+goes to stderr unless `--quiet` is set; stdout contains only the final report.
+
 `--offline` queries neither the remote, the index nor the forge, and reports
 those facts as `unknown`. Without it, an unreachable service degrades to
 `unknown` on its own rather than failing the report.

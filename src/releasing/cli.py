@@ -839,6 +839,7 @@ def _run_status(args: argparse.Namespace) -> int:
             manifest=manifest,
             remote=_remote(args, loaded),
             offline=args.offline,
+            wait_for_forge=not args.no_wait,
         )
     except _RELEASE_ERRORS as exc:
         reporting.error(str(exc))
@@ -1330,6 +1331,11 @@ def build_parser() -> argparse.ArgumentParser:
     _add_remote(status_parser, "the remote to ask about the tag")
     status_parser.add_argument(
         "--offline", action="store_true", help="do not query the index or the forge"
+    )
+    status_parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="do not retry a forge release that is not yet visible",
     )
     status_parser.set_defaults(run=_run_status)
     push_parser = commands.add_parser(

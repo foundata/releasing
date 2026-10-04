@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from collections.abc import Iterable
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -115,6 +117,167 @@ def states(report: status.Status) -> dict[str, str]:
     return {step.name: step.state for step in report.steps}
 
 
+@pytest.fixture
+def ready_project(
+    project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
+) -> ReleaseConfig:
+    arrange(
+        monkeypatch,
+        tag_state(
+            revision=REVISION,
+            annotated=True,
+            message="version 1.0.0",
+            remote_revision="t" * 40,
+        ),
+        published=[verify.IndexFile("example-1.0.0.tar.gz", "b" * 64)],
+    )
+    return project
+
+
+def forge_responses(
+    monkeypatch: pytest.MonkeyPatch, responses: Iterable[bool | forge_api.ForgeError]
+) -> list[str]:
+    answers = iter(responses)
+    events: list[str] = []
+
+    def exists(forge: Forge, tag: str) -> bool:
+        assert (forge, tag) == (FORGE, "v1.0.0")
+        events.append("query")
+        answer = next(answers)
+        if isinstance(answer, forge_api.ForgeError):
+            raise answer
+        return answer
+
+    def sleep(seconds: float) -> None:
+        events.append(f"sleep:{seconds:g}")
+
+    monkeypatch.setattr(forge_api, "release_exists", exists)
+    monkeypatch.setattr(status, "sleep", sleep)
+    return events
+
+
+@pytest.mark.parametrize("missing", [0, 1, 2, 3])
+def test_forge_checks_stop_as_soon_as_the_release_appears(
+    ready_project: ReleaseConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    missing: int,
+) -> None:
+    events = forge_responses(monkeypatch, [False] * missing + [True])
+
+    report = status.collect(
+        ready_project.root, ready_project, FORGE, "1.0.0", manifest=MANIFEST
+    )
+
+    assert report.complete
+    assert details(report)["forge release"] == "github has a release for v1.0.0"
+    assert events == ["query"] + ["sleep:5", "query"] * missing
+    output = capsys.readouterr()
+    assert (output.out, output.err) == ("", "")
+
+
+def test_forge_release_stays_pending_after_three_retries(
+    ready_project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events = forge_responses(monkeypatch, [False] * 4)
+
+    report = status.collect(
+        ready_project.root, ready_project, FORGE, "1.0.0", manifest=MANIFEST
+    )
+
+    assert states(report)["forge release"] == status.PENDING
+    assert details(report)["forge release"] == (
+        "github release for v1.0.0 is not visible after 4 checks"
+    )
+    assert not report.complete
+    assert report.broken == ()
+    assert events == ["query"] + ["sleep:5", "query"] * 3
+
+
+@pytest.mark.parametrize("missing", [0, 1])
+@pytest.mark.parametrize("error", ["HTTP 403", "HTTP 429", "HTTP 500", "timed out"])
+def test_forge_errors_stop_retries_and_leave_the_state_unknown(
+    ready_project: ReleaseConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    missing: int,
+    error: str,
+) -> None:
+    events = forge_responses(
+        monkeypatch, [False] * missing + [forge_api.ForgeError(error)]
+    )
+
+    report = status.collect(
+        ready_project.root, ready_project, FORGE, "1.0.0", manifest=MANIFEST
+    )
+
+    assert states(report)["forge release"] == status.UNKNOWN
+    assert details(report)["forge release"] == error
+    assert events == ["query"] + ["sleep:5", "query"] * missing
+
+
+def test_waiting_can_be_disabled_for_an_otherwise_finished_release(
+    ready_project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events = forge_responses(monkeypatch, [False])
+
+    report = status.collect(
+        ready_project.root,
+        ready_project,
+        FORGE,
+        "1.0.0",
+        manifest=MANIFEST,
+        wait_for_forge=False,
+    )
+
+    assert states(report)["forge release"] == status.PENDING
+    assert details(report)["forge release"] == "github has no release for v1.0.0"
+    assert events == ["query"]
+
+
+@pytest.mark.parametrize(
+    "unfinished",
+    ["changelog", "tag", "tag pushed", "artifact revision", "index"],
+)
+def test_another_unfinished_step_prevents_waiting_for_the_forge(
+    ready_project: ReleaseConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    unfinished: str,
+) -> None:
+    manifest = MANIFEST
+    if unfinished == "changelog":
+        (ready_project.root / "CHANGELOG.md").write_text(
+            "# Changelog\n", encoding="utf-8"
+        )
+    elif unfinished == "tag":
+        monkeypatch.setattr(tagging, "state", lambda *args, **kwargs: tag_state())
+    elif unfinished == "tag pushed":
+        monkeypatch.setattr(processes, "git", lambda *args, **kwargs: "")
+    elif unfinished == "artifact revision":
+        manifest = replace(MANIFEST, source_revision="c" * 40)
+    else:
+        monkeypatch.setattr(verify, "index_files", lambda *args: [])
+    events = forge_responses(monkeypatch, [False])
+
+    report = status.collect(
+        ready_project.root, ready_project, FORGE, "1.0.0", manifest=manifest
+    )
+
+    assert states(report)[unfinished] != status.OK
+    assert states(report)["forge release"] == status.PENDING
+    assert events == ["query"]
+
+
+def test_an_unknown_index_prevents_waiting_for_the_forge(
+    ready_project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events = forge_responses(monkeypatch, [False])
+
+    report = status.collect(ready_project.root, ready_project, FORGE, "1.0.0")
+
+    assert states(report)["index"] == status.UNKNOWN
+    assert events == ["query"]
+
+
 def test_a_finished_release_is_complete(
     project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -220,6 +383,7 @@ def test_offline_queries_nothing_remote(
 
     monkeypatch.setattr(verify, "index_files", refuse)
     monkeypatch.setattr(forge_api, "release_exists", refuse)
+    monkeypatch.setattr(status, "sleep", refuse)
     monkeypatch.setattr(tagging, "state", lambda *a, **k: tag_state())
     report = status.collect(project.root, project, FORGE, "1.0.0", offline=True)
     assert states(report)["index"] == status.UNKNOWN
