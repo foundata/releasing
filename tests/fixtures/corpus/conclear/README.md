@@ -2,7 +2,7 @@
 
 ConClear builds, tests and scans OCI container images, then signs and releases
 the digest that passed its checks. It applies the technical requirements of
-[foundata's OCI container image build and release guide](https://foundata.com/en/guidelines/oci-container-image-guide/)
+[foundata's OCI container image build and release guide](https://foundata.com/en/guidelines/oci-images/)
 without requiring you to maintain your own release scripts or CI service.
 
 > **Important:** ConClear is built for foundata's own release processes. You are
@@ -362,7 +362,7 @@ Prepare the build inputs:
 - Pin external images in the Containerfile as `image:tag@sha256:<digest>` and
   declare each tag and its intent under `[[images.pins]]`.
 - Supply the
-  [required OCI labels](https://foundata.com/en/guidelines/oci-container-image-guide/#image-metadata).
+  [required OCI labels](https://foundata.com/en/guidelines/oci-images/#image-metadata).
   Declare and use the `IMAGE_CREATED`, `IMAGE_REVISION` and `IMAGE_VERSION`
   build arguments for their corresponding labels.
 - Match the numeric `USER` to `images.runtime.user`. Declare writable paths
@@ -773,7 +773,7 @@ may be subject to different licensing or usage terms, such as third-party
 components. The repository conforms to the
 [REUSE specification](https://reuse.software/spec/). You can use
 [`reuse spdx`](https://reuse.readthedocs.io/en/latest/readme.html#cli) to create
-a
+an
 [SPDX software bill of materials (SBOM)](https://en.wikipedia.org/wiki/Software_Package_Data_Exchange).
 <!--REUSE-IgnoreEnd-->
 
@@ -782,13 +782,25 @@ a
 
 ### Trademarks<a id="trademarks"></a>
 
-- Red Hat® and Quay® are trademarks of Red Hat, Inc., registered in the US and
-  other countries
-- Docker® is a trademark of Docker, Inc.
-- Linux® is a registered trademark of Linus Torvalds
+Third-party trademarks used in this repository:
+
+- Debian® is a trademark of Software in the Public Interest, Inc., registered in
+  Germany and the United States.
+- Docker® is a trademark of Docker, Inc., registered in the European Union and
+  the United States.
+- Fedora®, Quay® and Red Hat® are trademarks of Red Hat, LLC, registered in the
+  United States and other countries.
+- Linux® is a trademark of Linus Torvalds, registered in Germany, the European
+  Union and the United States.
 
 Their use here is purely descriptive and does not imply any affiliation with or
 endorsement by the trademark holders.
+
+Own and licensed trademarks used in this repository:
+
+- foundata® is a trademark of [IPAM GmbH](https://ipam-services.com/),
+  registered in Germany and the European Union, licensed to
+  [foundata GmbH](https://foundata.com/).
 
 
 ## Author information<a id="author-information"></a>

@@ -42,6 +42,9 @@ and within
 - [Usage](#usage)
   - [Preparations](#usage-preparations)
   - [Generate or update documentation](#usage-generate)
+    - [Variables without defaults](#usage-defaults-missing)
+  - [Project configuration](#usage-config)
+    - [Markdown formatter](#usage-formatter)
   - [Collections](#usage-collections)
   - [Validate `argument_specs.yml` and `/defaults`](#usage-validate)
   - [Exit codes](#usage-exit-codes)
@@ -179,8 +182,8 @@ blocks above the variables defined there.
 **The marker contract** in short:
 
 - **All content between a START and END marker pair is owned by DocSmith** and
-  gets replaced on every `generate` run. Everything outside the markers is never
-  touched.
+  gets replaced on every `generate` run. Outside content is preserved unless you
+  enable a [whole-file Markdown formatter](#usage-formatter).
 - **A lone marker is always an error**, no matter the type: a `START` without
   its `END` (or vice versa) fails validation instead of guessing where the
   managed section ends. This applies to `MAIN`, `TOC`, `TOC-FULL` and the
@@ -202,7 +205,8 @@ Example files:
 
 ### Generate or update documentation<a id="usage-generate"></a>
 
-Basic usage:
+The path defaults to the current directory. Project settings are discovered
+automatically; explicit CLI options override them.
 
 ```bash
 # Safely preview changes without writing to files. No modifications are made.
@@ -241,6 +245,175 @@ ansible-docsmith generate /path/to/role --verbose
 ```
 
 
+#### Variables without defaults<a id="usage-defaults-missing"></a>
+
+Use `generate --defaults-include-missing` to append an owned comment section for
+required and optional top-level variables absent from the entry-point defaults
+mapping and without an explicit specification `default:`. Nested options stay
+under their parent; example values are not invented.
+
+```yaml
+# ANSIBLE DOCSMITH MISSING START
+#
+# The following variables have no default values. They are documented
+# here as comments for easier discovery:
+#
+# Server hostname.
+#
+# - Type: str
+# - Required: Yes
+# app_host:
+#
+# ANSIBLE DOCSMITH MISSING END
+```
+
+The option is off by default. Empty and comment-only files are supported.
+Missing `defaults/<entry-point>.yml` files and their directory are created only
+when there are eligible variables; existing `.yaml` files are reused. An
+explicit specification `default: null` is still a default, not a placeholder.
+
+DocSmith regenerates this section in specification order. Removing a variable
+from the spec or assigning it outside the markers removes its placeholder.
+Keep assignments outside the section: malformed markers or active YAML inside
+it stop generation before any files are written.
+
+`--no-defaults-include-missing` removes the owned section on the next
+generation, retaining the file. `--no-defaults` leaves defaults files entirely
+untouched. Set `defaults_include_missing = true` under `[generate]` to enable
+the feature through project configuration. It also applies to every role in a
+collection.
+
+
+### Project configuration<a id="usage-config"></a>
+
+Use `ansible-docsmith.toml` or `.ansible-docsmith.toml` in the selected role or
+collection directory. Exactly one file is loaded: having both is an error.
+`--config PATH` selects an alternative file, relative to the caller's directory,
+and bypasses discovery. `--no-config` skips configuration entirely; it cannot be
+combined with `--config`.
+
+There is no inheritance, ancestor search, user configuration or `pyproject.toml`
+support. A collection uses its root settings for every role, ignoring role-local
+files. When invoking a role directly, use `--config` to reuse the collection's
+configuration. CLI options take precedence over file settings, then built-in
+defaults. Unknown keys, invalid values and malformed files fail with exit 2,
+including when the formatter is disabled.
+
+All behavior settings are shown below with their built-in defaults. Settings for
+`generate` and `validate` are independent; `format` and `verbose` apply to both.
+
+```toml
+format = "auto"
+verbose = false
+
+[generate]
+readme = true
+defaults = true
+defaults_comments_nested = true
+defaults_include_missing = false
+readme_toc_list_bulletpoints = "auto"
+dry_run = false
+check = false
+markdown_formatter = true
+# template_readme = "templates/readme.md.j2"
+
+[validate]
+readme = true
+argument_specs = true
+strict = false
+```
+
+`format` accepts `auto`, `markdown` or `rst`; TOC bullets accept `auto`, `*` or
+`-`. Template paths in TOML are relative to that config file;
+`--template-readme` paths are relative to the caller's directory.
+
+Positive/negative CLI options override configured booleans, including
+`--no-check`, `--no-dry-run`, `--no-strict` and `--no-verbose`. Check always
+implies dry-run.
+
+```sh
+ansible-docsmith generate
+ansible-docsmith generate --dry-run
+ansible-docsmith generate --check
+ansible-docsmith validate
+ansible-docsmith generate --config ./alternative.toml
+```
+
+
+#### Markdown formatter<a id="usage-formatter"></a>
+
+Formatting is off unless `[markdown_formatter]` declares a command. DocSmith
+formats the **whole merged README**, including hand-written content, before
+comparing or writing. Generate, check and dry-run use the same result; the
+original file is never formatted merely to make a comparison pass. YAML defaults
+and reStructuredText files never enter this hook.
+
+For [rumdl](https://rumdl.dev/), put a reviewed `.rumdl.toml` beside your
+DocSmith configuration:
+
+```toml
+[markdown_formatter]
+command = [
+  "rumdl", "fmt", "--config", "{config_dir}/.rumdl.toml",
+  "--deny-config-warnings", "--no-cache", "--stderr",
+  "--stdin-filename", "{readme}", "-",
+]
+mode = "stdin"
+timeout_seconds = 30
+```
+
+The hook is formatter-independent. For example, an installed
+[Prettier](https://prettier.io/) can use:
+
+```toml
+[markdown_formatter]
+command = [
+  "prettier", "--config", "{config_dir}/.prettierrc.json",
+  "--no-editorconfig", "--parser", "markdown",
+  "--stdin-filepath", "{readme}",
+]
+```
+
+Keep Prettier's `embeddedLanguageFormatting` set to `off` to avoid formatting
+embedded code. Install and pin your chosen formatter separately; DocSmith does
+not install it.
+
+The command is an argument array, not a shell string. There is no shell
+expansion or implicit project executable lookup. Bare executables use `PATH`;
+execution uses the README's parent directory as the working directory.
+Placeholders are:
+
+|  Placeholder   | Value |
+| -------------- | ----- |
+| `{readme}`     | Absolute intended README path, for filename context only; never an output argument |
+| `{config_dir}` | Absolute directory of the selected DocSmith configuration |
+| `{path}`       | Disposable `README.md` outside the project, available only in file mode |
+
+Use `{{` and `}}` for literal braces. Other placeholders, conversions and format
+specifications are rejected.
+
+- `mode = "stdin"` (default): the candidate goes to stdin; UTF-8 stdout is the
+  formatted document. Diagnostics belong on stderr.
+- `mode = "file"`: the command must reference `{path}` and edit that temporary
+  file. Stdin is closed; stdout/stderr are diagnostics. For rumdl, use the
+  command above without `--stderr --stdin-filename {readme} -`, adding `{path}`
+  instead. Name formatter configuration explicitly because the temporary file
+  is outside the project.
+
+`timeout_seconds` defaults to 30 and must be positive and finite. Exit 0 is
+required; wrapper scripts must wait for their children. Missing commands,
+timeouts, nonzero exits, empty/invalid output or
+changed markers, headings or explicit anchors fail generation. Formatters must
+be deterministic and preserve DocSmith structure; verify that generate,
+standalone formatting and check agree after changing tool versions or policy.
+
+**Trust:** discovered commands run with your permissions and environment,
+including during `--check` and `--dry-run`. This is not a sandbox, so review
+repository configuration, formatter plugins and scripts before running them.
+`--no-markdown-formatter` suppresses the hook; `--no-readme` excludes it
+entirely. Loading configuration, `validate`, help and version never execute it.
+
+
 ### Collections<a id="usage-collections"></a>
 
 `generate` and `validate` also accept a **collection** path. All roles found via
@@ -276,6 +449,10 @@ documentation without manual upkeep:
   referenced in the collection README (`validate` emits a notice listing them).
   Markers referencing an unknown role produce a warning.
 
+If a formatter is configured, it runs once per Markdown role README and once for
+the collection README after all its sections are merged. READMEs without
+complete markers are not formatted.
+
 ```bash
 ansible-docsmith generate /path/to/collection
 ansible-docsmith validate /path/to/collection
@@ -300,6 +477,9 @@ Checks include:
 - Warnings for unknown keys in `argument_specs.yml` and invalid Ansible markup
   in descriptions, such as `M()` without a fully qualified collection name
   (FQCN).
+- Warnings for required top-level variables assigned in the corresponding
+  defaults file, including null values. A role default may satisfy Ansible's
+  required check without caller input.
 - Notices for non-required variables listed in the specification but absent from
   an otherwise populated entry-point defaults file, and names suggesting secrets
   (such as `*_password` or `*_token`) without `no_log: true`.
@@ -339,7 +519,7 @@ CI/CD pipelines and pre-commit hooks without output parsing:
 | --------- | ------- |
 | `0`       | Success. Warnings and notices alone do *not* fail a run (unless `--strict` is used). `generate --check` returns `0` when the documentation is up to date. |
 | `1`       | Validation or processing error (like missing `MAIN` markers, inconsistencies between `argument_specs.yml` and `defaults/`). Also: warnings when `validate --strict` is used, and pending changes when `generate --check` is used. |
-| `2`       | Command line usage error (unknown option, non-existing path). |
+| `2`       | Command line or configuration error (unknown option/key, non-existing path, malformed TOML or ambiguous discovery). |
 
 Notices are informational and never affect the exit code. A typical gate:
 
@@ -490,7 +670,7 @@ may be subject to different licensing or usage terms, such as third-party
 components. The repository conforms to the
 [REUSE specification](https://reuse.software/spec/). You can use
 [`reuse spdx`](https://reuse.readthedocs.io/en/latest/readme.html#cli) to create
-a
+an
 [SPDX software bill of materials (SBOM)](https://en.wikipedia.org/wiki/Software_Package_Data_Exchange).
 <!--REUSE-IgnoreEnd-->
 
@@ -499,13 +679,23 @@ a
 
 ### Trademarks<a id="trademarks"></a>
 
-- Red Hat® is a trademark of Red Hat, Inc., registered in the US and other
-  countries.
-- Ansible® is a trademark of Red Hat, Inc., registered in the US and other
-  countries.
+Third-party trademarks used in this repository:
+
+- Ansible®, Fedora® and Red Hat® are trademarks of Red Hat, LLC, registered in
+  the United States and other countries.
+- Debian® is a trademark of Software in the Public Interest, Inc., registered in
+  Germany and the United States.
+- Ubuntu® is a trademark of Canonical Ltd., registered in Germany, the European
+  Union and the United States.
 
 Their use here is purely descriptive and does not imply any affiliation with or
 endorsement by the trademark holders.
+
+Own and licensed trademarks used in this repository:
+
+- foundata® is a trademark of [IPAM GmbH](https://ipam-services.com/),
+  registered in Germany and the European Union, licensed to
+  [foundata GmbH](https://foundata.com/).
 
 
 ## Author information<a id="author-information"></a>

@@ -585,7 +585,7 @@ maintenance and used on a daily basis by the maintainers.
 
 <!--REUSE-IgnoreStart-->
 <!-- rumdl-disable MD034 --><!-- should match SPDX-PackageSupplier -->
-Copyright (c) 2026, [foundata GmbH](https://foundata.com/)
+Copyright (c) 2025, 2026, [foundata GmbH](https://foundata.com/)
 (https://foundata.com)
 <!-- rumdl-enable MD034 -->
 
@@ -600,7 +600,8 @@ may be subject to different licensing or usage terms, such as third-party
 components. The repository conforms to the
 [REUSE specification](https://reuse.software/spec/). You can use
 [`reuse spdx`](https://reuse.readthedocs.io/en/latest/readme.html#cli) to create
-a SPDX software bill of materials (SBOM).
+an
+[SPDX software bill of materials (SBOM)](https://en.wikipedia.org/wiki/Software_Package_Data_Exchange).
 <!--REUSE-IgnoreEnd-->
 
 [![REUSE status](https://api.reuse.software/badge/github.com/foundata/scanmole)](https://api.reuse.software/info/github.com/foundata/scanmole)
@@ -608,13 +609,32 @@ a SPDX software bill of materials (SBOM).
 
 ### Trademarks<a id="trademarks"></a>
 
-- ScanSnap is a trademark of PFU Limited, a Ricoh Group company (ScanSnap
-  scanners were sold under the Fujitsu brand until 2023)
-- Fujitsu is a trademark of Fujitsu Limited
-- Brother is a trademark of Brother Industries, Ltd
+Third-party trademarks used in this repository:
+
+- Brother® is a trademark of Brother Industries, Ltd, registered in Germany, the
+  European Union and the United States.
+- Debian® is a trademark of Software in the Public Interest, Inc., registered in
+  Germany and the United States.
+- Fedora® is a trademark of Red Hat, LLC, registered in the United States and
+  other countries.
+- Fujitsu® is a trademark of Fujitsu Limited, registered in Germany and the
+  United States.
+- Linux® is a trademark of Linus Torvalds, registered in Germany, the European
+  Union and the United States.
+- ScanSnap® is a trademark of PFU Limited, a Ricoh Group company, registered in
+  the European Union and the United States (ScanSnap scanners were sold under
+  the Fujitsu brand until 2023).
+- Ubuntu® is a trademark of Canonical Ltd., registered in Germany, the European
+  Union and the United States.
 
 Their use here is purely descriptive and does not imply any affiliation with or
 endorsement by the trademark holders.
+
+Own and licensed trademarks used in this repository:
+
+- foundata® is a trademark of [IPAM GmbH](https://ipam-services.com/),
+  registered in Germany and the European Union, licensed to
+  [foundata GmbH](https://foundata.com/).
 
 
 ## Author information<a id="author-information"></a>

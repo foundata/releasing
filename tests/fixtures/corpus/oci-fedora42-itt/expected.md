@@ -164,7 +164,7 @@ may be subject to different licensing or usage terms, such as third-party
 components. The repository conforms to the
 [REUSE specification](https://reuse.software/spec/). You can use
 [`reuse spdx`](https://reuse.readthedocs.io/en/latest/readme.html#cli) to create
-a
+an
 [SPDX software bill of materials (SBOM)](https://en.wikipedia.org/wiki/Software_Package_Data_Exchange).
 <!--REUSE-IgnoreEnd-->
 
@@ -189,13 +189,23 @@ from this repository, please refer to the following resources:
 
 ### Trademarks<a id="trademarks"></a>
 
-- Red Hat®, Fedora®, Ansible® and Quay® are trademarks of Red Hat, Inc.,
-  registered in the US and other countries
-- Docker® is a trademark of Docker, Inc.
-- Linux® is a registered trademark of Linus Torvalds
+Third-party trademarks used in this repository:
+
+- Ansible®, Fedora® and Quay® are trademarks of Red Hat, LLC, registered in the
+  United States and other countries.
+- Docker® is a trademark of Docker, Inc., registered in the European Union and
+  the United States.
+- Linux® is a trademark of Linus Torvalds, registered in Germany, the European
+  Union and the United States.
 
 Their use here is purely descriptive and does not imply any affiliation with or
 endorsement by the trademark holders.
+
+Own and licensed trademarks used in this repository:
+
+- foundata® is a trademark of [IPAM GmbH](https://ipam-services.com/),
+  registered in Germany and the European Union, licensed to
+  [foundata GmbH](https://foundata.com/).
 
 
 ## Author information<a id="author-information"></a>
