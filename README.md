@@ -217,7 +217,7 @@ create a
 
 Third-party trademarks used in this repository:
 
-- Ansible® is a trademark of Red Hat, Inc., registered in the United States and
+- Ansible® is a trademark of Red Hat, LLC, registered in the United States and
   other countries.
 - Debian® is a trademark of Software in the Public Interest, Inc., registered in
   Germany and the United States.
