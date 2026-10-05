@@ -58,4 +58,6 @@ goes to stderr unless `--quiet` is set; stdout contains only the final report.
 
 `--offline` queries neither the remote, the index nor the forge, and reports
 those facts as `unknown`. Without it, an unreachable service degrades to
-`unknown` on its own rather than failing the report.
+`unknown` on its own rather than failing the report. The forge request uses
+the login described in
+[How the forge is asked](./forge-release.md#how-the-forge-is-asked).

@@ -9,6 +9,17 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Forge requests are made as a user when they can be. Every question to the
+  forge, whether a release exists and which is latest, is asked first with a
+  `GH_TOKEN` or `GITHUB_TOKEN` from the environment, then through the
+  logged-in `gh`, and only then anonymously. GitHub allows an address 60
+  anonymous requests per hour, and an office shares one address. The narration
+  names the way that answered, and a used-up anonymous allowance now says when
+  it resets and how to ask as a user. The `Forge` definition carries the tool
+  and the token variables, so another forge adds one entry.
+
 ### Changed
 
 - `release status` retries a missing forge release three times at five-second

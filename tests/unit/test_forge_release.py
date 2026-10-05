@@ -16,6 +16,7 @@ FORGE = Forge(
     "https://github.com",
     "https://raw.githubusercontent.com",
     "https://api.github.com",
+    tool="gh",
 )
 CHANGELOG = """# Changelog
 

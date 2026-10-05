@@ -17,8 +17,6 @@ from releasing.artifacts import Manifest
 from releasing.config import ReleaseConfig
 from releasing.forges import Forge
 
-_TOOLS = {"github": "gh"}
-
 
 class ForgeReleaseError(RuntimeError):
     """The release entry cannot be created as asked."""
@@ -47,12 +45,9 @@ def plan(
     offline: bool = False,
 ) -> ReleasePlan:
     """Assemble the entry from the changelog and the manifest, and check it can be made."""
-    try:
-        tool = _TOOLS[forge.name]
-    except KeyError as exc:
-        raise ForgeReleaseError(
-            f"no release tool is known for the {forge.name} forge"
-        ) from exc
+    tool = forge.tool
+    if tool is None:
+        raise ForgeReleaseError(f"no release tool is known for the {forge.name} forge")
     processes.executable(tool)
     tag = config.tag(version_string)
     if not offline and forge_api.release_exists(forge, tag):

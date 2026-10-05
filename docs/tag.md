@@ -73,3 +73,7 @@ release condition, so use it only when you know no release exists.
 `delete` removes it there. That remote is the one the current branch tracks,
 which is what a fork workflow needs, and `origin` when the branch tracks
 nothing. `--remote NAME` names another one.
+
+They also ask the forge whether a release exists for the tag; see
+[How the forge is asked](./forge-release.md#how-the-forge-is-asked) for the
+login that request uses.

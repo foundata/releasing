@@ -3,9 +3,11 @@
 """Forge backends: where tags, releases and file contents of a repository live.
 
 A forge knows the URLs of a repository's pages and, for the commands that talk
-to it, its release API. GitHub is the first implementation; a Gitea, Forgejo or
-GitLab backend is a new entry here, selected by the declaration's ``forge``
-key. Nothing in this module performs network access.
+to it, its release API: the paths to ask, the command-line tool that asks and
+writes with the user's own login, and the environment variables a token
+arrives in. GitHub is the first implementation; a Gitea, Forgejo or GitLab
+backend is a new entry here, selected by the declaration's ``forge`` key.
+Nothing in this module performs network access.
 """
 
 from dataclasses import dataclass
@@ -15,13 +17,21 @@ from releasing.config import ReleaseConfig
 
 @dataclass(frozen=True)
 class Forge:
-    """URL patterns of one forge for one repository."""
+    """URL patterns, API paths and the client of one forge for one repository.
+
+    ``tool`` is the forge's own command-line program, which carries the user's
+    login; ``token_variables`` name the environment variables a token is read
+    from, first match wins. A forge without a tool is asked anonymously or
+    with a token only, and gets no release entry written.
+    """
 
     name: str
     repository: str
     web: str
     raw: str
     api: str
+    tool: str | None = None
+    token_variables: tuple[str, ...] = ()
 
     def repository_url(self) -> str:
         """The repository's landing page."""
@@ -47,20 +57,31 @@ class Forge:
         """URL base for the file viewer at ``ref``, used for link destinations."""
         return f"{self.repository_url()}/blob/{ref}"
 
+    def latest_release_path(self) -> str:
+        """API path, below ``api``, of the release the forge considers latest."""
+        return f"repos/{self.repository}/releases/latest"
+
+    def release_by_tag_path(self, tag: str) -> str:
+        """API path, below ``api``, of the release belonging to one tag."""
+        return f"repos/{self.repository}/releases/tags/{tag}"
+
     def latest_release_url(self) -> str:
         """API endpoint reporting the release the forge considers latest."""
-        return f"{self.api}/repos/{self.repository}/releases/latest"
+        return f"{self.api}/{self.latest_release_path()}"
 
     def release_by_tag_url(self, tag: str) -> str:
         """API endpoint for the release belonging to one tag."""
-        return f"{self.api}/repos/{self.repository}/releases/tags/{tag}"
+        return f"{self.api}/{self.release_by_tag_path(tag)}"
 
 
-_FORGES = {
+_FORGES: dict[str, dict[str, object]] = {
     "github": {
         "web": "https://github.com",
         "raw": "https://raw.githubusercontent.com",
         "api": "https://api.github.com",
+        "tool": "gh",
+        # gh's own variable first; GITHUB_TOKEN is what GitHub Actions sets.
+        "token_variables": ("GH_TOKEN", "GITHUB_TOKEN"),
     }
 }
 
@@ -68,7 +89,7 @@ _FORGES = {
 def forge_for(config: ReleaseConfig) -> Forge:
     """The forge backend selected by the declaration."""
     try:
-        urls = _FORGES[config.forge]
+        definition = _FORGES[config.forge]
     except KeyError as exc:
         raise ValueError(f"unsupported forge: {config.forge}") from exc
-    return Forge(name=config.forge, repository=config.repository, **urls)
+    return Forge(name=config.forge, repository=config.repository, **definition)  # type: ignore[arg-type]

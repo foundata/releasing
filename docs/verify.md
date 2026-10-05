@@ -56,7 +56,7 @@ Without `--version`, the newest released section of the changelog names the
 release. The remote is the one the current branch tracks, and `origin` when
 the branch tracks nothing; `--remote NAME` names another one.
 
-The command only reads. It creates no release and uploads nothing. A
-`GH_TOKEN` or `GITHUB_TOKEN` in the environment is sent with every forge
-request, which a private repository needs and which also lifts the anonymous
-rate limit of the forge's API.
+The command only reads. It creates no release and uploads nothing. The forge
+request uses a token from the environment, the logged-in `gh`, or goes
+anonymous, in that order; see
+[How the forge is asked](./forge-release.md#how-the-forge-is-asked).

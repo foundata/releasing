@@ -20,6 +20,7 @@ cannot be reached.
 ## Table of contents<a id="toc"></a>
 
 - [Credentials](#credentials)
+- [How the forge is asked](#how-the-forge-is-asked)
 - [Collections](#collections)
 
 ## Credentials<a id="credentials"></a>
@@ -27,6 +28,29 @@ cannot be reached.
 The forge's own command-line tool performs the write, so it must be installed
 and authenticated: `gh auth status` for GitHub. No credential is passed to it,
 and none is read here.
+
+## How the forge is asked<a id="how-the-forge-is-asked"></a>
+
+The questions the release steps put to the forge are reads: does a release
+exist for this tag, and which tag is the latest release. `tag create`, `tag
+check`, `tag delete`, `forge release-create`, `status` and `verify` ask them.
+A forge meters anonymous requests per address, GitHub at 60 per hour, and an
+office shares one address, so each question is asked the first way that can
+answer:
+
+1. With a token from the environment, `GH_TOKEN` or `GITHUB_TOKEN` for GitHub.
+   This is what a CI job provides, and the token stays in the process it was
+   given to.
+2. Through the forge's own tool and the login it holds, `gh api` for GitHub.
+   The tool's credential never enters this package. A tool that is not
+   installed or not logged in is skipped; one that is logged in and fails has
+   answered, and the failure is reported as the forge's.
+3. Anonymously.
+
+The narration names the way that answered, `GET via gh` for the second. When
+the anonymous allowance is used up, the error says when it resets and how to
+ask as a user instead. `--offline` on the tag commands and `forge
+release-create` asks nothing at all.
 
 ## Collections<a id="collections"></a>
 
