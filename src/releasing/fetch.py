@@ -15,6 +15,7 @@ import json
 import urllib.error
 import urllib.request
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any
 
 from releasing import reporting
@@ -37,6 +38,20 @@ class FetchError(RuntimeError):
 
 class NotFoundError(FetchError):
     """The service answered that there is no such document."""
+
+
+class RateLimitError(FetchError):
+    """The service refused the request because its allowance is used up.
+
+    A forge meters anonymous requests per address, so an office that shares
+    one connection runs out together. The answer is not wrong, only
+    unavailable until ``reset``; the caller says how to ask differently.
+    """
+
+    def __init__(self, message: str, *, reset: datetime | None = None) -> None:
+        """Record when the allowance returns, when the service said."""
+        super().__init__(message)
+        self.reset = reset
 
 
 def get(
@@ -62,7 +77,22 @@ def get(
         reporting.request("GET", url, exc.code)
         if exc.code == 404:
             raise NotFoundError(f"{url}: HTTP 404 {exc.reason}") from exc
+        if exc.code in (403, 429) and exc.headers.get("x-ratelimit-remaining") == "0":
+            reset = _reset_time(exc.headers.get("x-ratelimit-reset"))
+            until = f" until {reset:%H:%M}" if reset is not None else ""
+            raise RateLimitError(
+                f"{url}: HTTP {exc.code} {exc.reason}; the request allowance "
+                f"is used up{until}",
+                reset=reset,
+            ) from exc
         raise FetchError(f"{url}: HTTP {exc.code} {exc.reason}") from exc
     except (urllib.error.URLError, OSError, ValueError) as exc:
         reporting.request("GET", url, "failed")
         raise FetchError(f"{url}: {exc}") from exc
+
+
+def _reset_time(value: str | None) -> datetime | None:
+    """The local time a Unix-timestamp header names, or None without one."""
+    if value is None or not value.isdigit():
+        return None
+    return datetime.fromtimestamp(int(value)).astimezone()

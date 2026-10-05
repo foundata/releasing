@@ -81,3 +81,38 @@ def test_an_unreachable_service_is_a_fetch_error_naming_the_url(
         fetch.get(URL)
     assert URL in str(failure.value)
     assert not isinstance(failure.value, fetch.NotFoundError)
+
+
+def limited(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Refuse every request the way GitHub refuses an exhausted address."""
+
+    def fake(request: Any, timeout: float = 0) -> Response:
+        headers = Message()
+        headers["x-ratelimit-remaining"] = "0"
+        headers["x-ratelimit-reset"] = "1791171258"
+        raise urllib.error.HTTPError(
+            request.full_url, 403, "rate limit exceeded", headers, io.BytesIO(b"{}")
+        )
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake)
+
+
+def test_a_rate_limit_is_an_http_refusal_with_its_reset_time(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    limited(monkeypatch)
+    with pytest.raises(fetch.RateLimitError) as failure:
+        fetch.get(URL)
+    assert failure.value.reset is not None
+    assert isinstance(failure.value, fetch.FetchError)
+
+    # A 403 that is not about the allowance stays an ordinary refusal.
+    def forbidden(request: Any, timeout: float = 0) -> Response:
+        raise urllib.error.HTTPError(
+            request.full_url, 403, "Forbidden", Message(), io.BytesIO(b"{}")
+        )
+
+    monkeypatch.setattr(urllib.request, "urlopen", forbidden)
+    with pytest.raises(fetch.FetchError) as plain:
+        fetch.get(URL)
+    assert not isinstance(plain.value, fetch.RateLimitError)
