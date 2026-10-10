@@ -32,6 +32,7 @@ class ReleasePlan:
     tool: str
     repository: str
     tag: str
+    revision: str
     title: str
     notes: str
     assets: tuple[Path, ...]
@@ -58,7 +59,8 @@ def plan(
             f"{forge.name} already has a release for {tag}; a release entry is "
             "created once and the version is spent"
         )
-    notes = _notes(root, config, version_string)
+    revision = _tag_revision(root, tag)
+    notes = _notes(root, config, version_string, revision)
     assets: tuple[Path, ...] = ()
     if manifest is not None and manifest_path is not None:
         manifest_path = manifest_path.absolute()
@@ -72,7 +74,6 @@ def plan(
                 f"not {config.repository}"
             )
         if manifest.source_revision is not None:
-            revision = _tag_revision(root, tag)
             if manifest.source_revision != revision:
                 raise ForgeReleaseError(
                     f"the artifacts were built from {manifest.source_revision}, "
@@ -93,6 +94,7 @@ def plan(
         tool=tool,
         repository=f"{urlsplit(forge.web).netloc}/{forge.repository}",
         tag=tag,
+        revision=revision,
         title=tag,
         notes=notes,
         assets=assets,
@@ -156,17 +158,28 @@ def _tag_revision(root: Path, tag: str) -> str:
         raise ForgeReleaseError(f"cannot resolve release tag {tag}: {exc}") from exc
 
 
-def _notes(root: Path, config: ReleaseConfig, version_string: str) -> str:
+def _revision_text(root: Path, revision: str, path: str) -> str:
+    try:
+        return processes.git(root, "show", f"{revision}:{path}")
+    except (processes.ProcessError, UnicodeError) as exc:
+        raise ForgeReleaseError(f"cannot read {path} at {revision}: {exc}") from exc
+
+
+def _notes(
+    root: Path, config: ReleaseConfig, version_string: str, revision: str
+) -> str:
     if config.changelog_format == "antsibull":
+        changes = _revision_text(root, revision, antsibull.CHANGES.as_posix())
+        config_path = antsibull.CONFIG.as_posix()
+        listed = processes.git(
+            root, "ls-tree", "--name-only", revision, "--", config_path
+        )
+        titles = _revision_text(root, revision, config_path) if listed.strip() else None
         try:
-            return antsibull.notes(root, version_string)
+            return antsibull.notes_from_text(changes, version_string, config=titles)
         except antsibull.AntsibullError as exc:
             raise ForgeReleaseError(str(exc)) from exc
-    path = root / config.changelog
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError) as exc:
-        raise ForgeReleaseError(f"cannot read {config.changelog}: {exc}") from exc
+    text = _revision_text(root, revision, config.changelog)
     try:
         return changelog.show(text, version_string)
     except changelog.ChangelogError as exc:

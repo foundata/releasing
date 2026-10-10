@@ -243,7 +243,7 @@ def test_a_missing_local_tag_is_a_cli_error_before_gh_runs(
 
     assert result.returncode == 1
     assert result.stdout == b""
-    assert b"cannot read the commits to check" in result.stderr
+    assert b"cannot resolve release tag v1.0.0" in result.stderr
     assert b"v1.0.0" in result.stderr
     assert b"Traceback" not in result.stderr
     assert not fake_gh.exists()
@@ -323,3 +323,83 @@ def test_provenance_uses_the_tag_commit_not_a_same_named_branch(
 
     assert result.returncode == 0, result.stderr
     assert fake_gh.is_file()
+
+
+def test_notes_ignore_later_commits_and_uncommitted_edits(
+    repository: Path, fake_gh: Path
+) -> None:
+    write_lf(repository / "CHANGELOG.md", "# A different committed changelog\n")
+    git(repository, "commit", "-am", "project: replace the changelog after release")
+    write_lf(repository / "CHANGELOG.md", "# Uncommitted changes\n")
+
+    result = release(repository)
+
+    assert result.returncode == 0, result.stderr
+    assert (
+        json.loads(fake_gh.read_text(encoding="utf-8"))["notes"] == "- First release.\n"
+    )
+    assert (repository / "CHANGELOG.md").read_bytes() == b"# Uncommitted changes\n"
+
+
+def test_notes_do_not_need_a_working_tree_changelog(
+    repository: Path, fake_gh: Path
+) -> None:
+    (repository / "CHANGELOG.md").unlink()
+
+    result = release(repository)
+
+    assert result.returncode == 0, result.stderr
+    assert (
+        json.loads(fake_gh.read_text(encoding="utf-8"))["notes"] == "- First release.\n"
+    )
+    assert not (repository / "CHANGELOG.md").exists()
+
+
+def test_collection_notes_and_titles_come_from_the_tag(
+    repository: Path, fake_gh: Path
+) -> None:
+    declaration = repository / "pyproject.toml"
+    write_lf(
+        declaration,
+        declaration.read_text(encoding="utf-8") + 'changelog = "antsibull"\n',
+    )
+    directory = repository / "changelogs"
+    directory.mkdir()
+    write_lf(
+        directory / "changelog.yaml",
+        "releases:\n  1.0.0:\n    changes:\n      bugfixes:\n        - Tagged fix\n",
+    )
+    write_lf(directory / "config.yaml", "sections:\n  - [bugfixes, Tagged fixes]\n")
+    git(repository, "add", ".")
+    git(repository, "commit", "-m", "collection: record the release")
+    git(repository, "tag", "-f", "-a", "v1.0.0", "-m", "Release 1.0.0")
+    write_lf(directory / "changelog.yaml", "releases: {}\n")
+    write_lf(
+        directory / "config.yaml", "sections:\n  - [bugfixes, Uncommitted title]\n"
+    )
+
+    result = release(repository)
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(fake_gh.read_text(encoding="utf-8"))["notes"] == (
+        "### Tagged fixes\n\n- Tagged fix\n"
+    )
+
+
+def test_working_tree_notes_cannot_replace_a_missing_tagged_changelog(
+    repository: Path, fake_gh: Path
+) -> None:
+    git(repository, "rm", "CHANGELOG.md")
+    git(repository, "commit", "-m", "project: remove the changelog")
+    git(repository, "tag", "-f", "-a", "v1.0.0", "-m", "Release 1.0.0")
+    write_lf(
+        repository / "CHANGELOG.md", "# Changelog\n\n## [1.0.0]\n\n- Not committed.\n"
+    )
+
+    result = release(repository)
+
+    assert result.returncode == 1
+    assert result.stdout == b""
+    assert b"cannot read CHANGELOG.md at" in result.stderr
+    assert b"Traceback" not in result.stderr
+    assert not fake_gh.exists()

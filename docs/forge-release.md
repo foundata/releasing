@@ -5,7 +5,8 @@ release forge release-create "${version}" \
   --manifest "../dist-${version}/artifacts.json"
 ```
 
-The notes are the changelog section for that version. The assets are the
+The notes are the changelog section for that version at the local tag's commit,
+never from a later commit or a working-tree edit. The assets are the
 manifest and the files it names. The write is performed by the forge's own
 command-line tool, `gh` for GitHub.
 
@@ -76,8 +77,9 @@ release-create` asks nothing at all.
 ## Collections<a id="collections"></a>
 
 A collection's notes come from `changelogs/changelog.yaml`, rendered as
-Markdown with the section titles set in `changelogs/config.yaml`.
-`release changelog show` prints the same text.
+Markdown with the section titles set in `changelogs/config.yaml`; both files
+are read from the tagged commit. `release changelog show` instead reads the
+working tree.
 
 reStructuredText inline literals become Markdown code spans. Other markup is
 passed through unchanged.

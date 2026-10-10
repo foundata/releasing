@@ -22,6 +22,8 @@ and the project adheres to
 
 ### Changed
 
+- Forge release notes are read from the local release tag's commit, including
+  collection changelog data and titles, rather than from the working tree.
 - `release status` retries a missing forge release three times at five-second
   intervals when every other step is `ok`; `--no-wait` checks once.
 

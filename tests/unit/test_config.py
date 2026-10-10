@@ -245,6 +245,24 @@ def test_missing_and_ambiguous_declarations(tmp_path: Path) -> None:
         load_release_config(tmp_path)
 
 
+def test_committed_file_callers_can_load_a_declaration_without_checkout_files(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path, 'repository = "foundata/example"\n')
+    (root / "CHANGELOG.md").unlink()
+    with pytest.raises(ConfigError, match="declared files are missing"):
+        load_release_config(root)
+    assert load_release_config(root, check_files=False).changelog == "CHANGELOG.md"
+
+
+def test_skipping_checkout_files_does_not_skip_declaration_validation(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path, 'repository = "not-a-repository"\n')
+    with pytest.raises(ConfigError, match="repository must be owner/name"):
+        load_release_config(root, check_files=False)
+
+
 def test_both_standalone_spellings_are_ambiguous(tmp_path: Path) -> None:
     # A leftover copy under the other name is reported, rather than losing to
     # whichever file the search order reads first.

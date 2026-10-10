@@ -158,12 +158,13 @@ def locate(root: Path) -> tuple[Path, Mapping[str, object]]:
     return candidates[0]
 
 
-def load_release_config(root: Path) -> ReleaseConfig:
+def load_release_config(root: Path, *, check_files: bool = True) -> ReleaseConfig:
     """Load, default and validate the declaration for the project at ``root``.
 
     ``root`` may be a Git checkout or a plain exported tree. Every referenced
-    file must exist below it. Unknown keys are rejected so a misspelled key
-    cannot silently fall back to a default.
+    file must exist below it unless ``check_files=False`` for a caller that
+    reads the files from a committed revision instead. Unknown keys are rejected
+    so a misspelled key cannot silently fall back to a default.
     """
     root = root.resolve()
     if not root.is_dir():
@@ -225,7 +226,8 @@ def load_release_config(root: Path) -> ReleaseConfig:
         allowed_attribution=allowed_attribution,
         readmes=readmes,
     )
-    _check_files(config)
+    if check_files:
+        _check_files(config)
     return config
 
 

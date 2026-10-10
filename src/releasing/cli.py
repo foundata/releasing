@@ -905,7 +905,7 @@ def _run_publish(args: argparse.Namespace) -> int:
 
 def _run_forge_release_create(args: argparse.Namespace) -> int:
     try:
-        loaded = _load_config(args)
+        loaded = config.load_release_config(cast(Path, args.project), check_files=False)
         manifest_path = None if args.manifest is None else cast(Path, args.manifest)
         manifest = (
             None if manifest_path is None else artifacts.load_manifest(manifest_path)
@@ -919,7 +919,7 @@ def _run_forge_release_create(args: argparse.Namespace) -> int:
             manifest_path=manifest_path,
             offline=args.offline,
         )
-        if _stops_for_attribution(args, loaded, prepared.tag):
+        if _stops_for_attribution(args, loaded, prepared.revision):
             return 1
         reported = forge_release.execute(loaded.root, prepared, dry_run=args.dry_run)
     except _RELEASE_ERRORS as exc:

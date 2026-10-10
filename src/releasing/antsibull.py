@@ -51,11 +51,17 @@ def _yaml() -> Any:
 
 
 def _load(path: Path) -> Any:
-    yaml = _yaml()
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as exc:
         raise AntsibullError(f"cannot read {path}: {exc}") from exc
+    return _parse(text, path)
+
+
+def _parse(text: str, path: Path) -> Any:
+    yaml = _yaml()
+    try:
+        return yaml.safe_load(text)
     except yaml.YAMLError as exc:
         raise AntsibullError(f"{path} is not valid YAML: {exc}") from exc
 
@@ -65,7 +71,10 @@ def section_titles(root: Path) -> tuple[str, tuple[tuple[str, str], ...]]:
     path = root / CONFIG
     if not path.is_file():
         return DEFAULT_PRELUDE_TITLE, DEFAULT_SECTIONS
-    document = _load(path)
+    return _section_titles(_load(path))
+
+
+def _section_titles(document: object) -> tuple[str, tuple[tuple[str, str], ...]]:
     if not isinstance(document, dict):
         raise AntsibullError(f"{CONFIG}: expected a mapping")
     prelude = document.get("prelude_section_title") or DEFAULT_PRELUDE_TITLE
@@ -82,7 +91,10 @@ def section_titles(root: Path) -> tuple[str, tuple[tuple[str, str], ...]]:
 
 def release_entry(root: Path, version: str) -> dict[str, Any]:
     """The recorded entry for one version, or raise AntsibullError."""
-    document = _load(root / CHANGES)
+    return _release_entry(_load(root / CHANGES), version)
+
+
+def _release_entry(document: object, version: str) -> dict[str, Any]:
     releases = document.get("releases") if isinstance(document, dict) else None
     if not isinstance(releases, dict):
         raise AntsibullError(f"{CHANGES}: expected a releases mapping")
@@ -98,6 +110,26 @@ def notes(root: Path, version: str) -> str:
     """Render one version's recorded changes as Markdown."""
     entry = release_entry(root, version)
     prelude_title, sections = section_titles(root)
+    return _render(entry, version, prelude_title, sections)
+
+
+def notes_from_text(changes: str, version: str, *, config: str | None = None) -> str:
+    """Render committed YAML without consulting the working tree."""
+    entry = _release_entry(_parse(changes, CHANGES), version)
+    prelude_title, sections = (
+        (DEFAULT_PRELUDE_TITLE, DEFAULT_SECTIONS)
+        if config is None
+        else _section_titles(_parse(config, CONFIG))
+    )
+    return _render(entry, version, prelude_title, sections)
+
+
+def _render(
+    entry: dict[str, Any],
+    version: str,
+    prelude_title: str,
+    sections: tuple[tuple[str, str], ...],
+) -> str:
     changes = entry.get("changes")
     changes = changes if isinstance(changes, dict) else {}
     parts: list[str] = []

@@ -48,7 +48,16 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReleaseConfig:
     )
     monkeypatch.setattr(processes, "executable", lambda name: Path("/usr/bin") / name)
     monkeypatch.setattr(forge_api, "release_exists", lambda forge, tag: False)
-    monkeypatch.setattr(processes, "git", lambda root, *args: "a" * 40)
+
+    def git(root: Path, *args: str) -> str:
+        if args[0] == "rev-parse":
+            return "a" * 40
+        if args[0] == "ls-tree":
+            return args[-1] if (root / args[-1]).is_file() else ""
+        assert args[0] == "show"
+        return (root / args[1].split(":", 1)[1]).read_text(encoding="utf-8")
+
+    monkeypatch.setattr(processes, "git", git)
     return ReleaseConfig(
         root=tmp_path, source=tmp_path / "pyproject.toml", repository="foundata/example"
     )
