@@ -61,6 +61,7 @@ def plan(
     notes = _notes(root, config, version_string)
     assets: tuple[Path, ...] = ()
     if manifest is not None and manifest_path is not None:
+        manifest_path = manifest_path.absolute()
         if manifest.version and manifest.version != version_string:
             raise ForgeReleaseError(
                 f"the manifest records version {manifest.version}, not {version_string}"

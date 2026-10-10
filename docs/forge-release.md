@@ -9,6 +9,10 @@ The notes are the changelog section for that version. The assets are the
 manifest and the files it names. The write is performed by the forge's own
 command-line tool, `gh` for GitHub.
 
+Relative manifest paths are interpreted from the caller's working directory.
+The manifest and artifact paths are made absolute before execution, so using
+`--project` from another directory uploads the same files that were verified.
+
 The write explicitly names the declared forge host and repository, the same
 destination checked during planning. Git remotes, `GH_REPO` and `GH_HOST`
 cannot redirect it to another repository.

@@ -319,3 +319,35 @@ def test_a_notes_write_failure_cleans_up_its_directory(
         forge_release.execute(project.root, prepared)
     assert len(staged) == 1
     assert not staged[0].parent.exists()
+
+
+@pytest.mark.parametrize("shadow_files", [False, True])
+def test_relative_assets_keep_the_verified_bytes_when_execution_changes_directory(
+    project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch, shadow_files: bool
+) -> None:
+    caller = project.root / "caller"
+    caller.mkdir()
+    path = with_artifacts(caller)
+    expected = [path.read_bytes(), b"source distribution"]
+    if shadow_files:
+        (project.root / "dist").mkdir()
+        (project.root / "dist" / "artifacts.json").write_bytes(b"wrong manifest")
+        (project.root / "dist" / "example-1.0.0.tar.gz").write_bytes(b"wrong artifact")
+    monkeypatch.chdir(caller)
+    relative = Path("dist/artifacts.json")
+    prepared = forge_release.plan(
+        project.root,
+        project,
+        FORGE,
+        "1.0.0",
+        manifest=load_manifest(relative),
+        manifest_path=relative,
+    )
+
+    def read_assets(argv: list[str], *, cwd: Path, **kwargs: object) -> str:
+        paths = argv[argv.index("--notes-file") + 2 :]
+        assert [(cwd / value).read_bytes() for value in paths] == expected
+        return "created"
+
+    monkeypatch.setattr(processes, "run", read_assets)
+    assert forge_release.execute(project.root, prepared) == "created"

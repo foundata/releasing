@@ -40,6 +40,8 @@ and the project adheres to
 - `forge release-create` stages notes in its own temporary directory, preserving
   existing checkout files and supporting tag names containing slashes. Staged
   notes are removed after success or failure; dry runs create no staging files.
+- `forge release-create --project` keeps relative manifest and artifact paths
+  anchored to the caller's directory when running the forge tool in the project.
 
 
 ## [5.0.0] - 2026-09-26
