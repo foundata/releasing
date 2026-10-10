@@ -206,9 +206,11 @@ Three things decide whether that run means anything:
 
 ## Dependencies<a id="dependencies"></a>
 
-The direct runtime dependencies are `markdown-it-py`, `typing-extensions` and
-`PyYAML` on every supported Python version. `typing-extensions` supplies the
-`override` decorator through one unconditional import, including on Python 3.11.
+The direct runtime dependencies are `markdown-it-py`, `packaging`,
+`typing-extensions` and `PyYAML` on every supported Python version.
+`packaging` parses wheel and source-distribution filenames and compares their
+version fields. `typing-extensions` supplies the `override` decorator through
+one unconditional import, including on Python 3.11.
 `PyYAML` reads collection changelog data and is imported only when that data is
 needed. Archive, JSON, hashing and HTTP handling use the standard library.
 

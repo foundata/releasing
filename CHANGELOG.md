@@ -42,6 +42,10 @@ and the project adheres to
   notes are removed after success or failure; dry runs create no staging files.
 - `forge release-create --project` keeps relative manifest and artifact paths
   anchored to the caller's directory when running the forge tool in the project.
+- Artifact checks compare the filename's version field instead of searching
+  for the expected version anywhere in the name. Python filenames use
+  `packaging`, now a runtime dependency; collection prerelease suffixes and
+  wheel build tags remain supported.
 
 
 ## [5.0.0] - 2026-09-26

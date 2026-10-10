@@ -133,6 +133,46 @@ def test_check_passes_clean_artifacts(tmp_path: Path) -> None:
     assert check(built, version="1.2.3", names=["example"]) == []
 
 
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "example-11.2.3-py3-none-any.whl",
+        "example-1.2.30-py3-none-any.whl",
+        "example-1.2.3rc1-py3-none-any.whl",
+        "example_1.2.3-9.0.0-py3-none-any.whl",
+        "example-1.2.3.whl",
+    ],
+)
+def test_check_compares_the_wheel_version_field(tmp_path: Path, filename: str) -> None:
+    path = wheel(tmp_path).rename(tmp_path / filename)
+    assert check([inspect(path)], version="1.2.3") == [
+        f"{filename}: file name does not carry version 1.2.3"
+    ]
+
+
+@pytest.mark.parametrize("kind", ["sdist", "collection"])
+@pytest.mark.parametrize("filename_version", ["11.2.3", "1.2.30", "1.2.3rc1"])
+def test_check_compares_the_tarball_version_field(
+    tmp_path: Path, kind: str, filename_version: str
+) -> None:
+    path = sdist(tmp_path) if kind == "sdist" else collection(tmp_path, version="1.2.3")
+    filename = path.name.replace("1.2.3", filename_version)
+    path = path.rename(tmp_path / filename)
+    assert check([inspect(path)], version="1.2.3") == [
+        f"{filename}: file name does not carry version 1.2.3"
+    ]
+
+
+def test_a_wheel_build_tag_does_not_change_its_version(tmp_path: Path) -> None:
+    path = wheel(tmp_path).rename(tmp_path / "example-1.2.3-2build-py3-none-any.whl")
+    assert check([inspect(path)], version="1.2.3") == []
+
+
+def test_collection_prerelease_versions_keep_their_hyphens(tmp_path: Path) -> None:
+    path = collection(tmp_path, version="1.2.3-rc1")
+    assert check([inspect(path)], version="1.2.3-rc1") == []
+
+
 def test_check_names_each_defect(tmp_path: Path) -> None:
     built = [
         inspect(wheel(tmp_path, version="1.2.4")),

@@ -22,6 +22,14 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
+from packaging.utils import (
+    InvalidSdistFilename,
+    InvalidWheelFilename,
+    parse_sdist_filename,
+    parse_wheel_filename,
+)
+from packaging.version import InvalidVersion, Version
+
 from releasing import markdown
 
 SCHEMA_VERSION = 1
@@ -86,7 +94,7 @@ def check(
             problems.append(
                 f"{where}: metadata version {artifact.version} != {version}"
             )
-        if version not in artifact.path.name:
+        if not _filename_has_version(artifact, version):
             problems.append(f"{where}: file name does not carry version {version}")
         for member in artifact.members:
             problems.extend(f"{where}: {reason}" for reason in _member_problems(member))
@@ -100,6 +108,25 @@ def check(
                 f"no artifact for {name} among {', '.join(sorted(seen)) or 'none'}"
             )
     return problems
+
+
+def _filename_has_version(artifact: Artifact, expected: str) -> bool:
+    """Compare the version field using the artifact kind's filename format."""
+    filename = artifact.path.name
+    if artifact.kind == "collection":
+        # Namespace and collection names contain no hyphens; versions may.
+        fields = filename.removesuffix(".tar.gz").split("-", 2)
+        return (
+            filename.endswith(".tar.gz") and len(fields) == 3 and fields[2] == expected
+        )
+    try:
+        if artifact.kind == "wheel":
+            found = parse_wheel_filename(filename)[1]
+        else:
+            found = parse_sdist_filename(filename)[1]
+        return found == Version(expected)
+    except (InvalidWheelFilename, InvalidSdistFilename, InvalidVersion):
+        return False
 
 
 @dataclass(frozen=True)

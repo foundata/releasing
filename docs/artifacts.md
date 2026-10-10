@@ -23,6 +23,12 @@ Fails, naming every problem, when any file:
   patch leftovers;
 - contains an absolute path, a `..` component or a symbolic link.
 
+Filename checks compare the version field, not a substring: a `1.0.0`
+release cannot carry a file named for `11.0.0` or `1.0.0rc1`. Python filenames
+are parsed with `packaging`; wheel build tags are separate from the version.
+Collection filenames retain the full version after the namespace and name,
+including any prerelease suffix.
+
 Source distributions and collection tarballs must have non-empty descriptions.
 An empty wheel description is accepted; a whitespace-only description still
 fails. Python descriptions declared as a non-Markdown content type are treated

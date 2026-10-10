@@ -29,6 +29,7 @@ dependencies = [
   # and helpers), which is stable across 3.x and 4.x; the next major is
   # excluded until its rule API has been reviewed.
   "markdown-it-py>=3.0,<5",
+  "packaging>=23.2",  # Wheel and source-distribution filename parsers.
   "typing-extensions>=4.4",  # `override` backport for Python 3.11.
   # Reads a collection's changelog data, which antsibull-changelog writes as
   # YAML. Imported only when such a project is released.
