@@ -98,8 +98,8 @@ def _write(path: Path, data: bytes, mode: int) -> None:
             temporary = Path(stream.name)
             stream.write(data)
             stream.flush()
-            os.fchmod(stream.fileno(), mode)
             os.fsync(stream.fileno())
+        temporary.chmod(mode)
         temporary.replace(path)
     finally:
         if temporary is not None:

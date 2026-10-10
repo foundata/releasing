@@ -247,6 +247,27 @@ def test_custom_bases_do_not_depend_on_current_directory_names(tmp_path: Path) -
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.parametrize("in_place", [False, True])
+def test_atomic_output_does_not_require_posix_fchmod(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, in_place: bool
+) -> None:
+    path = source(tmp_path)
+    output = path if in_place else tmp_path / "prepared.md"
+    if not in_place:
+        output.write_bytes(b"existing output")
+    monkeypatch.delattr(os, "fchmod", raising=False)
+    arguments = ["markdown", "prepare", *BASE]
+    if not in_place:
+        arguments.extend(["--output", str(output)])
+    assert cli.main([*arguments, str(path)]) == 0
+    assert output.read_bytes() == (
+        b"[guide](https://github.com/foundata/example/blob/main/docs.md#start)\n"
+    )
+    if not in_place:
+        assert path.read_bytes() == b"[guide](./docs.md#start)\n"
+    assert not list(tmp_path.glob(f".{output.name}.*"))
+
+
 def test_failed_atomic_replace_cleans_temporary_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

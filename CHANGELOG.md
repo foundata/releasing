@@ -32,6 +32,8 @@ and the project adheres to
 
 ### Fixed
 
+- Atomic file writes apply permissions through the closed temporary file's
+  path, so Markdown and changelog writes also work on Windows without `fchmod`.
 - Index and forge uploads use private copies checked against the planned
   digests, including the forge's manifest attachment. Changed inputs are
   refused before any upload; staging is removed after success or failure.
