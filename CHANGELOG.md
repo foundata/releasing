@@ -27,6 +27,8 @@ and the project adheres to
 
 ### Fixed
 
+- Release commands report unreadable attribution-check revisions as CLI errors
+  instead of tracebacks, including a missing local tag during forge creation.
 - `release build` refuses README sources and copy destinations that resolve
   outside the export, preventing symbolic links from rewriting external files
   during a build or dry run.

@@ -693,6 +693,7 @@ def _run_build(args: argparse.Namespace) -> int:
 
 
 _RELEASE_ERRORS = (
+    attribution.AttributionError,
     config.ConfigError,
     version.VersionError,
     changelog.ChangelogError,

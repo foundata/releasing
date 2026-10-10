@@ -267,6 +267,9 @@ the current one.
 - `tests/integration/test_reporting.py`: the stream contract. Result data goes
   to stdout and progress to stderr, `--quiet` drops the progress but never an
   error, a dry run changes nothing, and a library caller narrates nothing.
+- `tests/integration/test_forge_release_cli.py`: real CLI and Git calls with a
+  fake `gh` executable. The tests exercise repository selection, asset paths,
+  missing tags, upload failures and temporary-note cleanup without a network.
 - `tests/fixtures/cases.json`: small reviewed inputs and exact expected output.
 - `tests/fixtures/mixed-content*.md`: nested containers, references, tables,
   HTML, code and comments with exact expected Markdown and renderer assertions.
