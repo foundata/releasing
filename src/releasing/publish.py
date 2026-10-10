@@ -37,6 +37,31 @@ class PublishError(RuntimeError):
     """The manifest's files cannot be published as they stand."""
 
 
+class UploadError(PublishError):
+    """An upload stopped with confirmed, uncertain and unattempted files."""
+
+    def __init__(
+        self,
+        reason: str,
+        *,
+        completed: tuple[str, ...],
+        uncertain: tuple[str, ...],
+        pending: tuple[str, ...],
+    ) -> None:
+        """Keep the partial result available to CLI and library callers."""
+        self.completed = completed
+        self.uncertain = uncertain
+        self.pending = pending
+        super().__init__(
+            f"{reason}\n"
+            f"Confirmed by the upload tool: {', '.join(completed) or 'none'}\n"
+            f"Outcome unconfirmed: {', '.join(uncertain) or 'none'}\n"
+            f"Not attempted: {', '.join(pending) or 'none'}\n"
+            "Check the index before retrying: an unconfirmed upload may already exist. "
+            "Skip an existing file only after its remote digest matches the manifest."
+        )
+
+
 @dataclass(frozen=True)
 class PublishPlan:
     """The exact files an upload would send."""
@@ -85,21 +110,37 @@ def execute(prepared: PublishPlan, *, dry_run: bool = False) -> list[str]:
 def _upload(index: str, files: tuple[Path, ...]) -> None:
     if index == "pypi":
         uv = str(processes.executable("uv"))
-        processes.run(
-            [uv, "publish", *[str(path) for path in files]],
-            timeout=1800,
-            stream=True,
-            echo=True,
-        )
-    else:
-        galaxy = str(processes.executable("ansible-galaxy"))
-        for path in files:
+        try:
             processes.run(
-                [galaxy, "collection", "publish", str(path)],
+                [uv, "publish", *[str(path) for path in files]],
                 timeout=1800,
                 stream=True,
                 echo=True,
             )
+        except processes.ProcessError as exc:
+            raise UploadError(
+                str(exc),
+                completed=(),
+                uncertain=tuple(path.name for path in files),
+                pending=(),
+            ) from exc
+    else:
+        galaxy = str(processes.executable("ansible-galaxy"))
+        for position, path in enumerate(files):
+            try:
+                processes.run(
+                    [galaxy, "collection", "publish", str(path)],
+                    timeout=1800,
+                    stream=True,
+                    echo=True,
+                )
+            except processes.ProcessError as exc:
+                raise UploadError(
+                    str(exc),
+                    completed=tuple(item.name for item in files[:position]),
+                    uncertain=(path.name,),
+                    pending=tuple(item.name for item in files[position + 1 :]),
+                ) from exc
 
 
 def credential_warning(

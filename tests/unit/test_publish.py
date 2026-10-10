@@ -175,6 +175,66 @@ def test_a_collection_is_published_one_file_at_a_time(
     assert seen[0][1:3] == ["collection", "publish"]
 
 
+@pytest.mark.parametrize("failed_at", [0, 1, 2])
+def test_partial_collection_failure_reports_progress_without_retrying(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failed_at: int
+) -> None:
+    files = [
+        tmp_path / f"foundata-{name}-1.0.0.tar.gz"
+        for name in ("alpha", "beta", "gamma")
+    ]
+    for path in files:
+        path.write_bytes(b"collection")
+    manifest = build_manifest(
+        files, repository="foundata/example", version="1.0.0", source_revision=None
+    )
+    prepared = publish.plan(manifest, tmp_path, index="galaxy")
+    calls: list[Path] = []
+    monkeypatch.setattr(processes, "executable", lambda name: Path("/tools") / name)
+
+    def run(argv: list[str], **kwargs: object) -> str:
+        calls.append(Path(argv[-1]))
+        if len(calls) == failed_at + 1:
+            raise processes.ProcessError("connection lost after sending the file")
+        return ""
+
+    monkeypatch.setattr(processes, "run", run)
+    with pytest.raises(publish.UploadError, match="connection lost") as stopped:
+        publish.execute(prepared)
+    assert stopped.value.completed == tuple(path.name for path in files[:failed_at])
+    assert stopped.value.uncertain == (files[failed_at].name,)
+    assert stopped.value.pending == tuple(path.name for path in files[failed_at + 1 :])
+    assert [path.name for path in calls] == [
+        path.name for path in files[: failed_at + 1]
+    ]
+    assert all(not path.parent.exists() for path in calls)
+    assert "remote digest matches the manifest" in str(stopped.value)
+
+
+def test_a_failed_batch_upload_does_not_guess_which_files_arrived(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = released(tmp_path)
+    prepared = publish.plan(
+        load_manifest(directory / "artifacts.json"), directory, index="pypi"
+    )
+    monkeypatch.setattr(processes, "executable", lambda name: Path("/tools") / name)
+    calls: list[list[str]] = []
+
+    def run(argv: list[str], **kwargs: object) -> str:
+        calls.append(argv)
+        raise processes.ProcessError("upload timed out")
+
+    monkeypatch.setattr(processes, "run", run)
+    with pytest.raises(publish.UploadError, match="upload timed out") as stopped:
+        publish.execute(prepared)
+    assert stopped.value.completed == ()
+    assert stopped.value.uncertain == tuple(path.name for path in prepared.files)
+    assert stopped.value.pending == ()
+    assert len(calls) == 1
+    assert all(not Path(value).parent.exists() for value in calls[0][2:])
+
+
 def test_dry_run_sends_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     directory = released(tmp_path)
     prepared = publish.plan(

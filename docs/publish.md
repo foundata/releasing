@@ -29,6 +29,20 @@ skipped.
 
 `--dry-run` lists what would be sent and uploads nothing.
 
+## Interrupted uploads
+
+An upload failure reports three sets: files confirmed by successful tool calls,
+files whose remote outcome is unconfirmed, and files not yet attempted. For
+Galaxy, a later failure retains the successful earlier calls and stops before
+the remaining files. A failed PyPI batch leaves every file in that batch
+unconfirmed; a lost response does not prove the server rejected the upload.
+
+The command does not retry or automatically skip files. Inspect the index before
+retrying. An existing filename may be skipped only after its remote SHA-256
+matches the original manifest; a mismatch requires investigation, not an
+overwrite. Keep the original manifest as the release record. Library callers
+can inspect `UploadError.completed`, `.uncertain` and `.pending`.
+
 ## Credentials
 
 The index's own tool reads them: from the environment, from trusted publishing,

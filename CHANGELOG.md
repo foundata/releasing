@@ -11,6 +11,9 @@ and the project adheres to
 
 ### Added
 
+- Failed uploads report tool-confirmed files, uncertain remote outcomes and
+  files not attempted. Galaxy failures retain earlier successes; failed PyPI
+  batches remain unconfirmed. No failed upload is automatically retried.
 - Forge requests are made as a user when they can be. Every question to the
   forge, whether a release exists and which is latest, is asked first with a
   `GH_TOKEN` or `GITHUB_TOKEN` from the environment, then through the
