@@ -90,6 +90,7 @@ uv run --locked --python 3.11 pytest
 uv run --locked --python 3.12 pytest
 uv run --locked --python 3.13 pytest
 uv run --locked --python 3.14 pytest
+uv run --locked --isolated --python 3.11 python tests/check_dependency_floors.py
 git diff --check
 ```
 
@@ -191,9 +192,15 @@ Copy that bundle to the host by any means, then, on the host:
 ```sh
 git clone --branch main releasing.bundle releasing
 cd releasing
-uv sync --locked --python 3.14
-uv run --locked pytest -q
+uv run --locked --isolated --python 3.14 python tests/check_windows.py
 ```
+
+The Windows entry point refuses non-native hosts and dirty tracked files. It
+runs declaration, formatting, lint, type, Markdown and pytest checks, builds
+from HEAD, then installs and functionally smoke-tests the wheel in a temporary
+environment outside the checkout. Each failed command stops the gate; temporary
+build and installation directories are removed. POSIX shell checks remain part
+of `scripts/release-check.sh` on Linux.
 
 Three things decide whether that run means anything:
 
@@ -237,6 +244,14 @@ release; run it against the oldest and newest supported parser after changing
 the range, then update the lockfile explicitly with `uv lock`. The
 development-only `readme-renderer[md]` dependency supplies an independent
 publishing renderer. Twine is neither required nor installed.
+
+`tests/check_dependency_floors.py` reads the direct runtime dependencies and
+Python minimum from `pyproject.toml`, creates an isolated uv environment with
+each dependency pinned to its declared floor, verifies the installed versions,
+then runs the full suite. The Linux release gate runs it in addition to the
+locked Python matrix. It leaves the lockfile and development environment alone.
+This floor check runs on Python 3.11; it does not claim Windows compatibility
+for versions whose development dependencies cannot be installed there.
 
 ## Coverage<a id="coverage"></a>
 

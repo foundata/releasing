@@ -289,6 +289,8 @@ main() {
   run_static_checks
   check_shell_scripts
   run_tests_matrix
+  log "Tests at the declared runtime dependency floors"
+  uv run --locked --isolated --python 3.11 python tests/check_dependency_floors.py
   build_artifacts
   smoke_test_matrix
   log "All release checks passed"
