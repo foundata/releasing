@@ -44,6 +44,19 @@ UNSAFE_MANIFEST_NAMES = (
     "x.whl:stream",
     "x\x00.whl",
 )
+PYTHON_VERSION_CASES = (
+    ("1.2.3a1", "1.2.3a1"),
+    ("1.2.3b2", "1.2.3b2"),
+    ("1.2.3rc1", "1.2.3rc1"),
+    ("1.2.3.post1", "1.2.3.post1"),
+    ("1.2.3.dev2", "1.2.3.dev2"),
+    ("1.2.3+linux.1", "1.2.3+linux.1"),
+    ("1!1.2.3", "1!1.2.3"),
+    ("1.2.3-rc1", "1.2.3rc1"),
+    ("1.2.3post1", "1.2.3.post1"),
+    ("1.2.3dev2", "1.2.3.dev2"),
+    ("1.2.3+Linux_01", "1.2.3+linux.1"),
+)
 
 
 def metadata(version: str, body: str | None) -> str:
@@ -185,6 +198,26 @@ def test_check_compares_the_tarball_version_field(
 def test_a_wheel_build_tag_does_not_change_its_version(tmp_path: Path) -> None:
     path = wheel(tmp_path).rename(tmp_path / "example-1.2.3-2build-py3-none-any.whl")
     assert check([inspect(path)], version="1.2.3") == []
+
+
+@pytest.mark.parametrize("version, filename_version", PYTHON_VERSION_CASES)
+def test_wheels_accept_python_versions_and_normalized_filenames(
+    tmp_path: Path, version: str, filename_version: str
+) -> None:
+    path = wheel(tmp_path, version=version).rename(
+        tmp_path / f"example-{filename_version}-py3-none-any.whl"
+    )
+    assert check([inspect(path)], version=version) == []
+
+
+@pytest.mark.parametrize("version, filename_version", PYTHON_VERSION_CASES)
+def test_sdists_accept_python_versions_and_normalized_filenames(
+    tmp_path: Path, version: str, filename_version: str
+) -> None:
+    path = sdist(tmp_path, version=version).rename(
+        tmp_path / f"example-{filename_version}.tar.gz"
+    )
+    assert check([inspect(path)], version=version) == []
 
 
 def test_collection_prerelease_versions_keep_their_hyphens(tmp_path: Path) -> None:
