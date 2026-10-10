@@ -93,6 +93,7 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> str:
         "release",
         "create",
         prepared.tag,
+        "--verify-tag",
         "--title",
         prepared.title,
         "--repo",

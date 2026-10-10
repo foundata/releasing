@@ -33,6 +33,8 @@ and the project adheres to
 - `forge release-create` explicitly targets the declared host and repository,
   preventing Git remotes or the forge tool's environment from redirecting the
   write to a different destination than the one checked.
+- `forge release-create` requires the tag to exist on the forge, preventing
+  `gh` from creating an unpushed release tag at the default branch.
 
 
 ## [5.0.0] - 2026-09-26

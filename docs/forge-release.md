@@ -17,6 +17,10 @@ It refuses when the changelog has no section for the version, when the
 manifest's files are missing or altered, when the forge already has a release
 for the tag, and when no release tool is known for the declared forge.
 
+The release tag must already exist on the forge. The write passes
+`--verify-tag` to `gh`, so forgetting to push the tag fails instead of creating
+a new tag at the default branch. Run `release push` before creating the entry.
+
 `--dry-run` prints the command it would run and creates nothing. `--offline`
 skips the question of whether a release already exists, for a forge that
 cannot be reached.
