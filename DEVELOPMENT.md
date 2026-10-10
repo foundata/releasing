@@ -207,7 +207,8 @@ Four things decide whether that run means anything:
 
 - Git and uv must be on `PATH`. The suite starts both as subprocesses, and a
   missing one appears as dozens of fixture errors rather than as a failure.
-- Install the [Microsoft Visual C++ v14 x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+- Install the
+  [Microsoft Visual C++ v14 x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
   required by `rumdl`. A fresh Windows image may lack `VCRUNTIME140.dll`;
   without it, the Markdown check exits with `0xC0000135` before linting.
 - Python 3.11 to 3.13 cannot create the environment there, because
