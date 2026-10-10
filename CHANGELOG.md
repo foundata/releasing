@@ -27,6 +27,9 @@ and the project adheres to
 
 ### Fixed
 
+- Artifact manifests reject duplicate filenames and paths instead of basenames.
+  Verification refuses symbolic links outside the artifact directory before
+  reading their contents, so publication cannot attach those external files.
 - Release commands report unreadable attribution-check revisions as CLI errors
   instead of tracebacks, including a missing local tag during forge creation.
 - `release build` refuses README sources and copy destinations that resolve

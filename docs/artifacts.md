@@ -71,8 +71,14 @@ hexadecimal, the spelling package indexes serve; an algorithm prefix such as
 `sha256:<hex>` is refused. A manifest without a `version` needs `--version`
 when verifying.
 
+Artifact filenames must be unique, non-empty basenames, not paths. Absolute
+paths, directory components, Windows drive or stream names and NUL bytes are
+refused, including in manifests produced by other tools.
+
 ## `release artifacts verify artifacts.json`<a id="artifacts-verify"></a>
 
 Fails when a listed file is missing or altered, or when an unlisted wheel or
-tarball lies beside the manifest. Run it directly before uploading, so exactly
-the validated bytes are published.
+tarball lies beside the manifest. A symbolic link is accepted only when its
+target stays inside that directory; an external target is rejected before its
+contents are read. Run it directly before uploading, so exactly the validated
+bytes are published. Publication commands apply the same verification.

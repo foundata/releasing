@@ -20,7 +20,7 @@ import zipfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from packaging.utils import (
     InvalidSdistFilename,
@@ -164,10 +164,11 @@ def sha256_file(path: Path) -> str:
 def build_manifest(
     files: Sequence[Path], *, repository: str, version: str, source_revision: str | None
 ) -> Manifest:
-    """Digest every file into a manifest; file names must be unique."""
+    """Digest every file into a manifest with unique, portable basenames."""
     names = [path.name for path in files]
-    if len(set(names)) != len(names):
-        raise ArtifactError("artifact file names must be unique")
+    problems = _manifest_name_problems(names)
+    if problems:
+        raise ArtifactError("; ".join(problems))
     if not files:
         raise ArtifactError("a manifest needs at least one artifact")
     return Manifest(
@@ -233,8 +234,8 @@ def dump_manifest(
 def load_manifest(path: Path) -> Manifest:
     """Read a manifest written by ``dump_manifest`` or a compatible one.
 
-    Only the ``artifacts`` list with ``filename`` and ``sha256`` is required,
-    so a manifest written by another gate in the same shape is accepted.
+    Only the ``artifacts`` list with ``filename`` and ``sha256`` is required.
+    File names must be unique basenames, never paths or Windows streams.
     """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -259,6 +260,9 @@ def load_manifest(path: Path) -> Manifest:
                 int(size) if isinstance(size, int) else -1,
             )
         )
+    problems = _manifest_name_problems(entry.filename for entry in artifacts)
+    if problems:
+        raise ArtifactError(f"{path}: " + "; ".join(problems))
     return Manifest(
         repository=str(data.get("repository", "")),
         version=str(data.get("version", "")),
@@ -272,13 +276,48 @@ def load_manifest(path: Path) -> Manifest:
     )
 
 
+def _manifest_name_problems(filenames: Iterable[str]) -> list[str]:
+    """Check names before joining them to a directory on either platform."""
+    problems = []
+    seen: set[str] = set()
+    for filename in filenames:
+        if (
+            filename in {"", ".", ".."}
+            or "\x00" in filename
+            or ":" in filename
+            or PurePosixPath(filename).name != filename
+            or PureWindowsPath(filename).name != filename
+        ):
+            problems.append(
+                f"unsafe artifact filename {filename!r}: expected a bare file name"
+            )
+        if filename in seen:
+            problems.append(f"duplicate artifact filename {filename!r}")
+        seen.add(filename)
+    return problems
+
+
 def verify_manifest(manifest: Manifest, directory: Path) -> list[str]:
-    """Return every file in ``directory`` that is missing, altered or unlisted."""
-    problems: list[str] = []
+    """Report unsafe names or files that escape, are missing, altered or unlisted."""
+    problems = _manifest_name_problems(entry.filename for entry in manifest.artifacts)
+    if problems:
+        return problems
+    root = directory.resolve()
     listed = {entry.filename for entry in manifest.artifacts}
     for entry in manifest.artifacts:
-        path = directory / entry.filename
-        if not path.is_file():
+        try:
+            path = (root / entry.filename).resolve(strict=True)
+        except FileNotFoundError:
+            problems.append(f"{entry.filename}: missing")
+            continue
+        except (OSError, RuntimeError) as exc:
+            problems.append(f"{entry.filename}: cannot resolve artifact: {exc}")
+            continue
+        if not path.is_relative_to(root):
+            problems.append(
+                f"{entry.filename}: resolves outside the artifact directory"
+            )
+        elif not path.is_file():
             problems.append(f"{entry.filename}: missing")
         elif sha256_file(path) != entry.sha256:
             problems.append(f"{entry.filename}: SHA-256 differs from the manifest")

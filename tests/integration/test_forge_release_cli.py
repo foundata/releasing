@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from releasing import artifacts
-from tests.support import captured, write_lf
+from tests.support import POSIX_ONLY, captured, write_lf
 
 pytestmark = pytest.mark.integration
 GIT_ENV = {
@@ -245,6 +245,26 @@ def test_a_missing_local_tag_is_a_cli_error_before_gh_runs(
     assert result.stdout == b""
     assert b"cannot read the commits to check" in result.stderr
     assert b"v1.0.0" in result.stderr
+    assert b"Traceback" not in result.stderr
+    assert not fake_gh.exists()
+    assert list((repository.parent / "staged notes").iterdir()) == []
+
+
+@POSIX_ONLY
+def test_a_manifest_symlink_cannot_upload_a_file_outside_its_directory(
+    repository: Path, fake_gh: Path, manifest: Path
+) -> None:
+    directory = repository.parent / manifest.parent
+    artifact = directory / "example-1.0.0.tar.gz"
+    external = repository.parent / "outside.tar.gz"
+    artifact.rename(external)
+    artifact.symlink_to(external)
+
+    result = release(repository, "--manifest", str(manifest))
+
+    assert result.returncode == 1
+    assert result.stdout == b""
+    assert b"resolves outside the artifact directory" in result.stderr
     assert b"Traceback" not in result.stderr
     assert not fake_gh.exists()
     assert list((repository.parent / "staged notes").iterdir()) == []

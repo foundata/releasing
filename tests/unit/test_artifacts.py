@@ -5,12 +5,15 @@ import io
 import json
 import tarfile
 import zipfile
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from releasing.artifacts import (
     ArtifactError,
+    Manifest,
+    ManifestEntry,
     build_manifest,
     check,
     dump_manifest,
@@ -19,12 +22,28 @@ from releasing.artifacts import (
     sha256_file,
     verify_manifest,
 )
+from tests.support import POSIX_ONLY
 
 HEADERS = (
     "Metadata-Version: 2.4\nName: example\nVersion: 1.2.3\n"
     "Description-Content-Type: text/markdown\n"
 )
 LINK = "[docs](https://example.test/)"
+UNSAFE_MANIFEST_NAMES = (
+    "",
+    ".",
+    "..",
+    "../x.whl",
+    "./x.whl",
+    "/x.whl",
+    "nested/x.whl",
+    r"nested\x.whl",
+    r"C:\release\x.whl",
+    "C:x.whl",
+    r"\\server\share\x.whl",
+    "x.whl:stream",
+    "x\x00.whl",
+)
 
 
 def metadata(version: str, body: str | None) -> str:
@@ -268,6 +287,150 @@ def test_manifest_requires_a_bare_digest(tmp_path: Path) -> None:
         )
         with pytest.raises(ArtifactError, match="filename and sha256"):
             load_manifest(path)
+
+
+@pytest.mark.parametrize("filename", UNSAFE_MANIFEST_NAMES)
+def test_loading_a_manifest_requires_bare_filenames(
+    tmp_path: Path, filename: str
+) -> None:
+    path = tmp_path / "artifacts.json"
+    path.write_text(
+        json.dumps({"artifacts": [{"filename": filename, "sha256": "0" * 64}]}),
+        encoding="utf-8",
+    )
+    with pytest.raises(ArtifactError, match="unsafe artifact filename"):
+        load_manifest(path)
+
+
+@pytest.mark.parametrize("filename", UNSAFE_MANIFEST_NAMES)
+def test_verification_rejects_unsafe_names_in_a_directly_constructed_manifest(
+    tmp_path: Path, filename: str
+) -> None:
+    manifest = Manifest(
+        repository="",
+        version="",
+        source_revision=None,
+        created="",
+        artifacts=(ManifestEntry(filename, "0" * 64, -1),),
+    )
+    assert verify_manifest(manifest, tmp_path) == [
+        f"unsafe artifact filename {filename!r}: expected a bare file name"
+    ]
+
+
+@pytest.mark.parametrize("second_digest", ["0" * 64, "1" * 64])
+def test_loading_a_manifest_rejects_duplicate_filenames(
+    tmp_path: Path, second_digest: str
+) -> None:
+    path = tmp_path / "artifacts.json"
+    path.write_text(
+        json.dumps(
+            {
+                "artifacts": [
+                    {"filename": "x.whl", "sha256": "0" * 64},
+                    {"filename": "x.whl", "sha256": second_digest},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ArtifactError, match=r"duplicate artifact filename 'x\.whl'"):
+        load_manifest(path)
+
+
+def test_verification_rejects_duplicate_entries_in_a_directly_constructed_manifest(
+    tmp_path: Path,
+) -> None:
+    manifest = build_manifest(
+        [wheel(tmp_path)], repository="", version="1.2.3", source_revision=None
+    )
+    duplicated = replace(manifest, artifacts=manifest.artifacts * 2)
+    assert verify_manifest(duplicated, tmp_path) == [
+        "duplicate artifact filename 'example-1.2.3-py3-none-any.whl'"
+    ]
+
+
+def test_building_a_manifest_rejects_duplicate_filenames(tmp_path: Path) -> None:
+    path = wheel(tmp_path)
+    with pytest.raises(ArtifactError, match="duplicate artifact filename"):
+        build_manifest([path, path], repository="", version="", source_revision=None)
+
+
+@POSIX_ONLY
+@pytest.mark.parametrize("filename", ["x.whl:stream", r"nested\x.whl"])
+def test_building_a_manifest_rejects_names_that_are_not_portable_basenames(
+    tmp_path: Path, filename: str
+) -> None:
+    path = tmp_path / filename
+    path.write_bytes(b"artifact")
+    with pytest.raises(ArtifactError, match="unsafe artifact filename"):
+        build_manifest([path], repository="", version="", source_revision=None)
+
+
+@POSIX_ONLY
+def test_verification_never_hashes_a_symlink_target_outside_the_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = tmp_path / "dist"
+    directory.mkdir()
+    external = wheel(tmp_path)
+    link = directory / external.name
+    link.symlink_to(external)
+    manifest = build_manifest(
+        [link], repository="", version="1.2.3", source_revision=None
+    )
+
+    def unexpected_read(path: Path) -> str:
+        pytest.fail(f"must not hash a path outside the artifact directory: {path}")
+
+    monkeypatch.setattr("releasing.artifacts.sha256_file", unexpected_read)
+    assert verify_manifest(manifest, directory) == [
+        f"{link.name}: resolves outside the artifact directory"
+    ]
+
+
+@POSIX_ONLY
+def test_verification_accepts_a_symlink_target_inside_the_directory(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "payload.bin"
+    target.write_bytes(b"validated artifact")
+    link = tmp_path / "example-1.2.3.tar.gz"
+    link.symlink_to(target.name)
+    manifest = build_manifest(
+        [link], repository="", version="1.2.3", source_revision=None
+    )
+    assert verify_manifest(manifest, tmp_path) == []
+
+
+@POSIX_ONLY
+def test_verification_reports_a_broken_symlink_as_missing(tmp_path: Path) -> None:
+    link = tmp_path / "x.whl"
+    link.symlink_to("missing")
+    manifest = Manifest(
+        repository="",
+        version="",
+        source_revision=None,
+        created="",
+        artifacts=(ManifestEntry(link.name, "0" * 64, -1),),
+    )
+    assert verify_manifest(manifest, tmp_path) == ["x.whl: missing"]
+
+
+@POSIX_ONLY
+def test_verification_reports_a_symlink_loop_without_raising(tmp_path: Path) -> None:
+    link = tmp_path / "x.whl"
+    link.symlink_to(link.name)
+    manifest = Manifest(
+        repository="",
+        version="",
+        source_revision=None,
+        created="",
+        artifacts=(ManifestEntry(link.name, "0" * 64, -1),),
+    )
+    problems = verify_manifest(manifest, tmp_path)
+    assert len(problems) == 1
+    assert problems[0].startswith("x.whl: cannot resolve artifact:")
 
 
 def test_manifest_carries_producer_specific_keys(tmp_path: Path) -> None:
