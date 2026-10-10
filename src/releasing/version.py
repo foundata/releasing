@@ -46,7 +46,7 @@ def is_prerelease(value: str) -> bool:
 
 
 def is_version(value: str) -> bool:
-    """Whether ``value`` is a version this package accepts (``X.Y.Z`` plus pre-release)."""
+    """Whether ``value`` is an accepted version (``X.Y.Z`` plus pre-release)."""
     return VERSION.fullmatch(value) is not None
 
 

@@ -44,7 +44,7 @@ def plan(
     manifest_path: Path | None = None,
     offline: bool = False,
 ) -> ReleasePlan:
-    """Assemble the entry from the changelog and the manifest, and check it can be made."""
+    """Assemble the entry from changelog and manifest, and check it can be made."""
     tool = forge.tool
     if tool is None:
         raise ForgeReleaseError(f"no release tool is known for the {forge.name} forge")

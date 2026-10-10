@@ -129,7 +129,7 @@ def check(
     version: str | None = None,
     today: date | None = None,
 ) -> list[str]:
-    """Return every structural problem, and for ``version`` that it is the latest release.
+    """Return every structural problem; also check ``version`` is the latest release.
 
     ``today`` is the day a release date may not lie after; it defaults to the
     machine's date and exists so a test can pin it.
@@ -243,7 +243,7 @@ def release(
 
 
 def antsibull_has_release(changelog_yaml: str, version: str) -> bool:
-    """Whether antsibull's ``changelogs/changelog.yaml`` lists ``version`` under releases."""
+    """Whether antsibull's ``changelogs/changelog.yaml`` has a ``version`` release."""
     return (
         re.search(
             r"^  " + re.escape(version) + r":[ \t]*$", changelog_yaml, re.MULTILINE

@@ -20,7 +20,7 @@ _SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 
 
 def is_local(value: str) -> bool:
-    """Whether a destination is repository-relative rather than absolute or an anchor."""
+    """Whether a destination is repository-relative, not absolute or an anchor."""
     return _local(value)
 
 
