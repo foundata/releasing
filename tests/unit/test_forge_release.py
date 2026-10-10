@@ -48,6 +48,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReleaseConfig:
     )
     monkeypatch.setattr(processes, "executable", lambda name: Path("/usr/bin") / name)
     monkeypatch.setattr(forge_api, "release_exists", lambda forge, tag: False)
+    monkeypatch.setattr(processes, "git", lambda root, *args: "a" * 40)
     return ReleaseConfig(
         root=tmp_path, source=tmp_path / "pyproject.toml", repository="foundata/example"
     )

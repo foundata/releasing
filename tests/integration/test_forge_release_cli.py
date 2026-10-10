@@ -268,3 +268,58 @@ def test_a_manifest_symlink_cannot_upload_a_file_outside_its_directory(
     assert b"Traceback" not in result.stderr
     assert not fake_gh.exists()
     assert list((repository.parent / "staged notes").iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    "field, value, message",
+    [
+        ("repository", "other/project", b"manifest records repository other/project"),
+        ("sourceRevision", "b" * 40, b"artifacts were built from"),
+    ],
+)
+def test_manifest_provenance_must_match_the_project_and_tag(
+    repository: Path,
+    fake_gh: Path,
+    manifest: Path,
+    field: str,
+    value: str,
+    message: bytes,
+) -> None:
+    path = repository.parent / manifest
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document[field] = value
+    write_lf(path, json.dumps(document))
+
+    result = release(repository, "--manifest", str(manifest))
+
+    assert result.returncode == 1
+    assert result.stdout == b""
+    assert message in result.stderr
+    assert b"Traceback" not in result.stderr
+    assert not fake_gh.exists()
+
+
+def test_a_minimal_manifest_without_provenance_remains_usable(
+    repository: Path, fake_gh: Path, manifest: Path
+) -> None:
+    path = repository.parent / manifest
+    document = json.loads(path.read_text(encoding="utf-8"))
+    write_lf(path, json.dumps({"artifacts": document["artifacts"]}))
+
+    result = release(repository, "--manifest", str(manifest))
+
+    assert result.returncode == 0, result.stderr
+    assert captured(result.stdout) == RELEASE_URL + "\n"
+    assert fake_gh.is_file()
+
+
+def test_provenance_uses_the_tag_commit_not_a_same_named_branch(
+    repository: Path, fake_gh: Path, manifest: Path
+) -> None:
+    git(repository, "commit", "--allow-empty", "-m", "project: change after release")
+    git(repository, "branch", "v1.0.0")
+
+    result = release(repository, "--manifest", str(manifest))
+
+    assert result.returncode == 0, result.stderr
+    assert fake_gh.is_file()

@@ -22,6 +22,9 @@ manifest records a different version, when its files are missing or altered,
 when the forge already has a release for the tag, and when no release tool is
 known for the declared forge. Compatible manifests without a version field
 remain accepted; the command's version selects the changelog section and tag.
+When a manifest supplies `repository` or `sourceRevision`, they must match the
+declared repository and the local release tag's commit. Omitting these optional
+fields remains supported; an explicit mismatch is always a refusal.
 
 The release tag must already exist on the forge. The write passes
 `--verify-tag` to `gh`, so forgetting to push the tag fails instead of creating

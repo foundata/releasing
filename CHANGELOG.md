@@ -27,6 +27,8 @@ and the project adheres to
 
 ### Fixed
 
+- Forge creation checks a manifest's supplied repository and source revision
+  against the declared project and the release tag's commit.
 - Artifact manifests reject duplicate filenames and paths instead of basenames.
   Verification refuses symbolic links outside the artifact directory before
   reading their contents, so publication cannot attach those external files.

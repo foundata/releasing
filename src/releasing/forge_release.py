@@ -66,6 +66,18 @@ def plan(
             raise ForgeReleaseError(
                 f"the manifest records version {manifest.version}, not {version_string}"
             )
+        if manifest.repository and manifest.repository != config.repository:
+            raise ForgeReleaseError(
+                f"the manifest records repository {manifest.repository}, "
+                f"not {config.repository}"
+            )
+        if manifest.source_revision is not None:
+            revision = _tag_revision(root, tag)
+            if manifest.source_revision != revision:
+                raise ForgeReleaseError(
+                    f"the artifacts were built from {manifest.source_revision}, "
+                    f"but {tag} names {revision}"
+                )
         problems = artifacts.verify_manifest(manifest, manifest_path.parent)
         if problems:
             raise ForgeReleaseError(
@@ -128,6 +140,20 @@ def _command(prepared: ReleasePlan, notes_file: Path) -> list[str]:
         str(notes_file),
         *[str(path) for path in prepared.assets],
     ]
+
+
+def _tag_revision(root: Path, tag: str) -> str:
+    """Resolve only the release tag, never a branch with the same name."""
+    try:
+        return processes.git(
+            root,
+            "rev-parse",
+            "--verify",
+            "--end-of-options",
+            f"refs/tags/{tag}^{{commit}}",
+        ).strip()
+    except processes.ProcessError as exc:
+        raise ForgeReleaseError(f"cannot resolve release tag {tag}: {exc}") from exc
 
 
 def _notes(root: Path, config: ReleaseConfig, version_string: str) -> str:
