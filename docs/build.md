@@ -31,7 +31,9 @@ release build --out "../dist-${version}"
 3. Runs the changelog check for that version.
 4. Prepares every declared document: relative destinations are validated
    against the exported tree, rewritten against the forge at the version's tag
-   ref, and copied over the documents named in `copies`.
+   ref, and copied over the documents named in `copies`. Document paths,
+   including symbolic links in their parent directories, must resolve inside
+   the export; this is checked during dry runs too.
 5. Builds the distributions. For Python that is a source distribution from the
    export and a wheel from that source distribution, so what is published is
    what installing from source produces. For an Ansible collection it is

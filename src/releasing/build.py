@@ -81,11 +81,12 @@ def prepare_readmes(
     declaration says so, copied over the documents of workspace members.
     Return the paths that changed.
     """
+    root = root.resolve()
     tag = config.tag(version_string)
     touched: list[str] = []
     for readme in config.readmes:
         ref = readme.ref.format(version=version_string, tag=tag)
-        source = root / readme.source_path
+        source = _readme_path(root, readme.source_path)
         try:
             original = source.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as exc:
@@ -108,7 +109,7 @@ def prepare_readmes(
         source.write_text(prepared, encoding="utf-8", newline="")
         touched.append(readme.source_path)
         for copy in readme.copies:
-            target = root / copy
+            target = _readme_path(root, copy)
             if not target.is_file():
                 raise BuildError(f"cannot copy the prepared document over {copy}")
             target.write_text(prepared, encoding="utf-8", newline="")
@@ -116,6 +117,17 @@ def prepare_readmes(
     for path in touched:
         reporting.phase(f"Prepared {path}")
     return touched
+
+
+def _readme_path(root: Path, relative: str) -> Path:
+    """Resolve a document without following a link outside the exported tree."""
+    try:
+        path = (root / relative).resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise BuildError(f"cannot resolve {relative}: {exc}") from exc
+    if not path.is_relative_to(root):
+        raise BuildError(f"{relative}: resolves outside the exported tree")
+    return path
 
 
 def build(

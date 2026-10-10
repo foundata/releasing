@@ -25,6 +25,12 @@ and the project adheres to
 - `release status` retries a missing forge release three times at five-second
   intervals when every other step is `ok`; `--no-wait` checks once.
 
+### Fixed
+
+- `release build` refuses README sources and copy destinations that resolve
+  outside the export, preventing symbolic links from rewriting external files
+  during a build or dry run.
+
 
 ## [5.0.0] - 2026-09-26
 

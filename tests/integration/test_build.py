@@ -249,6 +249,61 @@ def test_build_prepares_the_readme_inside_the_export_only(repository: Path) -> N
         assert not any(name.endswith("notes.txt") for name in archive.getnames())
 
 
+@POSIX_ONLY
+@pytest.mark.parametrize("destination", ["source", "copy", "copy-parent"])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_build_refuses_readme_paths_outside_the_export(
+    repository: Path, tmp_path: Path, destination: str, dry_run: bool
+) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    external = outside / "README.md"
+    write_lf(external, README)
+    if destination == "source":
+        (repository / "README.md").unlink()
+        (repository / "README.md").symlink_to(external)
+    else:
+        if destination == "copy":
+            copy = "copy.md"
+            (repository / copy).symlink_to(external)
+        else:
+            copy = "linked/README.md"
+            (repository / "linked").symlink_to(outside, target_is_directory=True)
+        write_lf(
+            repository / "pyproject.toml",
+            PYPROJECT + f'\n[[tool.releasing.readmes]]\ncopies = ["{copy}"]\n',
+        )
+    git(repository, "add", ".")
+    git(repository, "commit", "-qm", "project: link an external document")
+    out = tmp_path / "dist"
+
+    result = release(
+        repository, "build", "--out", str(out), *(["--dry-run"] if dry_run else [])
+    )
+
+    assert result.returncode == 1, result.stderr
+    assert b"resolves outside the exported tree" in result.stderr
+    assert b"Traceback" not in result.stderr
+    assert external.read_bytes() == README.encode()
+    assert not out.exists()
+    assert git(repository, "status", "--porcelain") == ""
+
+
+@POSIX_ONLY
+def test_build_allows_a_readme_symlink_inside_the_export(repository: Path) -> None:
+    (repository / "README.md").rename(repository / "document.md")
+    (repository / "README.md").symlink_to("document.md")
+    git(repository, "add", ".")
+    git(repository, "commit", "-qm", "project: link the project document")
+
+    result = release(
+        repository, "build", "--out", str(repository.parent / "dist"), "--dry-run"
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (repository / "document.md").read_bytes() == README.encode()
+
+
 def test_build_records_a_manifest_of_exactly_the_built_files(repository: Path) -> None:
     out = repository.parent / "dist"
     assert release(repository, "build", "--out", str(out)).returncode == 0
