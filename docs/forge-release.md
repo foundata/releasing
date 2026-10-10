@@ -27,6 +27,10 @@ a new tag at the default branch. Run `release push` before creating the entry.
 skips the question of whether a release already exists, for a forge that
 cannot be reached.
 
+Release notes are staged in a private temporary directory and removed after
+success or failure. Existing files in the checkout are left untouched. A dry
+run creates no staging files and shows a placeholder for the notes path.
+
 ## Table of contents<a id="toc"></a>
 
 - [Credentials](#credentials)

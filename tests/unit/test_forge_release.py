@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import tempfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -238,6 +239,7 @@ def test_dry_run_runs_nothing(
         raise AssertionError("a dry run must not create anything")
 
     monkeypatch.setattr(processes, "run", refuse)
+    monkeypatch.setattr(tempfile, "TemporaryDirectory", refuse)
     prepared = forge_release.plan(project.root, project, FORGE, "1.0.0")
     narrated: list[str] = []
     monkeypatch.setattr(
@@ -251,3 +253,69 @@ def test_dry_run_runs_nothing(
     assert "--repo github.com/foundata/example" in narrated[0]
     assert "--verify-tag" in narrated[0]
     assert list(project.root.glob(".releasing-notes-*")) == []
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_notes_staging_preserves_existing_files_and_cleans_up(
+    project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch, fails: bool
+) -> None:
+    existing = project.root / ".releasing-notes-v1.0.0"
+    existing.write_bytes(b"existing user notes\n")
+    prepared = forge_release.plan(project.root, project, FORGE, "1.0.0")
+    staged: list[Path] = []
+
+    def run(argv: list[str], **kwargs: object) -> str:
+        notes = Path(argv[argv.index("--notes-file") + 1])
+        staged.append(notes)
+        assert notes.read_text(encoding="utf-8") == prepared.notes
+        if fails:
+            raise processes.ProcessError("release refused")
+        return "https://github.com/foundata/example/releases/tag/v1.0.0\n"
+
+    monkeypatch.setattr(processes, "run", run)
+    if fails:
+        with pytest.raises(processes.ProcessError, match="release refused"):
+            forge_release.execute(project.root, prepared)
+    else:
+        assert forge_release.execute(project.root, prepared).endswith("/v1.0.0")
+    assert existing.read_bytes() == b"existing user notes\n"
+    assert len(staged) == 1
+    assert not staged[0].exists()
+    assert not staged[0].parent.exists()
+
+
+def test_notes_staging_accepts_a_tag_with_slashes(
+    project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = replace(project, tag_format="releases/v{version}")
+    prepared = forge_release.plan(project.root, config, FORGE, "1.0.0")
+
+    def run(argv: list[str], **kwargs: object) -> str:
+        assert argv[3] == "releases/v1.0.0"
+        notes = Path(argv[argv.index("--notes-file") + 1])
+        assert notes.read_text(encoding="utf-8") == prepared.notes
+        return "created"
+
+    monkeypatch.setattr(processes, "run", run)
+    assert forge_release.execute(project.root, prepared) == "created"
+
+
+def test_a_notes_write_failure_cleans_up_its_directory(
+    project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepared = forge_release.plan(project.root, project, FORGE, "1.0.0")
+    staged: list[Path] = []
+
+    def refuse_write(path: Path, *args: object, **kwargs: object) -> int:
+        staged.append(path)
+        raise OSError("disk full")
+
+    def refuse_run(*args: object, **kwargs: object) -> str:
+        raise AssertionError("cannot publish without the notes")
+
+    monkeypatch.setattr(Path, "write_text", refuse_write)
+    monkeypatch.setattr(processes, "run", refuse_run)
+    with pytest.raises(forge_release.ForgeReleaseError, match="disk full"):
+        forge_release.execute(project.root, prepared)
+    assert len(staged) == 1
+    assert not staged[0].parent.exists()

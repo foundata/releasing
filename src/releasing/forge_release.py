@@ -9,6 +9,7 @@ tool, which already owns an authenticated session. This package never holds a
 credential that can write to a repository.
 """
 
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -91,8 +92,28 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> str:
     A dry run narrates the command it would run and returns nothing, because
     no entry exists to point at.
     """
-    notes_file = root / f".releasing-notes-{prepared.tag}"
-    argv = [
+    if dry_run:
+        reporting.command(
+            _command(prepared, Path("<temporary release notes>")),
+            cwd=root,
+            executed=False,
+        )
+        return ""
+    try:
+        with tempfile.TemporaryDirectory(prefix="releasing-notes-") as value:
+            notes_file = Path(value) / "notes.md"
+            notes_file.write_text(prepared.notes, encoding="utf-8", newline="")
+            reported = processes.run(
+                _command(prepared, notes_file), cwd=root, timeout=600, echo=True
+            )
+    except (OSError, UnicodeError) as exc:
+        raise ForgeReleaseError(f"cannot stage the release notes: {exc}") from exc
+    return reported.strip()
+
+
+def _command(prepared: ReleasePlan, notes_file: Path) -> list[str]:
+    """The release invocation, shared by execution and its dry-run narration."""
+    return [
         str(processes.executable(prepared.tool)),
         "release",
         "create",
@@ -106,17 +127,6 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> str:
         str(notes_file),
         *[str(path) for path in prepared.assets],
     ]
-    if dry_run:
-        reporting.command(argv, cwd=root, executed=False)
-        return ""
-    try:
-        notes_file.write_text(prepared.notes, encoding="utf-8")
-        reported = processes.run(argv, cwd=root, timeout=600, echo=True)
-    except (OSError, UnicodeError) as exc:
-        raise ForgeReleaseError(f"cannot stage the release notes: {exc}") from exc
-    finally:
-        notes_file.unlink(missing_ok=True)
-    return reported.strip()
 
 
 def _notes(root: Path, config: ReleaseConfig, version_string: str) -> str:

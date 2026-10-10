@@ -37,6 +37,9 @@ and the project adheres to
   `gh` from creating an unpushed release tag at the default branch.
 - `forge release-create` rejects a manifest that records a different version
   from the requested release, even when all its file digests match.
+- `forge release-create` stages notes in its own temporary directory, preserving
+  existing checkout files and supporting tag names containing slashes. Staged
+  notes are removed after success or failure; dry runs create no staging files.
 
 
 ## [5.0.0] - 2026-09-26
