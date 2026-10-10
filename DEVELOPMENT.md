@@ -203,10 +203,13 @@ environment outside the checkout. Each failed command stops the gate; temporary
 build and installation directories are removed. POSIX shell checks remain part
 of `scripts/release-check.sh` on Linux.
 
-Three things decide whether that run means anything:
+Four things decide whether that run means anything:
 
 - Git and uv must be on `PATH`. The suite starts both as subprocesses, and a
   missing one appears as dozens of fixture errors rather than as a failure.
+- Install the [Microsoft Visual C++ v14 x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+  required by `rumdl`. A fresh Windows image may lack `VCRUNTIME140.dll`;
+  without it, the Markdown check exits with `0xC0000135` before linting.
 - Python 3.11 to 3.13 cannot create the environment there, because
   `readme-renderer[md]` pulls `comrak`, which publishes Windows wheels for
   cp314 only. That is a development dependency; the package itself supports
