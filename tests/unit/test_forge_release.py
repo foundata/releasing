@@ -168,6 +168,8 @@ def test_a_collection_without_that_version_is_refused(
 def test_the_write_is_delegated_and_the_notes_file_is_transient(
     project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("GH_REPO", "other/wrong-project")
+    monkeypatch.setenv("GH_HOST", "other.example")
     prepared = forge_release.plan(project.root, project, FORGE, "1.0.0")
     seen: dict[str, object] = {}
 
@@ -182,6 +184,7 @@ def test_the_write_is_delegated_and_the_notes_file_is_transient(
     argv = seen["argv"]
     assert isinstance(argv, list)
     assert argv[1:4] == ["release", "create", "v1.0.0"]
+    assert argv[argv.index("--repo") + 1] == "github.com/foundata/example"
     assert seen["notes"] == prepared.notes
     # The forge's own tool reports where the entry lives; that is the product.
     assert reported == "https://github.com/foundata/example/releases/tag/v1.0.0"
@@ -207,4 +210,5 @@ def test_dry_run_runs_nothing(
 
     assert forge_release.execute(project.root, prepared, dry_run=True) == ""
     assert "gh release create v1.0.0" in narrated[0]
+    assert "--repo github.com/foundata/example" in narrated[0]
     assert list(project.root.glob(".releasing-notes-*")) == []

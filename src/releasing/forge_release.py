@@ -11,6 +11,7 @@ credential that can write to a repository.
 
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from releasing import antsibull, artifacts, changelog, forge_api, processes, reporting
 from releasing.artifacts import Manifest
@@ -28,6 +29,7 @@ class ReleasePlan:
 
     forge: str
     tool: str
+    repository: str
     tag: str
     title: str
     notes: str
@@ -71,6 +73,7 @@ def plan(
     return ReleasePlan(
         forge=forge.name,
         tool=tool,
+        repository=f"{urlsplit(forge.web).netloc}/{forge.repository}",
         tag=tag,
         title=tag,
         notes=notes,
@@ -92,6 +95,8 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> str:
         prepared.tag,
         "--title",
         prepared.title,
+        "--repo",
+        prepared.repository,
         "--notes-file",
         str(notes_file),
         *[str(path) for path in prepared.assets],

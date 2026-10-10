@@ -30,6 +30,9 @@ and the project adheres to
 - `release build` refuses README sources and copy destinations that resolve
   outside the export, preventing symbolic links from rewriting external files
   during a build or dry run.
+- `forge release-create` explicitly targets the declared host and repository,
+  preventing Git remotes or the forge tool's environment from redirecting the
+  write to a different destination than the one checked.
 
 
 ## [5.0.0] - 2026-09-26

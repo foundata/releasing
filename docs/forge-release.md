@@ -9,6 +9,10 @@ The notes are the changelog section for that version. The assets are the
 manifest and the files it names. The write is performed by the forge's own
 command-line tool, `gh` for GitHub.
 
+The write explicitly names the declared forge host and repository, the same
+destination checked during planning. Git remotes, `GH_REPO` and `GH_HOST`
+cannot redirect it to another repository.
+
 It refuses when the changelog has no section for the version, when the
 manifest's files are missing or altered, when the forge already has a release
 for the tag, and when no release tool is known for the declared forge.
