@@ -69,8 +69,10 @@ one without ambiguity.
 
 [`scripts/release-check.sh`](./scripts/release-check.sh) runs everything in this
 section and under "Shell checks" on every supported Python version, then builds
-the distributions with `release build` and smoke-tests the installed wheel. Run
-it before a release; the individual commands below stay useful while working:
+the distributions with `release build` and smoke-tests the installed wheel.
+Outside the checkout, each installed command must accept the built wheel and
+source distribution and reject a wheel with a relative README link. Run the
+gate before a release; the individual commands below stay useful while working:
 
 ```sh
 scripts/release-check.sh            # the whole gate

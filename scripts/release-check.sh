@@ -223,9 +223,10 @@ build_artifacts() {
 # Install the built wheel into a clean environment per supported interpreter
 # and smoke-test the installed artifact, never the sources. The command must
 # report the version pyproject declares, so a wheel built from stale metadata
-# is caught here rather than after the upload.
+# is caught here rather than after the upload. Artifact checks must accept the
+# built distributions and reject a known-invalid wheel outside the checkout.
 # Globals:
-#   COMMAND_NAME, DIST_DIR, IMPORT_NAME, supported_pythons, WORK_DIR
+#   COMMAND_NAME, DIST_DIR, IMPORT_NAME, PKG_DIR, supported_pythons, WORK_DIR
 # Returns:
 #   0 when every interpreter passes, exits 1 otherwise.
 smoke_test_matrix() {
@@ -251,17 +252,22 @@ with open("pyproject.toml", "rb") as handle:
     # __version__ reads the installed distribution metadata, so this compares
     # what the wheel carries against what pyproject declares.
     local reported
-    reported="$("${env_dir}/bin/python" -c "import ${IMPORT_NAME}; print(${IMPORT_NAME}.__version__)")"
+    reported="$(cd "${WORK_DIR}" && "${env_dir}/bin/python" -I -c "import ${IMPORT_NAME}; print(${IMPORT_NAME}.__version__)")"
     printf '%s reports: %s\n' "${IMPORT_NAME}" "${reported}"
     if [ "${reported}" != "${declared}" ]; then
       printf 'error: installed %s reports %s, pyproject declares %s\n' \
         "${IMPORT_NAME}" "${reported}" "${declared}" >&2
       exit 1
     fi
-    # The entry point must run from the installed artifact; this CLI requires a
-    # command, so --help is the argument-free surface that proves it works.
-    "${env_dir}/bin/${COMMAND_NAME}" --help >/dev/null
-    "${env_dir}/bin/${COMMAND_NAME}" config --help >/dev/null
+    (
+      cd "${WORK_DIR}"
+      unset PYTHONPATH PYTHONHOME
+      "${env_dir}/bin/${COMMAND_NAME}" --help >/dev/null
+      "${env_dir}/bin/${COMMAND_NAME}" config --help >/dev/null
+      "${env_dir}/bin/python" -I "${PKG_DIR}/tests/smoke_installed.py" \
+        "${env_dir}/bin/${COMMAND_NAME}" "${declared}" \
+        "${DIST_DIR}"/*.whl "${DIST_DIR}"/*.tar.gz
+    )
   done
 }
 
