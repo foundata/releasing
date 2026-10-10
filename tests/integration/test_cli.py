@@ -168,7 +168,9 @@ def test_all_batch_inputs_are_validated_before_writing(tmp_path: Path) -> None:
     assert snapshot(first) == before
 
 
-@pytest.mark.parametrize("alias", ["same", "hardlink", "symlink"])
+@pytest.mark.parametrize(
+    "alias", ["same", "hardlink", pytest.param("symlink", marks=POSIX_ONLY)]
+)
 @pytest.mark.parametrize("dry_run", [False, True])
 def test_out_of_place_refuses_aliases_of_input(
     tmp_path: Path, alias: str, dry_run: bool
@@ -180,8 +182,6 @@ def test_out_of_place_refuses_aliases_of_input(
     elif alias == "hardlink":
         output.hardlink_to(path)
     else:
-        if sys.platform == "win32":
-            pytest.skip("symbolic links need privileges on Windows")
         output.symlink_to(path)
     result = invoke(
         tmp_path,
@@ -294,7 +294,8 @@ def test_failed_atomic_replace_cleans_temporary_output(
 @POSIX_ONLY
 def test_fifo_input_is_rejected_without_reading(tmp_path: Path) -> None:
     path = tmp_path / "input.md"
-    os.mkfifo(path)
+    if sys.platform != "win32":
+        os.mkfifo(path)
     result = invoke(tmp_path, *BASE, "--stdout", str(path))
     assert result.returncode == 1
     assert b"regular file" in result.stderr

@@ -8,6 +8,7 @@ import shlex
 import shutil
 import signal
 import subprocess
+import sys
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -193,7 +194,8 @@ def review(
         process.wait(timeout=5)
     finally:
         if process.poll() is None:
-            os.killpg(process.pid, signal.SIGKILL)
+            if sys.platform != "win32":
+                os.killpg(process.pid, signal.SIGKILL)
             process.wait(timeout=5)
         os.close(master)
     return Review(process.returncode, prompts, transcript.decode().replace("\r", ""))

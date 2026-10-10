@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -172,6 +173,7 @@ def test_images_must_be_files_and_trailing_slashes_must_name_directories(
 
 @POSIX_ONLY
 def test_special_files_are_refused_without_opening_them(tmp_path: Path) -> None:
-    os.mkfifo(tmp_path / "pipe")
+    if sys.platform != "win32":
+        os.mkfifo(tmp_path / "pipe")
     with pytest.raises(ValueError, match="regular file or directory"):
         TRANSFORMER.validate_local_files("[pipe](pipe)", repo_root=tmp_path)

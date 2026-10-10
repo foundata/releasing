@@ -230,7 +230,7 @@ def test_a_dry_run_of_a_manifest_shows_it_instead_of_writing_it(
 def test_a_terminal_gets_colour_and_a_pipe_does_not(repository: Path) -> None:
     # The decision is made against the real stream, so it is worth making once
     # against a real terminal rather than only against a stream double.
-    import pty
+    pty = pytest.importorskip("pty", reason="POSIX pseudo-terminal")
 
     main, worker = pty.openpty()
     process = subprocess.Popen(

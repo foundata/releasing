@@ -84,6 +84,7 @@ uv sync --locked --python 3.11
 uv run --locked ruff format --check .
 uv run --locked ruff check .
 uv run --locked mypy
+uv run --locked mypy --platform win32
 uv run --locked python tests/check_markdown.py
 uv run --locked pytest --cov --cov-report=term-missing
 uv run --locked --python 3.11 pytest

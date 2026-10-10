@@ -191,6 +191,7 @@ run_static_checks() {
   uv run --locked ruff format --check .
   uv run --locked ruff check .
   uv run --locked mypy
+  uv run --locked mypy --platform win32
   uv run --locked python tests/check_markdown.py
 }
 

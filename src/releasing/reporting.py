@@ -153,22 +153,23 @@ def _enable_windows_sequences(stream: TextIO) -> bool:  # pragma: no cover
     """
     import ctypes
 
-    enable_virtual_terminal_processing = 0x0004
-    try:
-        handle = ctypes.windll.kernel32.GetStdHandle(  # type: ignore[attr-defined]
-            -11 if stream.fileno() == 1 else -12
-        )
-        mode = ctypes.c_uint32()
-        if not ctypes.windll.kernel32.GetConsoleMode(  # type: ignore[attr-defined]
-            handle, ctypes.byref(mode)
-        ):
-            return False
-        return bool(
-            ctypes.windll.kernel32.SetConsoleMode(  # type: ignore[attr-defined]
-                handle, mode.value | enable_virtual_terminal_processing
+    if sys.platform == "win32":
+        enable_virtual_terminal_processing = 0x0004
+        try:
+            handle = ctypes.windll.kernel32.GetStdHandle(
+                -11 if stream.fileno() == 1 else -12
             )
-        )
-    except (AttributeError, OSError, ValueError):
+            mode = ctypes.c_uint32()
+            if not ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                return False
+            return bool(
+                ctypes.windll.kernel32.SetConsoleMode(
+                    handle, mode.value | enable_virtual_terminal_processing
+                )
+            )
+        except (AttributeError, OSError, ValueError):
+            return False
+    else:
         return False
 
 
