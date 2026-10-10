@@ -238,8 +238,18 @@ def load_manifest(path: Path) -> Manifest:
     File names must be unique basenames, never paths or Windows streams.
     """
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, ValueError) as exc:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ArtifactError(f"cannot read manifest {path}: {exc}") from exc
+    return parse_manifest(text, source=str(path))
+
+
+def parse_manifest(text: str | bytes, *, source: str = "<manifest>") -> Manifest:
+    """Parse a captured manifest without rereading a mutable source file."""
+    path = source
+    try:
+        data = json.loads(text)
+    except (UnicodeError, ValueError) as exc:
         raise ArtifactError(f"cannot read manifest {path}: {exc}") from exc
     entries = data.get("artifacts") if isinstance(data, dict) else None
     if not isinstance(entries, list) or not entries:

@@ -29,6 +29,9 @@ and the project adheres to
 
 ### Fixed
 
+- Index and forge uploads use private copies checked against the planned
+  digests, including the forge's manifest attachment. Changed inputs are
+  refused before any upload; staging is removed after success or failure.
 - Forge creation checks a manifest's supplied repository and source revision
   against the declared project and the release tag's commit.
 - Artifact manifests reject duplicate filenames and paths instead of basenames.

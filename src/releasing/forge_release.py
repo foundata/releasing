@@ -9,12 +9,14 @@ tool, which already owns an authenticated session. This package never holds a
 credential that can write to a repository.
 """
 
+import hashlib
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from releasing import antsibull, artifacts, changelog, forge_api, processes, reporting
+from releasing._artifact_staging import Upload, stage
 from releasing.artifacts import Manifest
 from releasing.config import ReleaseConfig
 from releasing.forges import Forge
@@ -35,7 +37,12 @@ class ReleasePlan:
     revision: str
     title: str
     notes: str
-    assets: tuple[Path, ...]
+    uploads: tuple[Upload, ...]
+
+    @property
+    def assets(self) -> tuple[Path, ...]:
+        """The original paths, for reporting and dry runs only."""
+        return tuple(item.path for item in self.uploads)
 
 
 def plan(
@@ -61,7 +68,7 @@ def plan(
         )
     revision = _tag_revision(root, tag)
     notes = _notes(root, config, version_string, revision)
-    assets: tuple[Path, ...] = ()
+    uploads: tuple[Upload, ...] = ()
     if manifest is not None and manifest_path is not None:
         manifest_path = manifest_path.absolute()
         if manifest.version and manifest.version != version_string:
@@ -85,9 +92,20 @@ def plan(
                 "the files beside the manifest are not the validated set:\n  "
                 + "\n  ".join(problems)
             )
-        assets = (
-            manifest_path,
-            *(manifest_path.parent / entry.filename for entry in manifest.artifacts),
+        try:
+            content = manifest_path.read_bytes()
+        except OSError as exc:
+            raise ForgeReleaseError(
+                f"cannot read manifest {manifest_path}: {exc}"
+            ) from exc
+        if artifacts.parse_manifest(content, source=str(manifest_path)) != manifest:
+            raise ForgeReleaseError("the manifest changed since it was loaded")
+        uploads = (
+            Upload(manifest_path, hashlib.sha256(content).hexdigest()),
+            *(
+                Upload(manifest_path.parent / entry.filename, entry.sha256)
+                for entry in manifest.artifacts
+            ),
         )
     return ReleasePlan(
         forge=forge.name,
@@ -97,7 +115,7 @@ def plan(
         revision=revision,
         title=tag,
         notes=notes,
-        assets=assets,
+        uploads=uploads,
     )
 
 
@@ -109,7 +127,7 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> str:
     """
     if dry_run:
         reporting.command(
-            _command(prepared, Path("<temporary release notes>")),
+            _command(prepared, Path("<temporary release notes>"), prepared.assets),
             cwd=root,
             executed=False,
         )
@@ -118,15 +136,21 @@ def execute(root: Path, prepared: ReleasePlan, *, dry_run: bool = False) -> str:
         with tempfile.TemporaryDirectory(prefix="releasing-notes-") as value:
             notes_file = Path(value) / "notes.md"
             notes_file.write_text(prepared.notes, encoding="utf-8", newline="")
-            reported = processes.run(
-                _command(prepared, notes_file), cwd=root, timeout=600, echo=True
-            )
+            with stage(prepared.uploads) as assets:
+                reported = processes.run(
+                    _command(prepared, notes_file, assets),
+                    cwd=root,
+                    timeout=600,
+                    echo=True,
+                )
     except (OSError, UnicodeError) as exc:
         raise ForgeReleaseError(f"cannot stage the release notes: {exc}") from exc
     return reported.strip()
 
 
-def _command(prepared: ReleasePlan, notes_file: Path) -> list[str]:
+def _command(
+    prepared: ReleasePlan, notes_file: Path, assets: tuple[Path, ...]
+) -> list[str]:
     """The release invocation, shared by execution and its dry-run narration."""
     return [
         str(processes.executable(prepared.tool)),
@@ -140,7 +164,7 @@ def _command(prepared: ReleasePlan, notes_file: Path) -> list[str]:
         prepared.repository,
         "--notes-file",
         str(notes_file),
-        *[str(path) for path in prepared.assets],
+        *[str(path) for path in assets],
     ]
 
 

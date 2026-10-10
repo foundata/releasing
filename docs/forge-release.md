@@ -11,8 +11,10 @@ manifest and the files it names. The write is performed by the forge's own
 command-line tool, `gh` for GitHub.
 
 Relative manifest paths are interpreted from the caller's working directory.
-The manifest and artifact paths are made absolute before execution, so using
-`--project` from another directory uploads the same files that were verified.
+The original paths are made absolute during planning. Execution stages private,
+digest-checked copies of the manifest and artifacts, so using `--project` from
+another directory or changing the originals during upload cannot redirect the
+uploaded bytes. A change before staging is a refusal, not a fresh validation.
 
 The write explicitly names the declared forge host and repository, the same
 destination checked during planning. Git remotes, `GH_REPO` and `GH_HOST`
@@ -35,9 +37,10 @@ a new tag at the default branch. Run `release push` before creating the entry.
 skips the question of whether a release already exists, for a forge that
 cannot be reached.
 
-Release notes are staged in a private temporary directory and removed after
-success or failure. Existing files in the checkout are left untouched. A dry
-run creates no staging files and shows a placeholder for the notes path.
+Release notes and upload copies are staged in private temporary directories and
+removed after success, failure or interruption. Existing files in the checkout
+are left untouched. A dry run creates no staging files and shows the original
+asset paths and a placeholder for the notes path.
 
 ## Table of contents<a id="toc"></a>
 

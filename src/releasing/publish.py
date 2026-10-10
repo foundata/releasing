@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from releasing import artifacts, processes, reporting
+from releasing._artifact_staging import Upload, stage
 from releasing.artifacts import Manifest
 
 _INDEXES = frozenset({"pypi", "galaxy"})
@@ -42,7 +43,12 @@ class PublishPlan:
 
     index: str
     version: str
-    files: tuple[Path, ...]
+    uploads: tuple[Upload, ...]
+
+    @property
+    def files(self) -> tuple[Path, ...]:
+        """The original paths, for reporting and dry runs only."""
+        return tuple(item.path for item in self.uploads)
 
 
 def plan(manifest: Manifest, directory: Path, *, index: str) -> PublishPlan:
@@ -58,32 +64,42 @@ def plan(manifest: Manifest, directory: Path, *, index: str) -> PublishPlan:
             "the files beside the manifest are not the validated set:\n  "
             + "\n  ".join(problems)
         )
-    files = tuple(directory / entry.filename for entry in manifest.artifacts)
-    return PublishPlan(index=index, version=manifest.version, files=files)
+    uploads = tuple(
+        Upload(directory.absolute() / entry.filename, entry.sha256)
+        for entry in manifest.artifacts
+    )
+    return PublishPlan(index=index, version=manifest.version, uploads=uploads)
 
 
 def execute(prepared: PublishPlan, *, dry_run: bool = False) -> list[str]:
     """Upload the planned files through the index's own tool."""
+    if not prepared.uploads:
+        raise PublishError("no artifacts are planned for upload")
     if dry_run:
         return [path.name for path in prepared.files]
-    if prepared.index == "pypi":
+    with stage(prepared.uploads) as files:
+        _upload(prepared.index, files)
+    return [path.name for path in prepared.files]
+
+
+def _upload(index: str, files: tuple[Path, ...]) -> None:
+    if index == "pypi":
         uv = str(processes.executable("uv"))
         processes.run(
-            [uv, "publish", *[str(path) for path in prepared.files]],
+            [uv, "publish", *[str(path) for path in files]],
             timeout=1800,
             stream=True,
             echo=True,
         )
     else:
         galaxy = str(processes.executable("ansible-galaxy"))
-        for path in prepared.files:
+        for path in files:
             processes.run(
                 [galaxy, "collection", "publish", str(path)],
                 timeout=1800,
                 stream=True,
                 echo=True,
             )
-    return [path.name for path in prepared.files]
 
 
 def credential_warning(

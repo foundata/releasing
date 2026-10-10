@@ -8,7 +8,12 @@ from pathlib import Path
 import pytest
 
 from releasing import forge_api, forge_release, processes, reporting
-from releasing.artifacts import build_manifest, dump_manifest, load_manifest
+from releasing.artifacts import (
+    ArtifactError,
+    build_manifest,
+    dump_manifest,
+    load_manifest,
+)
 from releasing.config import ReleaseConfig
 from releasing.forges import Forge
 
@@ -171,10 +176,47 @@ def test_altered_artifacts_are_refused(project: ReleaseConfig) -> None:
         )
 
 
+@pytest.mark.parametrize("filename", ["artifacts.json", "example-1.0.0.tar.gz"])
+def test_execution_refuses_inputs_changed_after_planning(
+    project: ReleaseConfig, monkeypatch: pytest.MonkeyPatch, filename: str
+) -> None:
+    path = with_artifacts(project.root)
+    prepared = forge_release.plan(
+        project.root,
+        project,
+        FORGE,
+        "1.0.0",
+        manifest=load_manifest(path),
+        manifest_path=path,
+    )
+    (path.parent / filename).write_bytes(b"changed after planning")
+
+    def refuse(*args: object, **kwargs: object) -> str:
+        pytest.fail("changed release inputs must not reach gh")
+
+    monkeypatch.setattr(processes, "run", refuse)
+    with pytest.raises(ArtifactError, match="SHA-256 changed since planning"):
+        forge_release.execute(project.root, prepared)
+
+
 def test_an_unknown_forge_is_refused(project: ReleaseConfig) -> None:
     other = Forge("gitea", "foundata/example", "https://g", "https://r", "https://a")
     with pytest.raises(forge_release.ForgeReleaseError, match="no release tool"):
         forge_release.plan(project.root, project, other, "1.0.0")
+
+
+def test_the_manifest_attachment_must_describe_the_manifest_that_was_checked(
+    project: ReleaseConfig,
+) -> None:
+    path = with_artifacts(project.root)
+    manifest = load_manifest(path)
+    path.write_text(
+        dump_manifest(replace(manifest, repository="other/project")), encoding="utf-8"
+    )
+    with pytest.raises(forge_release.ForgeReleaseError, match="manifest changed"):
+        forge_release.plan(
+            project.root, project, FORGE, "1.0.0", manifest=manifest, manifest_path=path
+        )
 
 
 def test_a_collection_takes_its_notes_from_the_collection_changelog(

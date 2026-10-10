@@ -130,7 +130,14 @@ def test_an_echoed_command_can_never_carry_a_credential(
         return ""
 
     monkeypatch.setattr(processes, "run", narrate)
-    plan = publish.PublishPlan(index="pypi", version="1.0.0", files=(tmp_path / "a",))
+    from releasing.artifacts import build_manifest
+
+    path = tmp_path / "example.whl"
+    path.write_bytes(b"artifact")
+    manifest = build_manifest(
+        [path], repository="", version="1.0.0", source_revision=None
+    )
+    plan = publish.plan(manifest, tmp_path, index="pypi")
     publish.execute(plan)
 
     assert seen, "the upload must be narrated"

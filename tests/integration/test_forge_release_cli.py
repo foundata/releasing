@@ -34,6 +34,8 @@ assert arguments[:2] == ["release", "create"], arguments
 notes_index = arguments.index("--notes-file") + 1
 notes = Path(arguments[notes_index])
 assets = [Path(value) for value in arguments[notes_index + 1:]]
+for source in json.loads(os.environ.get("FAKE_GH_MUTATE", "[]")):
+    Path(source).write_bytes(b"changed while the uploader runs")
 Path(os.environ["FAKE_GH_RECORD"]).write_text(json.dumps({
     "arguments": arguments,
     "cwd": str(Path.cwd()),
@@ -103,6 +105,7 @@ def fake_gh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("GH_HOST", "wrong-forge.invalid")
     monkeypatch.setenv("GH_CONFIG_DIR", str(tmp_path / "gh-config"))
     monkeypatch.delenv("FAKE_GH_ERROR", raising=False)
+    monkeypatch.delenv("FAKE_GH_MUTATE", raising=False)
     record = tmp_path / "gh-call.json"
     monkeypatch.setenv("FAKE_GH_RECORD", str(record))
     staging = tmp_path / "staged notes"
@@ -172,7 +175,7 @@ def test_create_uses_the_declared_repository_and_the_verified_assets(
     call = json.loads(fake_gh.read_text(encoding="utf-8"))
     notes = Path(call["notes_path"])
     directory = repository.parent / manifest.parent
-    assert call["arguments"] == [
+    assert call["arguments"][:10] == [
         "release",
         "create",
         "v1.0.0",
@@ -183,9 +186,11 @@ def test_create_uses_the_declared_repository_and_the_verified_assets(
         "github.com/foundata/example",
         "--notes-file",
         str(notes),
-        str(directory / "artifacts.json"),
-        str(directory / "example-1.0.0.tar.gz"),
     ]
+    staged = [Path(value) for value in call["arguments"][10:]]
+    assert [path.name for path in staged] == ["artifacts.json", "example-1.0.0.tar.gz"]
+    assert all(path.is_absolute() and path.parent != directory for path in staged)
+    assert all(not path.parent.exists() for path in staged)
     assert Path(call["cwd"]) == repository
     assert call["notes"] == "- First release.\n"
     assert call["assets"] == {
@@ -403,3 +408,23 @@ def test_working_tree_notes_cannot_replace_a_missing_tagged_changelog(
     assert b"cannot read CHANGELOG.md at" in result.stderr
     assert b"Traceback" not in result.stderr
     assert not fake_gh.exists()
+
+
+def test_gh_reads_private_copies_even_when_the_original_inputs_change(
+    repository: Path, fake_gh: Path, manifest: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = repository.parent / manifest
+    artifact = path.parent / "example-1.0.0.tar.gz"
+    expected = {
+        path.name: path.read_bytes().hex(),
+        artifact.name: artifact.read_bytes().hex(),
+    }
+    monkeypatch.setenv("FAKE_GH_MUTATE", json.dumps([str(path), str(artifact)]))
+
+    result = release(repository, "--manifest", str(manifest))
+
+    assert result.returncode == 0, result.stderr
+    call = json.loads(fake_gh.read_text(encoding="utf-8"))
+    assert call["assets"] == expected
+    assert artifact.read_bytes() == b"changed while the uploader runs"
+    assert list((repository.parent / "staged notes").iterdir()) == []

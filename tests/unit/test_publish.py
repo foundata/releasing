@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 
 from releasing import processes, publish
-from releasing.artifacts import build_manifest, dump_manifest, load_manifest
+from releasing.artifacts import (
+    ArtifactError,
+    build_manifest,
+    dump_manifest,
+    load_manifest,
+)
 
 
 def released(tmp_path: Path, *, extra_file: bool = False) -> Path:
@@ -60,6 +65,50 @@ def test_a_missing_file_is_refused(tmp_path: Path) -> None:
     (directory / "example-1.0.0.tar.gz").unlink()
     with pytest.raises(publish.PublishError, match="missing"):
         publish.plan(manifest, directory, index="pypi")
+
+
+def test_execution_refuses_a_file_changed_after_planning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = released(tmp_path)
+    prepared = publish.plan(
+        load_manifest(directory / "artifacts.json"), directory, index="pypi"
+    )
+    prepared.files[0].write_bytes(b"changed after planning")
+
+    def refuse(*args: object, **kwargs: object) -> str:
+        pytest.fail("changed bytes must never reach an upload tool")
+
+    monkeypatch.setattr(processes, "run", refuse)
+    with pytest.raises(ArtifactError, match="SHA-256 changed since planning"):
+        publish.execute(prepared)
+
+
+def test_execution_keeps_planned_paths_when_the_caller_changes_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = released(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    prepared = publish.plan(
+        load_manifest(directory / "artifacts.json"), Path("dist"), index="pypi"
+    )
+    monkeypatch.chdir(directory)
+    monkeypatch.setattr(processes, "executable", lambda name: Path("/tools") / name)
+    uploaded: list[Path] = []
+
+    def run(argv: list[str], **kwargs: object) -> str:
+        uploaded.extend(Path(value) for value in argv[2:])
+        assert [path.read_bytes() for path in uploaded] == [
+            b"wheel",
+            b"source distribution",
+        ]
+        assert all(path.parent != directory for path in uploaded)
+        return ""
+
+    monkeypatch.setattr(processes, "run", run)
+    publish.execute(prepared)
+    assert uploaded
+    assert all(not path.parent.exists() for path in uploaded)
 
 
 def test_an_index_that_publishes_nothing_is_refused(tmp_path: Path) -> None:
@@ -140,6 +189,18 @@ def test_dry_run_sends_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
         "example-1.0.0-py3-none-any.whl",
         "example-1.0.0.tar.gz",
     ]
+
+
+def test_an_empty_plan_never_invokes_a_tools_default_upload_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def refuse(*args: object, **kwargs: object) -> str:
+        pytest.fail("an empty upload plan must not invoke the tool")
+
+    monkeypatch.setattr(processes, "run", refuse)
+    prepared = publish.PublishPlan(index="pypi", version="1.0.0", uploads=())
+    with pytest.raises(publish.PublishError, match="no artifacts"):
+        publish.execute(prepared)
 
 
 def test_a_manifest_from_another_gate_is_accepted(tmp_path: Path) -> None:

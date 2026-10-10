@@ -16,6 +16,12 @@ Error: the files beside the manifest are not the validated set:
 It also refuses a file the manifest names but the directory lacks, and one
 whose content no longer matches its recorded digest.
 
+Before invoking an upload tool, every input is copied into a private temporary
+directory and the copy is checked against the planned digest. Changes between
+planning and staging abort the upload; later changes to the originals cannot
+change the copies being sent. All staged copies are removed after success,
+failure or interruption. A dry run creates no staging files.
+
 The declaration's `index` decides which tool does the upload: `uv publish` for
 PyPI, `ansible-galaxy collection publish` for Ansible Galaxy, one file at a
 time. An ecosystem that publishes nothing is refused rather than silently
