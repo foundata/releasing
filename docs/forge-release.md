@@ -14,8 +14,10 @@ destination checked during planning. Git remotes, `GH_REPO` and `GH_HOST`
 cannot redirect it to another repository.
 
 It refuses when the changelog has no section for the version, when the
-manifest's files are missing or altered, when the forge already has a release
-for the tag, and when no release tool is known for the declared forge.
+manifest records a different version, when its files are missing or altered,
+when the forge already has a release for the tag, and when no release tool is
+known for the declared forge. Compatible manifests without a version field
+remain accepted; the command's version selects the changelog section and tag.
 
 The release tag must already exist on the forge. The write passes
 `--verify-tag` to `gh`, so forgetting to push the tag fails instead of creating

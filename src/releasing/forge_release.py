@@ -60,6 +60,10 @@ def plan(
     notes = _notes(root, config, version_string)
     assets: tuple[Path, ...] = ()
     if manifest is not None and manifest_path is not None:
+        if manifest.version and manifest.version != version_string:
+            raise ForgeReleaseError(
+                f"the manifest records version {manifest.version}, not {version_string}"
+            )
         problems = artifacts.verify_manifest(manifest, manifest_path.parent)
         if problems:
             raise ForgeReleaseError(

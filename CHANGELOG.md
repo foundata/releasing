@@ -35,6 +35,8 @@ and the project adheres to
   write to a different destination than the one checked.
 - `forge release-create` requires the tag to exist on the forge, preventing
   `gh` from creating an unpushed release tag at the default branch.
+- `forge release-create` rejects a manifest that records a different version
+  from the requested release, even when all its file digests match.
 
 
 ## [5.0.0] - 2026-09-26

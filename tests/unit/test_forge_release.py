@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -51,14 +52,14 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReleaseConfig:
     )
 
 
-def with_artifacts(root: Path) -> Path:
+def with_artifacts(root: Path, *, version: str = "1.0.0") -> Path:
     directory = root / "dist"
     directory.mkdir()
-    (directory / "example-1.0.0.tar.gz").write_bytes(b"source distribution")
+    (directory / f"example-{version}.tar.gz").write_bytes(b"source distribution")
     manifest = build_manifest(
-        [directory / "example-1.0.0.tar.gz"],
+        [directory / f"example-{version}.tar.gz"],
         repository="foundata/example",
-        version="1.0.0",
+        version=version,
         source_revision="a" * 40,
     )
     path = directory / "artifacts.json"
@@ -94,6 +95,42 @@ def test_a_version_the_changelog_does_not_document_is_refused(
 ) -> None:
     with pytest.raises(forge_release.ForgeReleaseError, match="no changelog section"):
         forge_release.plan(project.root, project, FORGE, "9.9.9")
+
+
+@pytest.mark.parametrize("manifest_version", ["0.9.0", "1.0.1"])
+def test_artifacts_for_another_version_are_refused(
+    project: ReleaseConfig, manifest_version: str
+) -> None:
+    path = with_artifacts(project.root, version=manifest_version)
+    with pytest.raises(
+        forge_release.ForgeReleaseError, match="manifest records version"
+    ):
+        forge_release.plan(
+            project.root,
+            project,
+            FORGE,
+            "1.0.0",
+            manifest=load_manifest(path),
+            manifest_path=path,
+        )
+
+
+def test_a_compatible_manifest_without_a_version_remains_usable(
+    project: ReleaseConfig,
+) -> None:
+    path = with_artifacts(project.root)
+    manifest = replace(load_manifest(path), version="")
+    path.write_text(dump_manifest(manifest), encoding="utf-8")
+    prepared = forge_release.plan(
+        project.root,
+        project,
+        FORGE,
+        "1.0.0",
+        manifest=manifest,
+        manifest_path=path,
+    )
+    assert prepared.tag == "v1.0.0"
+    assert prepared.assets[1].name == "example-1.0.0.tar.gz"
 
 
 def test_an_existing_release_is_refused(
