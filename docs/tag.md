@@ -1,5 +1,10 @@
 # Release tags
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 A release tag is annotated, carries the project's message convention and points
 at the revision whose artifacts were built. The `tag` commands enforce that,
 and they keep the escape hatch in the release procedures usable.

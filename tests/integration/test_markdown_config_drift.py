@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """The drift tool finds every copy of the guide's .rumdl.toml and judges it."""

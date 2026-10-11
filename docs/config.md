@@ -1,5 +1,10 @@
 # The release declaration
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 Project-aware `release` commands share one declaration: the facts that differ
 between projects, stated once. It lives in `[tool.releasing]` of
 `pyproject.toml`. A repository without a `pyproject.toml` uses the same keys at

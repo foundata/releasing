@@ -1,5 +1,10 @@
 # `git-review-unpushed.sh`
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 `git-review-unpushed.sh` reviews commit messages that exist on the current local
 branch but not on its configured remote upstream. It fetches that upstream
 branch first, then visits the unpushed commits from oldest to newest. It never

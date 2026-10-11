@@ -1,5 +1,10 @@
 # Where a release stands
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 Reports what is true of one version: its changelog entry, its tag locally and
 on the remote, what the index serves and whether the forge has a release. It
 performs no step and writes nothing.

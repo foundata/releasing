@@ -1,5 +1,10 @@
 # Uploading what was validated
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 ```sh
 release publish "../dist-${version}/artifacts.json"
 ```

@@ -1,5 +1,10 @@
 # Artifacts
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 The `artifacts` commands inspect built distributions without extracting them:
 wheels, source distributions and Ansible collection tarballs. The checks cover
 the defects these projects have shipped before: an index page whose relative

@@ -1,5 +1,10 @@
 # Releasing a Python package
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 The order below is the one the commands assume. Each step produces a result
 the next one depends on, so a skipped step is a missing result rather than a
 shortcut.

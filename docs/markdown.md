@@ -1,5 +1,10 @@
 # Preparing Markdown for package indexes
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 `release markdown prepare` rewrites repository-relative Markdown and HTML
 destinations to absolute URLs. It preserves the document around those
 destinations, including HTML image dimensions. It writes in place, so use it on

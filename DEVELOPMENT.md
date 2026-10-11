@@ -1,5 +1,10 @@
 # Developing release helpers
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 The repository is the `releasing` Python package: the `release` command and
 the `releasing` import package under `src/`. One module per release step, with
 `markdown`, `changelog`, `version`, `config` and `artifacts` free of Git,

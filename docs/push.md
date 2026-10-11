@@ -1,5 +1,10 @@
 # Publishing the branch and the tag
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 ```sh
 release push "${version}"
 ```

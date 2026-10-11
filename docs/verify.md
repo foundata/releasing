@@ -1,5 +1,10 @@
 # Verifying a published release
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 `release verify` checks the published artifacts and the forge release, stopping
 at the first failure. For PyPI, it also checks an isolated installation. A
 project that uploads nothing verifies its tag instead of artifacts; see

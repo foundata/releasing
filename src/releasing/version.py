@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Version sites: find, compare and rewrite every place a project states its version.
 

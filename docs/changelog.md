@@ -1,5 +1,10 @@
 # Changelog sections
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 The `changelog` commands work on a
 [Keep a Changelog](https://keepachangelog.com/) file in the layout the foundata
 projects use: a `## [Unreleased]` section first, then `## [X.Y.Z] - YYYY-MM-DD`

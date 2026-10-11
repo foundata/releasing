@@ -1,5 +1,10 @@
 # releasing (helpers and tooling for software releases)
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 Release helpers for projects that publish from a Git-tracked source tree.
 
 > **Important:** This tooling is built for foundata's own release processes. You

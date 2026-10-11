@@ -1,5 +1,10 @@
 # The forge's release entry
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 ```sh
 release forge release-create "${version}" \
   --manifest "../dist-${version}/artifacts.json"

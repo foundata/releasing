@@ -19,7 +19,7 @@
 # tmp/ or a build tree in .nox/ holds a copy nobody maintains, and reporting it
 # would bury the copies that matter.
 #
-# SPDX-FileCopyrightText: 2026, foundata GmbH (https://foundata.com)
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # Boilerplate taken from the foundata shell guide's shell-boilerplate.sh

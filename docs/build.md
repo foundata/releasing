@@ -1,5 +1,10 @@
 # Building from an exported revision
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 `release build` exports the committed revision with `git archive`, prepares the
 package-index Markdown inside that export, builds there, checks the result and
 records a manifest. The working tree stays untouched, so nothing has to be

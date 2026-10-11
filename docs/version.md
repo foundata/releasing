@@ -1,5 +1,10 @@
 # Version sites
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 A project states its version in more than one place: `pyproject.toml`, an
 `__version__` constant, a `galaxy.yml`, generated JSON. Each such line is a
 version site. The declaration's `version-files` lists the files; every listed
