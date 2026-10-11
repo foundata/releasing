@@ -89,3 +89,49 @@ def test_analysis_state_belongs_to_each_document() -> None:
     first.code_blocks.append((0, 1))
     assert second == analyze(source)
     assert analyze("") == Document()
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n", "\r"])
+def test_analysis_records_comments_declarations_and_raw_html_spans(
+    newline: str,
+) -> None:
+    block = "<!--" + newline + "header" + newline + "-->"
+    inline = "<!-- inline -->"
+    source = newline.join(
+        [
+            "# Title",
+            "",
+            block,
+            "",
+            f"Text {inline} <br> `<!-- code -->`",
+            "",
+            "<!DOCTYPE html>",
+            "",
+            "<?php echo 1; ?>",
+            "",
+        ]
+    )
+    document = analyze(source)
+    block_start = source.index(block)
+    inline_start = source.index(inline)
+    br = source.index("<br>")
+    assert document.comments == [
+        (block_start, block_start + len(block)),
+        (inline_start, inline_start + len(inline)),
+    ]
+    assert document.declarations == [
+        source.index("<!DOCTYPE"),
+        source.index("<?php"),
+    ]
+    assert document.inline_html == [
+        (inline_start, inline_start + len(inline)),
+        (br, br + len("<br>")),
+    ]
+    assert [start for start, _ in document.html_blocks] == [
+        block_start,
+        source.index("<!DOCTYPE"),
+        source.index("<?php"),
+    ]
+    assert document.html_blocks[0][1] == source.index(newline + newline + "Text") + len(
+        newline
+    )

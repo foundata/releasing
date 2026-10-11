@@ -329,7 +329,9 @@ programs. They cover input preservation, strict
 failure before any write, stdout purity, encoding failures, aliases, atomic
 replacement and permission preservation. Renderer tests examine actual HTML link
 and image destinations, including screenshot dimensions; successful parsing
-alone is not the assertion.
+alone is not the assertion. HTML stripping is checked by rendering each corpus
+README through comrak with raw HTML disabled, which marks every HTML node it
+leaves out.
 
 Combination tests place identical active and literal link syntax in nested
 lists, block quotes and tables, across LF, CRLF and CR line endings. They check

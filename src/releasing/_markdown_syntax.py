@@ -55,6 +55,11 @@ class Document:
     image_links: list[tuple[int, int, str]] = field(default_factory=list)
     unsupported: list[tuple[int, str]] = field(default_factory=list)
     code_blocks: list[tuple[int, int]] = field(default_factory=list)
+    html_blocks: list[tuple[int, int]] = field(default_factory=list)
+    inline_html: list[tuple[int, int]] = field(default_factory=list)
+    comments: list[tuple[int, int]] = field(default_factory=list)
+    # Declarations, processing instructions and CDATA sections, by start offset.
+    declarations: list[int] = field(default_factory=list)
 
 
 def _capture_inline(
@@ -256,6 +261,31 @@ class _HtmlDestinations(HTMLParser):
             HtmlTag(self.positions[offset], self.positions[end], tag, {}, True)
         )
 
+    @override
+    def handle_comment(self, data: str) -> None:
+        offset = self._offset()
+        if not self.rawdata.startswith("<!--", offset):
+            # HTMLParser reports a declaration it does not recognize as a comment.
+            self.document.declarations.append(self.positions[offset])
+            return
+        # Searching from the third character also ends `<!-->` and `<!--->`,
+        # which CommonMark accepts as complete comments.
+        end = self.rawdata.find("-->", offset + 2)
+        end = len(self.rawdata) if end < 0 else end + 3
+        self.document.comments.append((self.positions[offset], self.positions[end]))
+
+    @override
+    def handle_decl(self, decl: str) -> None:
+        self.document.declarations.append(self.positions[self._offset()])
+
+    @override
+    def handle_pi(self, data: str) -> None:
+        self.document.declarations.append(self.positions[self._offset()])
+
+    @override
+    def unknown_decl(self, data: str) -> None:
+        self.document.declarations.append(self.positions[self._offset()])
+
 
 def analyze(text: str) -> Document:
     """Parse CommonMark and map active destinations back to unchanged source text."""
@@ -271,8 +301,12 @@ def analyze(text: str) -> Document:
         if child.type == "image" and "label" in child.meta
     }
     for token in tokens:
-        if token.type in {"fence", "code_block"} and token.map:
-            document.code_blocks.append(
+        if token.type in {"fence", "code_block", "html_block"} and token.map:
+            (
+                document.html_blocks
+                if token.type == "html_block"
+                else document.code_blocks
+            ).append(
                 (
                     original_positions[starts[token.map[0]]],
                     original_positions[starts[token.map[1]]]
@@ -307,6 +341,12 @@ def analyze(text: str) -> Document:
             for child in children:
                 if child.type == "html_inline":
                     left, right = cast(tuple[int, int], child.meta[_WHOLE])
+                    document.inline_html.append((positions[left], positions[right]))
+                    if child.content.startswith("<!--"):
+                        # The token is exactly the comment. HTMLParser before
+                        # Python 3.14 does not end `<!-->` and `<!--->` there.
+                        document.comments.append((positions[left], positions[right]))
+                        continue
                     _HtmlDestinations(
                         child.content, positions[left : right + 1], document
                     )

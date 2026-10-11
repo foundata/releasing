@@ -534,3 +534,25 @@ def test_cli_simplification_flags(
     assert (b"![badge]" not in result.stdout) is badges
     assert (b"project-readme-header" not in result.stdout) is header
     assert b"https://github.com/foundata/example/blob/main/page.md" in result.stdout
+
+
+def test_cli_strip_html_removes_comments_anchors_and_breaks(tmp_path: Path) -> None:
+    path = source(
+        tmp_path,
+        b'# Title\n\n<!-- note -->\n\n## Usage<a id="usage"></a>\n\nA<br>B\n',
+    )
+    result = invoke(tmp_path, *BASE, "--strip-html", "--stdout", str(path))
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b"# Title\n\n## Usage\n\nA B\n"
+
+
+def test_cli_strip_html_refuses_other_raw_html_and_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    path = source(tmp_path, b'Logo: <img src="logo.png">\n')
+    before = snapshot(path)
+    result = invoke(tmp_path, *BASE, "--strip-html", str(path))
+    assert result.returncode == 1
+    assert b"README.md:1:7: <img> is raw HTML" in result.stderr
+    assert result.stdout == b""
+    assert snapshot(path) == before

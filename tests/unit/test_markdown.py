@@ -217,3 +217,158 @@ def test_badges_only_does_not_attempt_malformed_header_collapse() -> None:
     )
     with pytest.raises(ValueError, match="unclosed project-readme-header"):
         prepare(source, collapse_header=True)
+
+
+STRIP_SOURCE = """# Title
+
+<!--
+SPDX-FileCopyrightText: Example
+-->
+
+Intro [x](./a.md).
+
+<!-- rumdl-disable MD033 -->
+<!-- note -->
+<div align="center" id="project-readme-header">
+<br>
+
+**Star** [![badge](./b.svg)](./c.md)
+
+<br>
+</div>
+<!-- rumdl-enable MD033 -->
+
+
+## Usage<a id="usage"></a>
+
+- [Usage](#usage)
+
+<!--REUSE-IgnoreStart-->
+<!-- should match -->
+Copyright (c) Example <https://example.org>
+<!--REUSE-IgnoreEnd-->
+"""
+STRIP_EXPECTED = f"""# Title
+
+Intro [x]({UI}/a.md).
+
+**Star** [![badge]({RAW}/b.svg)]({UI}/c.md)
+
+
+## Usage
+
+- [Usage](#usage)
+
+Copyright (c) Example <https://example.org>
+"""
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n", "\r"])
+def test_strip_html_removes_comments_anchors_and_the_collapsed_header(
+    newline: str,
+) -> None:
+    source = STRIP_SOURCE.replace("\n", newline)
+    output = prepare(source, collapse_header=True, strip_html=True)
+    assert output == STRIP_EXPECTED.replace("\n", newline)
+    assert prepare(output, collapse_header=True, strip_html=True) == output
+
+
+def test_strip_html_is_opt_in() -> None:
+    assert "<!--" in prepare(STRIP_SOURCE, collapse_header=True)
+    assert '<a id="usage"></a>' in prepare(STRIP_SOURCE, collapse_header=True)
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("a<br>b\n", "a b\n"),
+        ("a<br/>b<br />c</br>d<BR>e\n", "a b c d e\n"),
+        ("a<!-- c --><br>b\n", "a b\n"),
+        ("a <br> b\n", "a  b\n"),
+        ("a<br>\nb\n", "a\nb\n"),
+        ("line one\n<br>\nline two\n", "line one\nline two\n"),
+        ("Text\n\n<br>\n\nMore\n", "Text\n\nMore\n"),
+        ("| a |\n| - |\n| b<br>c |\n", "| a |\n| - |\n| b c |\n"),
+        ("1. Item\n   text.<br>More text\n", "1. Item\n   text. More text\n"),
+    ],
+)
+def test_strip_html_turns_breaks_into_spaces(source: str, expected: str) -> None:
+    assert prepare(source, strip_html=True) == expected
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("Para one\n<!-- c -->\nPara two\n", "Para one\n\nPara two\n"),
+        ("## Heading\n<!-- c -->\nText\n", "## Heading\n\nText\n"),
+        ("a <!-- c --> b\n", "a  b\n"),
+        ("a<!---->b<!-- -->c\n", "abc\n"),
+        ("Text <!-- x\ny --> more\n", "Text  more\n"),
+        ("<!-- c -->\n\n# Title\n", "# Title\n"),
+        ("Text\n\n<!-- c -->\n", "Text\n"),
+        ("<!-- c -->\n", ""),
+        ("Text\n\n<!-- c -->\n\n\n## Next\n", "Text\n\n\n## Next\n"),
+        ("- item\n  <!-- c -->\n  more\n", "- item\n\n  more\n"),
+        ('## A<a id="a"/>\n', "## A\n"),
+        ('## A<a name="a"></a>\n', "## A\n"),
+    ],
+)
+def test_strip_html_keeps_the_blocks_around_removed_lines(
+    source: str, expected: str
+) -> None:
+    assert prepare(source, strip_html=True) == expected
+
+
+def test_strip_html_leaves_code_alone() -> None:
+    source = (
+        "`<br>` and `<!-- c -->`\n\n```html\n<!-- c -->\n<div>\n```\n\n"
+        '    <a id="x"></a>\n'
+    )
+    assert prepare(source, strip_html=True) == source
+
+
+@pytest.mark.parametrize(
+    ("source", "location", "message"),
+    [
+        ('Intro\n\nText <img src="a.png" />\n', "3:6:", "<img> is raw HTML"),
+        ('## A<a id="a">text</a>\n', "1:5:", "<a> is raw HTML"),
+        ('## A<a id="a">\n', "1:5:", "<a> is raw HTML"),
+        ('[x](#a) <a href="#a"></a>\n', "1:9:", "<a> is raw HTML"),
+        ("<details>\n<summary>S</summary>\n</details>\n", "1:1:", "<details>"),
+        ("Text\n\n<!DOCTYPE html>\n", "3:1:", "declaration"),
+        ("<?php echo 1; ?>\n", "1:1:", "declaration"),
+        ("<!ELEMENT br EMPTY>\n", "1:1:", "declaration"),
+        ("Text <![CDATA[x]]>\n", "1:6:", "declaration"),
+        (
+            '<div id="project-readme-header">\n\nText\n\n</div>\n',
+            "1:1:",
+            "collapse the project-readme-header first",
+        ),
+    ],
+)
+@pytest.mark.parametrize("strict", [False, True])
+def test_strip_html_refuses_other_raw_html_at_its_source_location(
+    source: str, location: str, message: str, strict: bool
+) -> None:
+    with pytest.raises(ValueError, match=f"^{location} [^\n]*{message}"):
+        prepare(source, strip_html=True, strict=strict)
+
+
+def test_strip_html_accepts_the_header_only_when_it_is_collapsed() -> None:
+    source = '<div id="project-readme-header">\n<br>\n\n**Star**\n\n</div>\n'
+    assert prepare(source, collapse_header=True, strip_html=True) == "**Star**\n"
+    assert prepare(source, simplify=True, strip_html=True) == "**Star**\n"
+
+
+def test_strip_html_fails_when_raw_html_survives() -> None:
+    with pytest.raises(ValueError, match=r"^1:1: raw HTML remains after stripping"):
+        prepare("<!-- never closed\n\nText\n", strip_html=True)
+
+
+def test_strip_html_leaves_header_structure_errors_to_the_collapse() -> None:
+    with pytest.raises(ValueError, match="unclosed project-readme-header"):
+        prepare(
+            '<div id="project-readme-header">\n\nText\n',
+            collapse_header=True,
+            strip_html=True,
+        )

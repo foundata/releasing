@@ -16,6 +16,10 @@ and the project adheres to
 
 ### Added
 
+- `release markdown prepare --strip-html` prepares a document for a target
+  that shows raw HTML as text, such as a Quay repository description: it
+  removes comments, empty heading anchors and `<br>`, and refuses any other raw
+  HTML with its location. The library function takes `strip_html=True`.
 - Failed uploads report tool-confirmed files, uncertain remote outcomes and
   files not attempted. Galaxy failures retain earlier successes; failed PyPI
   batches remain unconfirmed. No failed upload is automatically retried.

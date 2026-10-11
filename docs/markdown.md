@@ -22,6 +22,7 @@ uses.
 - [Strict validation](#strict-validation)
 - [Optional local file checks](#optional-local-file-checks)
 - [Optional HTML simplification](#optional-html-simplification)
+- [Optional HTML stripping](#optional-html-stripping)
 - [Compatibility and tests](#compatibility-and-tests)
 
 ## Running the command<a id="running-the-command"></a>
@@ -158,7 +159,8 @@ and duplicate definitions are also prepared.
 HTML attributes are parsed as HTML. Quoting, spacing, tag spelling and unrelated
 attributes are preserved. Attributes such as `data-src` are not treated as
 `src`. HTML comments, fenced and indented code blocks, inline code spans,
-external URLs, autolinks and local `#anchors` remain unchanged. Line endings and
+external URLs, autolinks and local `#anchors` remain unchanged, unless
+[HTML stripping](#optional-html-stripping) is requested. Line endings and
 the presence or absence of a final newline are preserved during destination
 rewriting.
 
@@ -258,6 +260,38 @@ blocks are refused. Headers containing code blocks, comments or multiline code
 spans are also refused rather than collapsed destructively. Badge-only mode
 leaves these headers intact. Leave simplification off when the publishing
 platform already renders the original structure correctly.
+
+## Optional HTML stripping<a id="optional-html-stripping"></a>
+
+Some targets render Markdown but show raw HTML as literal text: Quay's
+repository description prints comments, heading anchors and `<br>` as written.
+`--strip-html` prepares a document for such a target:
+
+- HTML comments are removed, including those inside HTML blocks, such as an
+  SPDX license header or a linter directive.
+- Empty anchors without `href`, such as `<a id="usage"></a>` after a heading,
+  are removed.
+- `<br>` becomes a space between two words, and disappears next to whitespace
+  or alone on its line. A Markdown hard break is not used, because a table cell
+  cannot hold one.
+- A line left empty by these removals is removed. Between two blank lines, one
+  of them goes as well; a removed HTML block between two text lines leaves one
+  blank line, so the blocks around it stay separate.
+- Any other raw HTML outside code fails with its location, with or without
+  `--strict`, because the target would print it. There is no conversion from
+  HTML to Markdown. That includes the `project-readme-header` block unless
+  `--collapse-header` or `-s` collapses it first.
+
+```sh
+release markdown prepare \
+  -o foundata -r example --ref refs/tags/v1.0.0 \
+  --collapse-header --strip-html --strict --dry-run ./README.md
+```
+
+Code blocks and inline code are not changed. After stripping, the output is
+parsed again, and any raw HTML still left fails the command rather than reaching
+the target. Without the switch, comments and anchors stay exactly as written;
+PyPI, for example, hides the comments and uses the anchors itself.
 
 ## Compatibility and tests<a id="compatibility-and-tests"></a>
 

@@ -4,6 +4,7 @@
 from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
+import comrak
 import pytest
 from readme_renderer.markdown import render
 from typing_extensions import override
@@ -37,6 +38,14 @@ def rendered(text: str) -> Rendered:
     return Rendered(result)
 
 
+def safely_rendered(text: str) -> str:
+    """Render without raw HTML, which comrak marks as `raw HTML omitted`."""
+    extensions = comrak.ExtensionOptions()
+    extensions.autolink = True
+    extensions.table = True
+    return comrak.render_markdown(text, extension_options=extensions)
+
+
 @pytest.mark.parametrize("repository", REPOSITORIES)
 @pytest.mark.parametrize("mode", ["default", "simplified", "badges", "header"])
 def test_every_corpus_readme_renders_without_repository_relative_urls(
@@ -58,6 +67,31 @@ def test_every_corpus_readme_renders_without_repository_relative_urls(
         assert value.startswith(("#", "//")) or urlsplit(value).scheme, value
     if mode in {"default", "header"}:
         assert len(page.images) == len(rendered(source).images)
+
+
+@pytest.mark.parametrize("repository", REPOSITORIES)
+def test_stripped_corpus_readmes_render_without_raw_html(repository: str) -> None:
+    source = (CORPUS / repository / "README.md").read_text(encoding="utf-8")
+    assert "raw HTML omitted" in safely_rendered(source)
+
+    def stripped() -> str:
+        return TRANSFORMER.prepare_markdown(
+            source,
+            raw_base=f"https://raw.githubusercontent.com/foundata/{repository}/refs/heads/main",
+            ui_base=f"https://github.com/foundata/{repository}/blob/main",
+            collapse_header=True,
+            strip_html=True,
+            strict=True,
+        )
+
+    if repository in {"ansible-docsmith", "scanmole"}:
+        # Their screenshots are HTML images, which a target would print.
+        with pytest.raises(ValueError, match="<img> is raw HTML"):
+            stripped()
+        return
+    prepared = stripped()
+    assert "raw HTML omitted" not in safely_rendered(prepared)
+    assert len(rendered(prepared).images) == len(rendered(source).images)
 
 
 def test_real_html_screenshot_keeps_dimensions_and_navigation_target() -> None:

@@ -159,6 +159,11 @@ def _add_markdown_prepare(parser: argparse.ArgumentParser) -> None:
         help="collapse only the project-readme-header div",
     )
     parser.add_argument(
+        "--strip-html",
+        action="store_true",
+        help="remove comments, <br> and empty anchors; refuse other raw HTML",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="fail on unresolved paths or unsupported resource attributes",
@@ -225,6 +230,7 @@ def _prepare_document(
             simplify=args.simplify,
             simplify_badges=args.simplify_badges,
             collapse_header=args.collapse_header,
+            strip_html=args.strip_html,
             strict=args.strict,
         )
     except ValueError as exc:
