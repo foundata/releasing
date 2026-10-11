@@ -1,10 +1,16 @@
 # SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import io
+import json
 import sys
+import urllib.error
+from email.message import Message
 from pathlib import Path
+from typing import Any
 
 import pytest
+from typing_extensions import override
 
 from releasing import markdown
 
@@ -25,6 +31,7 @@ __all__ = [
     "ROOT",
     "TRANSFORMER",
     "UI",
+    "FakeQuay",
     "captured",
     "prepare",
     "write_lf",
@@ -74,3 +81,59 @@ def prepare(
         absolute_anchors=absolute_anchors,
         strict=strict,
     )
+
+
+class _Response(io.BytesIO):
+    status = 200
+
+    @override
+    def __enter__(self) -> "_Response":
+        return self
+
+    @override
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+
+class FakeQuay:
+    """A stand-in for ``urllib.request.urlopen`` that serves Quay descriptions.
+
+    Every repository starts with ``initial`` and keeps what is written to it.
+    ``refuse`` answers a method with an HTTP error and a JSON body,
+    ``unanswered_puts`` drops that many write answers after storing them, and
+    ``ignore_writes`` answers writes without storing them.
+    """
+
+    def __init__(self, initial: str | None = "old") -> None:
+        self.initial = initial
+        self.stored: dict[str, str] = {}
+        self.requests: list[Any] = []
+        self.refuse: dict[str, tuple[int, dict[str, str]]] = {}
+        self.unanswered_puts = 0
+        self.ignore_writes = False
+
+    def __call__(self, request: Any, timeout: float = 0) -> _Response:
+        self.requests.append(request)
+        method = request.get_method()
+        if method in self.refuse:
+            code, body = self.refuse[method]
+            raise urllib.error.HTTPError(
+                request.full_url,
+                code,
+                "Refused",
+                Message(),
+                io.BytesIO(json.dumps(body).encode()),
+            )
+        if method == "PUT":
+            if not self.ignore_writes:
+                self.stored[request.full_url] = json.loads(request.data)["description"]
+            if self.unanswered_puts:
+                self.unanswered_puts -= 1
+                raise urllib.error.URLError("timed out")
+            return _Response(b'{"success": true}')
+        description = self.stored.get(request.full_url, self.initial)
+        return _Response(json.dumps({"description": description}).encode())
+
+    def methods(self) -> list[str]:
+        """The methods requested so far, in order."""
+        return [request.get_method() for request in self.requests]

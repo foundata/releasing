@@ -5,7 +5,7 @@
 The notes are the changelog section for that version and the assets are the
 manifest's files, so the release entry cannot drift from what was written and
 what was validated. The write itself is delegated to the forge's command-line
-tool, which already owns an authenticated session. This package never holds a
+tool, which already owns an authenticated session. This module never holds a
 credential that can write to a repository.
 """
 

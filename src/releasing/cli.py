@@ -31,6 +31,7 @@ from releasing import (
     processes,
     publish,
     push,
+    quay,
     reporting,
     status,
     tag,
@@ -55,10 +56,17 @@ def _ref(value: str) -> str:
 
 
 def _url_bases(args: argparse.Namespace) -> tuple[str, str]:
-    if args.output is not None and not (
-        (args.org and args.repo) or (args.raw_base and args.ui_base)
-    ):
+    if args.output is not None and not _named_repository(args):
         raise ValueError("out-of-place output requires -o and -r, or both -a and -u")
+    return _link_bases(args)
+
+
+def _named_repository(args: argparse.Namespace) -> bool:
+    """Whether the forge repository is named, not guessed from directory names."""
+    return bool((args.org and args.repo) or (args.raw_base and args.ui_base))
+
+
+def _link_bases(args: argparse.Namespace) -> tuple[str, str]:
     if args.raw_base and args.ui_base:
         return markdown.url_base(args.raw_base), markdown.url_base(args.ui_base)
     org = args.org or Path.cwd().parent.name
@@ -947,6 +955,91 @@ def _run_forge_release_create(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_quay_description_set(args: argparse.Namespace) -> int:
+    parser = cast(argparse.ArgumentParser, args.parser)
+    if args.token_file is None and not args.dry_run:
+        parser.error("--token-file is required unless --dry-run is given")
+    try:
+        if not _named_repository(args):
+            raise ValueError("name the forge repository with -o and -r, or -a and -u")
+        raw_base, ui_base = _link_bases(args)
+        api = quay.api_url(args.api_url)
+        repositories = [
+            quay.parse_repository(value, api) for value in args.repositories
+        ]
+        description = quay.prepare(
+            cast(Path, args.project),
+            ref=args.ref,
+            source_path=args.source_path,
+            raw_base=raw_base,
+            ui_base=ui_base,
+        )
+        quay.publish(
+            description,
+            repositories,
+            api=api,
+            token_file=args.token_file,
+            dry_run=args.dry_run,
+        )
+    except (
+        quay.QuayError,
+        build.BuildError,
+        processes.ProcessError,
+        ValueError,
+    ) as exc:
+        reporting.error(str(exc))
+        return 1
+    if not args.dry_run:
+        for repository in repositories:
+            print(repository.page_url())
+    return 0
+
+
+def _add_quay_description_set(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--project",
+        type=Path,
+        default=Path.cwd(),
+        help="Git repository the document is read from (default: .)",
+    )
+    parser.add_argument(
+        "--ref",
+        required=True,
+        help="qualified tag or branch ref, or full commit SHA, to read and link to",
+    )
+    parser.add_argument("-o", "--org", help="forge organization of the repository")
+    parser.add_argument("-r", "--repo", help="forge repository name")
+    parser.add_argument("-a", "--raw-base", help="absolute URL base for images")
+    parser.add_argument("-u", "--ui-base", help="absolute URL base for links")
+    parser.add_argument(
+        "--source-path",
+        default="README.md",
+        help="repository-relative document path (default: README.md)",
+    )
+    parser.add_argument(
+        "--token-file",
+        type=Path,
+        help="file holding a Quay API token with the repo:write scope",
+    )
+    parser.add_argument(
+        "--api-url",
+        default=quay.API_URL,
+        help=f"Quay API URL (default: {quay.API_URL})",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="show the difference to the current descriptions without writing",
+    )
+    parser.add_argument(
+        "repositories",
+        nargs="+",
+        metavar="REPOSITORY",
+        help="Quay repository as HOST/NAMESPACE/NAME, e.g. quay.io/foundata/example",
+    )
+    parser.set_defaults(run=_run_quay_description_set, parser=parser, branch=None)
+
+
 def _add_artifact_arguments(parser: argparse.ArgumentParser) -> None:
     _add_project(parser)
     parser.add_argument(
@@ -1399,6 +1492,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_allow_tool_attribution(forge_create)
     forge_create.set_defaults(run=_run_forge_release_create)
+    quay_parser = commands.add_parser(
+        "quay", help="publish to the Quay container registry"
+    )
+    quay_commands = quay_parser.add_subparsers(
+        dest="subcommand", required=True, metavar="SUBCOMMAND", title="subcommands"
+    )
+    _add_quay_description_set(
+        quay_commands.add_parser(
+            "description-set",
+            help="publish the README as the repositories' description",
+            description=quay.__doc__,
+        )
+    )
     markdown_parser = commands.add_parser(
         "markdown", help="prepare Markdown for package indexes"
     )

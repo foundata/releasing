@@ -114,6 +114,10 @@ and explicit-version artifact operations also work independently; see
 - `release markdown prepare`: rewrite repository-relative link and image
   destinations to absolute URLs without reformatting the document. See
   [Preparing Markdown for package indexes](./docs/markdown.md).
+- `release quay description-set`: publish the README of a tag as the
+  description of Quay repositories, without the raw HTML Quay would show as
+  text, and read it back. See
+  [The Quay repository description](./docs/quay.md).
 
 The end-to-end order is in
 [Releasing a Python package](./docs/python-packages.md),

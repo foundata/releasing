@@ -23,6 +23,13 @@ and the project adheres to
 - `release markdown prepare --absolute-anchors` points in-page `#anchor` links
   at the same anchor in the document on the forge, for a target without the
   document's anchors. The library function takes `absolute_anchors=True`.
+- `release quay description-set` publishes the README of a Git ref as the
+  description of one or more Quay repositories. The document is read from the
+  ref, its relative links are checked against an export of it, and it is
+  prepared with the header collapsed, HTML stripped and absolute anchors. The
+  write uses a Quay API token from a file only its owner can read, skips a
+  description that is already current and reads the stored description back.
+  `--dry-run` shows the difference without writing.
 - Failed uploads report tool-confirmed files, uncertain remote outcomes and
   files not attempted. Galaxy failures retain earlier successes; failed PyPI
   batches remain unconfirmed. No failed upload is automatically retried.

@@ -297,6 +297,10 @@ the current one.
 - `tests/integration/test_forge_release_cli.py`: real CLI and Git calls with a
   fake `gh` executable. The tests exercise repository selection, asset paths,
   missing tags, upload failures and temporary-note cleanup without a network.
+- `tests/integration/test_quay_cli.py`: a temporary repository whose working
+  tree moved on from its tag, and a fake Quay API in place of `urlopen`. The
+  tests check what is sent, to which repository and with which token, without
+  reaching quay.io.
 - `tests/fixtures/cases.json`: small reviewed inputs and exact expected output.
 - `tests/fixtures/mixed-content*.md`: nested containers, references, tables,
   HTML, code and comments with exact expected Markdown and renderer assertions.
