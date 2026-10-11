@@ -259,6 +259,39 @@ def test_write_mode_reports_a_copy_it_cannot_write(shell: str, tmp_path: Path) -
     assert locked.read_text(encoding="utf-8") == "drifted\n"
 
 
+# REUSE-IgnoreStart
+TAGGED = (
+    "# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>\n"
+    "# SPDX-License-Identifier: GPL-3.0-or-later\n\n" + CONFIG
+)
+# REUSE-IgnoreEnd
+
+
+def test_license_tag_values_may_differ(shell: str, tmp_path: Path) -> None:
+    root = fleet(tmp_path, guide=GUIDE.replace(CONFIG, TAGGED))
+    (root / "project" / ".rumdl.toml").write_text(
+        TAGGED.replace("GPL-3.0-or-later", "Apache-2.0"), encoding="utf-8"
+    )
+    (root / "skeletons" / "role_default" / ".rumdl.toml.j2").write_text(
+        TAGGED.replace("foundata GmbH <https://foundata.com>", "{{ company }}"),
+        encoding="utf-8",
+    )
+    result = run(shell, root)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_write_mode_keeps_a_copys_license_tags(shell: str, tmp_path: Path) -> None:
+    root = fleet(tmp_path, guide=GUIDE.replace(CONFIG, TAGGED))
+    own = TAGGED.replace("GPL-3.0-or-later", "Apache-2.0")
+    stale = root / "project" / ".rumdl.toml"
+    stale.write_text(own.replace("80", "100"), encoding="utf-8")
+    untagged = root / "skeletons" / "role_default" / ".rumdl.toml.j2"
+    untagged.write_text(CONFIG, encoding="utf-8")
+    assert run(shell, root, "-w").returncode == 0
+    assert stale.read_text(encoding="utf-8") == own
+    assert untagged.read_text(encoding="utf-8") == TAGGED
+
+
 def test_invalid_usage_exits_two(shell: str, tmp_path: Path) -> None:
     root = fleet(tmp_path)
 

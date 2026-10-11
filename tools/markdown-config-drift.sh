@@ -5,9 +5,11 @@
 # The guide owns the rule set and shows it as a `.rumdl.toml` in its "Linting and
 # automatic formatting" section. Every repository commits a verbatim copy and
 # runs `rumdl` against it, so the copies go stale without a word when the guide
-# moves. Four repositories catch that in their own test suite; the collections,
-# the skeletons and the drill have no suite to catch it, which is what this
-# script is for.
+# moves. Only the values of the license comment header's two tags may differ: the
+# license follows the repository, and a skeleton template names its holder with
+# a template expression. The comparison masks both values. Four repositories
+# catch that in their own test suite; the collections, the skeletons and the
+# drill have no suite to catch it, which is what this script is for.
 #
 # With -w, each stale copy is overwritten with the guide's block, so a change
 # to the guide reaches every repository in one run. Nothing is committed; each
@@ -327,6 +329,38 @@ documented_config() {
   ' "${1}"
 }
 
+# REUSE-IgnoreStart
+###
+# Print a configuration with the values of its license tags masked.
+# Arguments:
+#   $1 - Path to the configuration.
+# Outputs:
+#   Writes the masked configuration to STDOUT.
+masked_config() {
+  sed -e 's/^\(# SPDX-FileCopyrightText:\).*$/\1/' \
+    -e 's/^\(# SPDX-License-Identifier:\).*$/\1/' "${1}"
+}
+
+###
+# Print the guide's configuration with the license tag lines of a copy.
+# Arguments:
+#   $1 - Path to the guide's configuration.
+#   $2 - Path to the copy, whose tag lines win when it has them.
+# Outputs:
+#   Writes the configuration to STDOUT.
+config_with_own_tags() {
+  local holder license
+
+  holder="$(sed -n '/^# SPDX-FileCopyrightText:/{p;q;}' "${2}")"
+  license="$(sed -n '/^# SPDX-License-Identifier:/{p;q;}' "${2}")"
+  awk -v holder="${holder}" -v license="${license}" '
+    index($0, "# SPDX-FileCopyrightText:") == 1 && holder != "" { print holder; next }
+    index($0, "# SPDX-License-Identifier:") == 1 && license != "" { print license; next }
+    { print }
+  ' "${1}"
+}
+# REUSE-IgnoreEnd
+
 ###
 # Print every committed copy below a directory, one path per line.
 # Globals:
@@ -372,6 +406,8 @@ EOF
 run_check() {
   local expected="${temporary_directory}/expected"
   local copies="${temporary_directory}/copies"
+  local masked="${temporary_directory}/masked"
+  local candidate="${temporary_directory}/candidate"
   local copy relative state total='0' stale='0' written='0' failed='0'
 
   if [ ! -f "${guide_file}" ]; then
@@ -391,17 +427,19 @@ run_check() {
     print_error "No ${CONFIG_NAME} below: ${search_directory}"
     return 1
   fi
+  masked_config "${expected}" >"${masked}"
 
   while IFS= read -r copy; do
     total=$((total + 1))
     relative="${copy#"${search_directory}"/}"
-    if cmp -s "${copy}" "${expected}"; then
+    if masked_config "${copy}" | cmp -s - "${masked}"; then
       state='ok'
     elif [ "${write_mode}" -eq 0 ]; then
       state='stale'
       stale=$((stale + 1))
     # Redirecting into the existing file keeps its mode and ownership.
-    elif cat "${expected}" >"${copy}"; then
+    elif config_with_own_tags "${expected}" "${copy}" >"${candidate}" \
+      && cat "${candidate}" >"${copy}"; then
       state='wrote'
       written=$((written + 1))
     else
