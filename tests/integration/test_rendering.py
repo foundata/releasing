@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import re
 from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
@@ -92,6 +93,33 @@ def test_stripped_corpus_readmes_render_without_raw_html(repository: str) -> Non
     prepared = stripped()
     assert "raw HTML omitted" not in safely_rendered(prepared)
     assert len(rendered(prepared).images) == len(rendered(source).images)
+
+
+@pytest.mark.parametrize(
+    "repository",
+    [name for name in REPOSITORIES if name not in {"ansible-docsmith", "scanmole"}],
+)
+def test_absolute_anchors_reach_anchors_of_the_document_on_the_forge(
+    repository: str,
+) -> None:
+    source = (CORPUS / repository / "README.md").read_text(encoding="utf-8")
+    ui_base = f"https://github.com/foundata/{repository}/blob/main"
+    prepared = TRANSFORMER.prepare_markdown(
+        source,
+        raw_base=f"https://raw.githubusercontent.com/foundata/{repository}/refs/heads/main",
+        ui_base=ui_base,
+        collapse_header=True,
+        strip_html=True,
+        absolute_anchors=True,
+        strict=True,
+    )
+    # comrak, like Quay, generates no heading IDs and no links to them.
+    links = Rendered(safely_rendered(prepared)).links
+    assert all(urlsplit(link).scheme for link in links), links
+    in_page = [link for link in links if link.startswith(f"{ui_base}/README.md#")]
+    assert in_page
+    anchors = set(re.findall(r'<a id="([^"]+)"></a>', source))
+    assert {urlsplit(link).fragment for link in in_page} <= anchors
 
 
 def test_real_html_screenshot_keeps_dimensions_and_navigation_target() -> None:

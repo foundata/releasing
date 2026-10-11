@@ -372,3 +372,39 @@ def test_strip_html_leaves_header_structure_errors_to_the_collapse() -> None:
             collapse_header=True,
             strip_html=True,
         )
+
+
+def test_absolute_anchors_point_in_page_links_at_the_document() -> None:
+    source = (
+        "[Usage](#usage) [top](#) ![image](#mark)\n\n"
+        '[toc][toc] <a href="#a&amp;b">HTML</a> [elsewhere](./a.md#part)\n\n'
+        "[toc]: #toc\n"
+    )
+    expected = (
+        f"[Usage]({UI}/README.md#usage) [top]({UI}/README.md#) ![image](#mark)\n\n"
+        f'[toc][toc] <a href="{UI}/README.md#a&amp;b">HTML</a> '
+        f"[elsewhere]({UI}/a.md#part)\n\n"
+        f"[toc]: {UI}/README.md#toc\n"
+    )
+    output = prepare(source, absolute_anchors=True)
+    assert output == expected
+    assert prepare(output, absolute_anchors=True) == output
+    assert prepare(source) == source.replace("./a.md", f"{UI}/a.md")
+
+
+def test_absolute_anchors_follow_the_source_path() -> None:
+    assert (
+        prepare("[x](#part)\n", source_path="docs/guide.md", absolute_anchors=True)
+        == f"[x]({UI}/docs/guide.md#part)\n"
+    )
+
+
+def test_absolute_anchors_with_stripped_html_keep_every_section_reachable() -> None:
+    source = (
+        '## Table of contents<a id="toc"></a>\n\n- [Usage](#usage)\n\n'
+        '## Usage<a id="usage"></a>\n\nBack to the [contents](#toc).\n'
+    )
+    assert prepare(source, strip_html=True, absolute_anchors=True) == (
+        f"## Table of contents\n\n- [Usage]({UI}/README.md#usage)\n\n"
+        f"## Usage\n\nBack to the [contents]({UI}/README.md#toc).\n"
+    )

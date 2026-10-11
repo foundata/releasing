@@ -23,6 +23,7 @@ uses.
 - [Optional local file checks](#optional-local-file-checks)
 - [Optional HTML simplification](#optional-html-simplification)
 - [Optional HTML stripping](#optional-html-stripping)
+- [Optional absolute anchors](#optional-absolute-anchors)
 - [Compatibility and tests](#compatibility-and-tests)
 
 ## Running the command<a id="running-the-command"></a>
@@ -159,8 +160,9 @@ and duplicate definitions are also prepared.
 HTML attributes are parsed as HTML. Quoting, spacing, tag spelling and unrelated
 attributes are preserved. Attributes such as `data-src` are not treated as
 `src`. HTML comments, fenced and indented code blocks, inline code spans,
-external URLs, autolinks and local `#anchors` remain unchanged, unless
-[HTML stripping](#optional-html-stripping) is requested. Line endings and
+external URLs and autolinks remain unchanged. Comments stay unless
+[HTML stripping](#optional-html-stripping) is requested, and local `#anchors`
+stay unless [absolute anchors](#optional-absolute-anchors) are. Line endings and
 the presence or absence of a final newline are preserved during destination
 rewriting.
 
@@ -293,12 +295,37 @@ parsed again, and any raw HTML still left fails the command rather than reaching
 the target. Without the switch, comments and anchors stay exactly as written;
 PyPI, for example, hides the comments and uses the anchors itself.
 
+## Optional absolute anchors<a id="optional-absolute-anchors"></a>
+
+An in-page link such as `[Usage](#usage)` works only where the target page
+carries that anchor. Quay generates no heading IDs, and HTML stripping removes
+the `<a id="usage"></a>` that GitHub uses. `--absolute-anchors` points such
+links at the same anchor in the document on the forge, under the link base,
+the ref and `--source-path`:
+
+```sh
+release markdown prepare \
+  -o foundata -r example --ref refs/tags/v1.0.0 \
+  --collapse-header --strip-html --absolute-anchors --strict \
+  --output /tmp/example-description.md ./README.md
+```
+
+Here `[Usage](#usage)` becomes
+`[Usage](https://github.com/foundata/example/blob/refs/tags/v1.0.0/README.md#usage)`.
+Markdown links, reference definitions and HTML `href` attributes are rewritten;
+images are not. Every link keeps working, at the cost of leaving the target page
+for the forge. A target that generates matching heading IDs needs neither this
+switch nor the anchors.
+
 ## Compatibility and tests<a id="compatibility-and-tests"></a>
 
 All 21 frozen project READMEs match their expected output with and without
-`-s`. The corpus includes conclear, ansible-docsmith, ScanMole and 18 OCI
-integration-test repositories. Their source revisions and SHA-256 values are
-recorded with the fixtures.
+`-s`. The 19 without HTML images also match their expected output with
+`--collapse-header --strip-html --absolute-anchors`; ansible-docsmith and
+ScanMole are refused in that form because of their HTML screenshots. The corpus
+includes conclear, ansible-docsmith, ScanMole and 18 OCI integration-test
+repositories. Their source revisions and SHA-256 values are recorded with the
+fixtures.
 
 Approved fixes beyond the original shell behaviour are covered by focused
 fixtures: protected code/comments; fragment-bearing images and HTML attributes;

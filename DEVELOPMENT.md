@@ -301,7 +301,7 @@ the current one.
 - `tests/fixtures/mixed-content*.md`: nested containers, references, tables,
   HTML, code and comments with exact expected Markdown and renderer assertions.
 - `tests/fixtures/corpus/`: 21 project README snapshots, the reviewed expected
-  output of both modes and their provenance.
+  output of both modes and of the stripped form, and their provenance.
 
 Tests that need a symbolic link, a device file, a permission bit or a path
 Windows cannot name carry `POSIX_ONLY` from `tests/support.py` and skip
@@ -331,7 +331,8 @@ replacement and permission preservation. Renderer tests examine actual HTML link
 and image destinations, including screenshot dimensions; successful parsing
 alone is not the assertion. HTML stripping is checked by rendering each corpus
 README through comrak with raw HTML disabled, which marks every HTML node it
-leaves out.
+leaves out. With absolute anchors, every in-page link of each corpus README
+must name an anchor the README defines.
 
 Combination tests place identical active and literal link syntax in nested
 lists, block quotes and tables, across LF, CRLF and CR line endings. They check
@@ -349,7 +350,9 @@ Snapshots cover `conclear`, `ansible-docsmith`, `scanmole` and all 18 local
 `oci-*-itt` repositories. `manifest.json` records each repository's source
 revision, the README SHA-256 and whether it matches that revision. The current
 output matches every frozen expectation in both modes, with no corpus
-exceptions.
+exceptions. `expected-stripped.md` holds the form a Quay description gets
+(`--collapse-header --strip-html --absolute-anchors`); ansible-docsmith and
+scanmole have none, because stripping refuses their HTML screenshots.
 
 The expectations are a change detector, not the authority on correctness. They
 were first produced by the shell script this package replaces, then audited

@@ -43,17 +43,35 @@ def main() -> None:
         target = destination / repository.name
         target.mkdir(parents=True, exist_ok=True)
         (target / "README.md").write_bytes(data)
+        raw_base = f"https://raw.githubusercontent.com/foundata/{repository.name}/refs/heads/main"
+        ui_base = f"https://github.com/foundata/{repository.name}/blob/main"
         for simplify in (False, True):
             prepared = prepare_markdown(
                 data.decode("utf-8"),
-                raw_base=f"https://raw.githubusercontent.com/foundata/{repository.name}/refs/heads/main",
-                ui_base=f"https://github.com/foundata/{repository.name}/blob/main",
+                raw_base=raw_base,
+                ui_base=ui_base,
                 simplify=simplify,
                 strict=True,
             )
             (
                 target / ("expected-simplified.md" if simplify else "expected.md")
             ).write_text(prepared, encoding="utf-8", newline="")
+        stripped = target / "expected-stripped.md"
+        try:
+            prepared = prepare_markdown(
+                data.decode("utf-8"),
+                raw_base=raw_base,
+                ui_base=ui_base,
+                collapse_header=True,
+                strip_html=True,
+                absolute_anchors=True,
+                strict=True,
+            )
+        except ValueError:
+            # Raw HTML that stripping refuses, such as an HTML screenshot.
+            stripped.unlink(missing_ok=True)
+        else:
+            stripped.write_text(prepared, encoding="utf-8", newline="")
         entries.append(
             {
                 "repository": repository.name,
@@ -66,7 +84,7 @@ def main() -> None:
     (destination / "manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
-    print(f"Captured {len(entries)} READMEs and both modes in {destination}")
+    print(f"Captured {len(entries)} READMEs and their expected output in {destination}")
 
 
 if __name__ == "__main__":

@@ -164,6 +164,11 @@ def _add_markdown_prepare(parser: argparse.ArgumentParser) -> None:
         help="remove comments, <br> and empty anchors; refuse other raw HTML",
     )
     parser.add_argument(
+        "--absolute-anchors",
+        action="store_true",
+        help="point in-page #anchor links at the document under the link base",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="fail on unresolved paths or unsupported resource attributes",
@@ -231,6 +236,7 @@ def _prepare_document(
             simplify_badges=args.simplify_badges,
             collapse_header=args.collapse_header,
             strip_html=args.strip_html,
+            absolute_anchors=args.absolute_anchors,
             strict=args.strict,
         )
     except ValueError as exc:

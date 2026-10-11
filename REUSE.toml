@@ -21,3 +21,11 @@ path = "**"
 precedence = "closest"
 SPDX-FileCopyrightText = "foundata GmbH <https://foundata.com>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Stripped corpus expectations lose the README's REUSE-IgnoreStart/End
+# comments, so REUSE would read its licensing prose as malformed tags.
+[[annotations]]
+path = "tests/fixtures/corpus/*/expected-stripped.md"
+precedence = "override"
+SPDX-FileCopyrightText = "foundata GmbH <https://foundata.com>"
+SPDX-License-Identifier = "GPL-3.0-or-later"

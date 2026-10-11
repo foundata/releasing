@@ -425,6 +425,7 @@ def prepare_markdown(
     simplify_badges: bool = False,
     collapse_header: bool = False,
     strip_html: bool = False,
+    absolute_anchors: bool = False,
     strict: bool = False,
 ) -> str:
     """Rewrite active destinations without filesystem, Git or network access.
@@ -435,6 +436,8 @@ def prepare_markdown(
     operation can also be selected independently. Strip HTML, for a target that
     shows raw HTML as text, removes comments, `br` and empty anchors after the
     header collapse and refuses any other raw HTML, with or without strict.
+    Absolute anchors points in-page `#anchor` links at the same anchor in the
+    document under the UI base, for a target without the document's anchors.
     """
     source_path = _source_path(source_path)
     raw_base, ui_base = url_base(raw_base), url_base(ui_base)
@@ -444,7 +447,12 @@ def prepare_markdown(
         problems.extend(_html_problems(document, header=simplify or collapse_header))
     edits = []
     for destination in document.destinations:
-        if not _local(destination.value):
+        anchor = (
+            absolute_anchors
+            and not destination.image
+            and destination.value.startswith("#")
+        )
+        if not (_local(destination.value) or anchor):
             continue
         try:
             replacement = _absolute(

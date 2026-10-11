@@ -556,3 +556,23 @@ def test_cli_strip_html_refuses_other_raw_html_and_writes_nothing(
     assert b"README.md:1:7: <img> is raw HTML" in result.stderr
     assert result.stdout == b""
     assert snapshot(path) == before
+
+
+def test_cli_absolute_anchors_use_the_ref_and_source_path(tmp_path: Path) -> None:
+    path = source(tmp_path, b"[Usage](#usage)\n")
+    result = invoke(
+        tmp_path,
+        *BASE,
+        "--ref",
+        "refs/tags/v1.0.0",
+        "--source-path",
+        "docs/guide.md",
+        "--absolute-anchors",
+        "--stdout",
+        str(path),
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == (
+        b"[Usage](https://github.com/foundata/example/blob/refs/tags/v1.0.0/"
+        b"docs/guide.md#usage)\n"
+    )

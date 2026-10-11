@@ -59,6 +59,7 @@ def prepare(
     simplify_badges: bool = False,
     collapse_header: bool = False,
     strip_html: bool = False,
+    absolute_anchors: bool = False,
     strict: bool = True,
 ) -> str:
     return TRANSFORMER.prepare_markdown(
@@ -70,5 +71,6 @@ def prepare(
         simplify_badges=simplify_badges,
         collapse_header=collapse_header,
         strip_html=strip_html,
+        absolute_anchors=absolute_anchors,
         strict=strict,
     )
