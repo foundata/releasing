@@ -1,5 +1,10 @@
 # DocSmith for Ansible
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 **Automating role documentation (using `argument_specs.yml`)**
 
 DocSmith is a documentation generator. It reads a role's
@@ -654,10 +659,8 @@ Supply values for required variables before running the example:
 ## Licensing, copyright<a id="licensing-copyright"></a>
 
 <!--REUSE-IgnoreStart-->
-<!-- rumdl-disable MD034 --><!-- should match SPDX-PackageSupplier -->
-Copyright (c) 2025, 2026, [foundata GmbH](https://foundata.com/)
-(https://foundata.com)
-<!-- rumdl-enable MD034 -->
+<!-- should match SPDX-PackageSupplier -->
+Copyright (c) 2025, 2026, foundata GmbH <https://foundata.com>
 
 This project is licensed under the GNU General Public License v3.0 or later
 (SPDX-License-Identifier: `GPL-3.0-or-later`), see

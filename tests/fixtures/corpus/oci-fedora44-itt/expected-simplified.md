@@ -1,5 +1,10 @@
 # OCI Image: Fedora 44, Integration Test Target (ITT)
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 [Fedora 44](https://docs.fedoraproject.org/en-US/releases/f44/) (Linux) for
 integration testing.
 
@@ -139,10 +144,8 @@ See [`CONTRIBUTING.md`](https://github.com/foundata/oci-fedora44-itt/blob/main/C
 ### Container configuration, repository<a id="licensing-copyright-project"></a>
 
 <!--REUSE-IgnoreStart-->
-<!-- rumdl-disable MD034 --><!-- should match SPDX-PackageSupplier -->
-Copyright (c) 2026, [foundata GmbH](https://foundata.com/)
-(https://foundata.com)
-<!-- rumdl-enable MD034 -->
+<!-- should match SPDX-PackageSupplier -->
+Copyright (c) 2026, foundata GmbH <https://foundata.com>
 
 This project is licensed under the GNU General Public License v3.0 or later
 (SPDX-License-Identifier: `GPL-3.0-or-later`), see

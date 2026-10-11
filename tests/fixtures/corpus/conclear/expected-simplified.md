@@ -1,5 +1,10 @@
 # ConClear (container clearance before promotion)
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 ConClear builds, tests and scans OCI container images, then signs and releases
 the digest that passed its checks. It applies the technical requirements of
 [foundata's OCI container image build and release guide](https://foundata.com/en/guidelines/oci-images/)
@@ -748,10 +753,8 @@ and the clean-checkout release gate.
 ## Licensing, copyright<a id="licensing-copyright"></a>
 
 <!--REUSE-IgnoreStart-->
-<!-- rumdl-disable MD034 --><!-- should match SPDX-PackageSupplier -->
-Copyright (c) 2026, [foundata GmbH](https://foundata.com/)
-(https://foundata.com)
-<!-- rumdl-enable MD034 -->
+<!-- should match SPDX-PackageSupplier -->
+Copyright (c) 2026, foundata GmbH <https://foundata.com>
 
 This project is licensed under the GNU General Public License v3.0 or later
 (SPDX-License-Identifier: `GPL-3.0-or-later`), see
