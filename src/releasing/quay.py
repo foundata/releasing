@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Publish a repository's README as the description of its Quay repositories.
 
-Quay renders the description as Markdown, but shows raw HTML as text and gives
-headings no IDs. The document is therefore prepared with the project header
+Quay renders the description as Markdown in two web interfaces: the newer one
+shows raw HTML as literal text, the older one drops it, and neither gives
+headings IDs. The document is therefore prepared with the project header
 collapsed, the HTML stripped and in-page links pointed at the same anchor in
-the document on the forge. It is read from a Git revision, never from the
-working tree, and its relative links are checked against an export of that
-revision, so the description and its links name the same source.
+the document on the forge, so it reads the same in both. It is read from a Git
+revision, never from the working tree, and its relative links are checked
+against an export of that revision, so the description and its links name the
+same source.
 
 Quay has no command-line tool that owns a session, so the write uses a Quay API
 token read from a file only its owner can read: an OAuth application token with

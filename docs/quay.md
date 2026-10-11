@@ -37,10 +37,13 @@ it does not serve.
 
 ## What Quay gets<a id="what-quay-gets"></a>
 
-Quay renders the description as Markdown, but shows raw HTML as literal text
-and gives headings no IDs. The document is prepared the way
+Quay renders the description as Markdown in two web interfaces. The newer one
+shows raw HTML as literal text, so comments, heading anchors and `<br>` appear
+as written. The older one, which quay.io still serves unless a visitor
+switches, drops raw HTML instead. Neither gives headings IDs, so in-page links
+lead nowhere in both. The document is prepared the way
 `release markdown prepare --collapse-header --strip-html --absolute-anchors
---strict` prepares it:
+--strict` prepares it, and reads the same in both interfaces:
 
 - Repository-relative links and images become absolute URLs at the ref.
 - The `project-readme-header` block becomes one line.

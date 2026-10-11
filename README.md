@@ -115,8 +115,8 @@ and explicit-version artifact operations also work independently; see
   destinations to absolute URLs without reformatting the document. See
   [Preparing Markdown for package indexes](./docs/markdown.md).
 - `release quay description-set`: publish the README of a tag as the
-  description of Quay repositories, without the raw HTML Quay would show as
-  text, and read it back. See
+  description of Quay repositories, free of the raw HTML that Quay shows as
+  text or drops, and read it back. See
   [The Quay repository description](./docs/quay.md).
 
 The end-to-end order is in

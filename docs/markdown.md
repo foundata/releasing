@@ -265,8 +265,9 @@ platform already renders the original structure correctly.
 
 ## Optional HTML stripping<a id="optional-html-stripping"></a>
 
-Some targets render Markdown but show raw HTML as literal text: Quay's
-repository description prints comments, heading anchors and `<br>` as written.
+Some targets render Markdown but show raw HTML as literal text: the newer web
+interface of Quay prints comments, heading anchors and `<br>` in a repository
+description as written.
 `--strip-html` prepares a document for such a target:
 
 - HTML comments are removed, including those inside HTML blocks, such as an
