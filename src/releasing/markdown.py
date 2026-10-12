@@ -366,17 +366,35 @@ def _strip_html(original: str) -> str:
             offset += step
         return text[offset] if 0 <= offset < len(text) else "\n"
 
+    soft_breaks = set(document.soft_break_html)
+    hard_breaks = []
     spaces = []
     for tag in breaks:
-        # A break between two words becomes a space; next to whitespace it goes.
-        if neighbour(tag.start - 1, -1) in " \t\n" or neighbour(tag.end, 1) in " \t\n":
+        line_start = text.rfind("\n", 0, tag.start) + 1
+        before = "".join(
+            char
+            for offset, char in enumerate(text[line_start : tag.start], line_start)
+            if not removed[offset]
+        ).strip(" \t>")
+        if tag.start in soft_breaks and before and not before.startswith("|"):
+            # A backslash before the line ending is a Markdown hard break, which
+            # keeps stacked lines such as several notices apart. It needs the
+            # paragraph to continue, so a final break and a table row keep the
+            # rules below.
+            hard_breaks.append((tag.start, text.index("\n", tag.end)))
+        elif (
+            neighbour(tag.start - 1, -1) in " \t\n" or neighbour(tag.end, 1) in " \t\n"
+        ):
+            # Next to whitespace, alone on its line or ending a paragraph, it goes.
             _mark(removed, tag.start, tag.end)
         else:
+            # Between two words it becomes a space.
             spaces.append((tag.start, tag.end))
     _remove_emptied_lines(text, removed, document.html_blocks)
     edits = [
-        (positions[start], positions[end], " ")
-        for start, end in spaces
+        (positions[start], positions[end], replacement)
+        for replacement, spans in ((" ", spaces), ("\\", hard_breaks))
+        for start, end in spans
         if not any(removed[start:end])
     ]
     start = 0

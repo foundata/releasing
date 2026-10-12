@@ -285,7 +285,6 @@ def test_strip_html_is_opt_in() -> None:
         ("a<br/>b<br />c</br>d<BR>e\n", "a b c d e\n"),
         ("a<!-- c --><br>b\n", "a b\n"),
         ("a <br> b\n", "a  b\n"),
-        ("a<br>\nb\n", "a\nb\n"),
         ("line one\n<br>\nline two\n", "line one\nline two\n"),
         ("Text\n\n<br>\n\nMore\n", "Text\n\nMore\n"),
         ("| a |\n| - |\n| b<br>c |\n", "| a |\n| - |\n| b c |\n"),
@@ -294,6 +293,36 @@ def test_strip_html_is_opt_in() -> None:
 )
 def test_strip_html_turns_breaks_into_spaces(source: str, expected: str) -> None:
     assert prepare(source, strip_html=True) == expected
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        (
+            "Copyright (c) 2018 A<br>\nCopyright (c) 2022 B<br>\n\nNext\n",
+            "Copyright (c) 2018 A\\\nCopyright (c) 2022 B\n\nNext\n",
+        ),
+        ("a <br> \nb\n", "a \\\nb\n"),
+        ("- a<br>\n  b\n", "- a\\\n  b\n"),
+        ("> a<br>\n> b\n", "> a\\\n> b\n"),
+        ("[a<br>\nb](https://example.org)\n", "[a\\\nb](https://example.org)\n"),
+        # A trailing double space is already a hard break.
+        ("a<br>  \nb\n", "a  \nb\n"),
+        # A backslash ending a paragraph or a heading would show as text.
+        ("a<br>\n\nb\n", "a\n\nb\n"),
+        ("## A<br>\nText\n", "## A\nText\n"),
+        # In a table row, the next line is another row.
+        ("| a<br>\n| b\n", "| a\n| b\n"),
+    ],
+)
+@pytest.mark.parametrize("newline", ["\n", "\r\n", "\r"])
+def test_strip_html_keeps_line_end_breaks_as_hard_breaks(
+    source: str, expected: str, newline: str
+) -> None:
+    source, expected = source.replace("\n", newline), expected.replace("\n", newline)
+    output = prepare(source, strip_html=True)
+    assert output == expected
+    assert prepare(output, strip_html=True) == output
 
 
 @pytest.mark.parametrize(

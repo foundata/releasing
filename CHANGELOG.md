@@ -16,10 +16,11 @@ and the project adheres to
 
 ### Added
 
-- `release markdown prepare --strip-html` prepares a document for a target
-  that shows raw HTML as text, such as Quay's newer repository page: it
-  removes comments, empty heading anchors and `<br>`, and refuses any other raw
-  HTML with its location. The library function takes `strip_html=True`.
+- `release markdown prepare --strip-html` prepares a document for a target that
+  shows raw HTML as text, such as Quay's newer repository page: it removes
+  comments and empty heading anchors, turns `<br>` into a Markdown line break or
+  a space, and refuses any other raw HTML with its location. The library
+  function takes `strip_html=True`.
 - `release markdown prepare --absolute-anchors` points in-page `#anchor` links
   at the same anchor in the document on the forge, for a target without the
   document's anchors. The library function takes `absolute_anchors=True`.

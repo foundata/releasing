@@ -135,3 +135,11 @@ def test_analysis_records_comments_declarations_and_raw_html_spans(
     assert document.html_blocks[0][1] == source.index(newline + newline + "Text") + len(
         newline
     )
+
+
+def test_analysis_records_inline_html_before_a_soft_line_break() -> None:
+    source = "A<br>\nB <br>  \nC<br>D <b>x</b>\nE<br>\n\nF<br>\n"
+    assert analyze(source).soft_break_html == [
+        source.index("<br>"),
+        source.index("</b>"),
+    ]

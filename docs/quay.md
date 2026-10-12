@@ -47,7 +47,8 @@ lead nowhere in both. The document is prepared the way
 
 - Repository-relative links and images become absolute URLs at the ref.
 - The `project-readme-header` block becomes one line.
-- HTML comments, empty heading anchors and `<br>` are removed; see
+- HTML comments and empty heading anchors are removed, and `<br>` becomes a
+  Markdown line break or a space; see
   [HTML stripping](./markdown.md#optional-html-stripping). Any other raw HTML,
   such as an HTML screenshot, is refused rather than shown as text.
 - In-page links such as `[Usage](#usage)` point at the same anchor in the

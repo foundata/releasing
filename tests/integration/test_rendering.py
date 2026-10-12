@@ -122,6 +122,13 @@ def test_absolute_anchors_reach_anchors_of_the_document_on_the_forge(
     assert {urlsplit(link).fragment for link in in_page} <= anchors
 
 
+def test_stripped_line_end_breaks_render_as_line_breaks() -> None:
+    source = "Copyright (c) 2018 A<br>\nCopyright (c) 2022 B<br>\n"
+    page = safely_rendered(prepare(source, strip_html=True))
+    assert "raw HTML omitted" not in page
+    assert page == "<p>Copyright (c) 2018 A<br />\nCopyright (c) 2022 B</p>\n"
+
+
 def test_real_html_screenshot_keeps_dimensions_and_navigation_target() -> None:
     page = rendered(
         prepare('[<img src="./shot.png" alt="Screenshot" height="128" />](./shot.png)')

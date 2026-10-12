@@ -274,9 +274,12 @@ description as written.
   SPDX license header or a linter directive.
 - Empty anchors without `href`, such as `<a id="usage"></a>` after a heading,
   are removed.
-- `<br>` becomes a space between two words, and disappears next to whitespace
-  or alone on its line. A Markdown hard break is not used, because a table cell
-  cannot hold one.
+- `<br>` at the end of a line inside a paragraph becomes a backslash, the
+  Markdown hard break, so stacked lines such as several copyright notices stay
+  apart. Between two words it becomes a space, because a hard break there would
+  need a new line with the container's indentation and a table cell cannot hold
+  one. Ending a paragraph, in a table row, next to other whitespace or alone on
+  its line, it disappears.
 - A line left empty by these removals is removed. Between two blank lines, one
   of them goes as well; a removed HTML block between two text lines leaves one
   blank line, so the blocks around it stay separate.

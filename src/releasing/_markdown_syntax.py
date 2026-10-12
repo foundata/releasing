@@ -57,6 +57,8 @@ class Document:
     code_blocks: list[tuple[int, int]] = field(default_factory=list)
     html_blocks: list[tuple[int, int]] = field(default_factory=list)
     inline_html: list[tuple[int, int]] = field(default_factory=list)
+    # Inline HTML that a soft line break follows within its paragraph, by start.
+    soft_break_html: list[int] = field(default_factory=list)
     comments: list[tuple[int, int]] = field(default_factory=list)
     # Declarations, processing instructions and CDATA sections, by start offset.
     declarations: list[int] = field(default_factory=list)
@@ -338,10 +340,13 @@ def analyze(text: str) -> Document:
             if token.type == "html_block":
                 _HtmlDestinations(token.content, positions, document)
                 continue
-            for child in children:
+            for number, child in enumerate(children):
                 if child.type == "html_inline":
                     left, right = cast(tuple[int, int], child.meta[_WHOLE])
                     document.inline_html.append((positions[left], positions[right]))
+                    following = children[number + 1 : number + 2]
+                    if following and following[0].type == "softbreak":
+                        document.soft_break_html.append(positions[left])
                     if child.content.startswith("<!--"):
                         # The token is exactly the comment. HTMLParser before
                         # Python 3.14 does not end `<!-->` and `<!--->` there.
