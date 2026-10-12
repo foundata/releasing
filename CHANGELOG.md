@@ -14,6 +14,11 @@ and the project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [6.0.0] - 2026-10-12
+
 ### Added
 
 - `release markdown prepare --strip-html` prepares a document for a target that
@@ -311,7 +316,8 @@ and the project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v5.0.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v6.0.0...HEAD
+[6.0.0]: https://github.com/foundata/releasing/releases/tag/v6.0.0
 [5.0.0]: https://github.com/foundata/releasing/releases/tag/v5.0.0
 [4.2.0]: https://github.com/foundata/releasing/releases/tag/v4.2.0
 [4.1.0]: https://github.com/foundata/releasing/releases/tag/v4.1.0
