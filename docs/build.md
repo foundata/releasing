@@ -17,6 +17,7 @@ release build --out "../dist-${version}"
 ## Table of contents<a id="toc"></a>
 
 - [What it does](#what-it-does)
+- [Ansible sanity](#ansible-sanity)
 - [Local dependency sources](#local-dependency-sources)
 - [Output](#output)
 - [Verifying and publishing what was built](#verifying-and-publishing)
@@ -33,7 +34,8 @@ release build --out "../dist-${version}"
    there, so the version that ships is the committed one. `--expect X.Y.Z`
    pins what that version has to be. A `source-repository` stops here: it is
    released as its tag and builds no artifact, and the command says so.
-3. Runs the changelog check for that version.
+3. Runs the changelog check for that version. For an Ansible collection, also
+   runs its sanity sessions on that exact commit before building.
 4. Prepares every declared document: relative destinations are validated
    against the exported tree, rewritten against the forge at the version's tag
    ref, and copied over the documents named in `copies`. Document paths,
@@ -46,6 +48,48 @@ release build --out "../dist-${version}"
 6. Runs the artifact checks and writes the files plus `artifacts.json` into
    `--out`, which must not exist yet. The directory appears complete or not at
    all.
+
+## Ansible sanity<a id="ansible-sanity"></a>
+
+Ansible collection builds require `uv` and a committed `noxfile.py` with the
+`ansible-test-sanity` session provided by `antsibull-nox`. The script must
+declare its dependencies using inline script metadata. Its selected concrete
+`ansible-test-sanity-*` sessions determine the matrix and configured exceptions;
+`release` adds no core versions. The existing container engine, Python
+interpreters and network access those sessions need must be available.
+
+The checks run in a temporary local clone of the selected commit, with all
+tracked test files retained even when `export-ignore` excludes them from the
+package. The clone is separate from the packaging export and the developer's
+checkout. The command is:
+
+```sh
+CI=true ANTSIBULL_CHANGE_DETECTION=false uv run --quiet --no-project --script noxfile.py \
+  -s ansible-test-sanity --error-on-missing-interpreters --report <report.json>
+```
+
+`release` discovers the selected sessions first and requires a successful Nox
+report for every one. Empty selections, skips, missing interpreters, failed
+commands, missing reports and changes to tracked files stop the build. Change
+detection is disabled so release checks cover the whole collection. These are
+the project's trusted sanity sessions; the report is not an independent audit
+of their implementation or configured exceptions.
+
+The sanity command has a two-hour timeout. Its combined output goes to the
+diagnostic path printed before it starts. Failure leaves that directory and
+its reports available for inspection; success removes it. Diagnostics can
+contain private dependency locations or tool output, so review them before
+sharing and remove them when no longer needed. No artifact output directory
+is created for a failed gate.
+
+The manifest records `ansibleSanity`: passing session names, the tested commit,
+`releasing`, `uv` and Nox versions, and the built artifact digests. Galaxy
+publication requires evidence matching the manifest's source and files. It is
+a local release record, not a cryptographically signed attestation. Python
+builds and PyPI publication are unchanged.
+
+Installed-artifact acceptance against the real product remains a separate
+collection-specific step after building and before publication.
 
 ## Local dependency sources<a id="local-dependency-sources"></a>
 
@@ -76,9 +120,9 @@ The artifact paths go to stdout, one per line, so a publishing step can read
 them, followed by the path of the manifest. Everything else, including the
 commands that built them, goes to stderr.
 
-`--dry-run` exports the revision and runs every check, then reports the build
-commands it would run without running them. It writes no output directory and
-records no digests, because there are no artifacts to hash.
+`--dry-run` exports the revision and checks its metadata and README links, then
+reports the sanity and build commands without running them. It writes no output
+directory or passing sanity evidence and records no artifact digests.
 
 Because the build runs before the tag exists, the prepared links point at the
 version's tag ref (`refs/tags/vX.Y.Z` by default). The tag is pushed with the

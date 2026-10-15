@@ -5,6 +5,7 @@ import io
 import json
 import sys
 import urllib.error
+from dataclasses import replace
 from email.message import Message
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ import pytest
 from typing_extensions import override
 
 from releasing import markdown
+from releasing.artifacts import AnsibleSanity, Manifest
 
 TRANSFORMER = markdown
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +25,22 @@ POSIX_ONLY = pytest.mark.skipif(
     sys.platform == "win32",
     reason="symbolic links, device files, permission bits or a path Windows cannot name",
 )
+
+
+def with_sanity(manifest: Manifest) -> Manifest:
+    """Attach sample passing evidence to a publication fixture."""
+    revision = manifest.source_revision or "a" * 40
+    return replace(
+        manifest,
+        source_revision=revision,
+        ansible_sanity=AnsibleSanity(
+            revision,
+            ("ansible-test-sanity-2.19",),
+            {"releasing": "7.0.0", "uv": "uv 0.12.3", "nox": "2026.10.1"},
+            {entry.filename: entry.sha256 for entry in manifest.artifacts},
+        ),
+    )
+
 
 __all__ = [
     "FIXTURES",

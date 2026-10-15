@@ -80,6 +80,8 @@ def plan(manifest: Manifest, directory: Path, *, index: str) -> PublishPlan:
     """Re-verify the manifest against the directory and list what to upload."""
     if index not in _INDEXES:
         raise PublishError(f"the {index} index publishes nothing")
+    if index == "galaxy":
+        artifacts.require_ansible_sanity(manifest)
     reporting.phase(
         f"Re-checking {len(manifest.artifacts)} file(s) against the manifest"
     )

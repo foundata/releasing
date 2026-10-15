@@ -34,6 +34,13 @@ skipped.
 
 `--dry-run` lists what would be sent and uploads nothing.
 
+Galaxy publication, including its dry run, requires passing `ansibleSanity`
+evidence from [the build gate](./build.md#ansible-sanity). The tested revision
+and artifact digests must match the manifest. Old manifests and those created
+with `release artifacts manifest` have no such evidence: rebuild the release
+with `release build` before publishing. There is no skip flag. PyPI publication
+continues to accept the existing manifest format.
+
 ## Interrupted uploads
 
 An upload failure reports three sets: files confirmed by successful tool calls,

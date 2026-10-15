@@ -13,6 +13,7 @@ from releasing.artifacts import (
     dump_manifest,
     load_manifest,
 )
+from tests.support import with_sanity
 
 
 def released(tmp_path: Path, *, extra_file: bool = False) -> Path:
@@ -159,6 +160,7 @@ def test_a_collection_is_published_one_file_at_a_time(
         version="1.4.0",
         source_revision=None,
     )
+    manifest = with_sanity(manifest)
     (directory / "artifacts.json").write_text(dump_manifest(manifest), encoding="utf-8")
     prepared = publish.plan(
         load_manifest(directory / "artifacts.json"), directory, index="galaxy"
@@ -188,7 +190,7 @@ def test_partial_collection_failure_reports_progress_without_retrying(
     manifest = build_manifest(
         files, repository="foundata/example", version="1.0.0", source_revision=None
     )
-    prepared = publish.plan(manifest, tmp_path, index="galaxy")
+    prepared = publish.plan(with_sanity(manifest), tmp_path, index="galaxy")
     calls: list[Path] = []
     monkeypatch.setattr(processes, "executable", lambda name: Path("/tools") / name)
 

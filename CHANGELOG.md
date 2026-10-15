@@ -14,7 +14,17 @@ and the project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Changed
+
+- Ansible collection builds now require a committed, script-runnable Nox setup
+  and passing `ansible-test-sanity` sessions on the exact release commit. The
+  gate uses an isolated clone, retains export-ignored tests, rejects skipped
+  or missing sessions and tracked-file rewrites, and keeps diagnostics on
+  failure. Dry runs show the command without running it.
+- Galaxy publication now requires `ansibleSanity` evidence matching the
+  manifest's source revision and artifact digests. Older manifests must be
+  rebuilt with `release build`; `artifacts manifest` cannot supply this
+  evidence. The Python build and PyPI publication paths are unchanged.
 
 
 ## [6.0.0] - 2026-10-12

@@ -57,6 +57,9 @@ names but cannot find.
 ## What the release needs<a id="what-the-release-needs"></a>
 
 - `ansible-galaxy`, which builds and publishes the collection.
+- `uv` and the collection's Nox sanity prerequisites, including its container
+  engine and required Python interpreters. See
+  [Ansible sanity](./build.md#ansible-sanity).
 - `antsibull-changelog`, which owns `changelogs/`. Only
   `release changelog release` calls it; the checks read the file directly.
 - `gh` for the GitHub release entry, already authenticated.
@@ -65,8 +68,10 @@ names but cannot find.
 ## Before the release<a id="before-the-release"></a>
 
 Run the project's own gate first: `ansible-lint`, the sanity tests, molecule
-and whatever else the collection verifies. `release` does not replace it and
-knows nothing about it.
+and whatever else the collection verifies. `release build` additionally runs
+the configured sanity sessions on the final release commit and refuses a
+failed or skipped run. Product and installed-artifact acceptance remain the
+collection's responsibility.
 
 Decide the version according to [Semantic Versioning](https://semver.org/).
 
@@ -85,9 +90,12 @@ git add --all
 git commit -m "release: prepare ${version}"
 git status --short
 
-# 3. Build from the committed revision. This prepares the README inside the
-#    export, so the Galaxy page shows working links.
+# 3. Run sanity on the committed revision and build from it. The build also
+#    prepares the README inside the export for Galaxy.
 release build --out "../dist-${version}" --expect "${version}"
+
+# Complete the collection's required installed-artifact acceptance with this
+# exact archive before continuing. Keep its checksum with the results.
 
 # 4. Tag the revision that was built, then publish branch and tag together.
 release tag create "${version}" \
@@ -149,7 +157,9 @@ A collection whose roles carry their own READMEs can prepare those too; see
 
 ## Why this order<a id="why-this-order"></a>
 
-The build runs after the commit and before the tag, so the artifact cannot
+The build runs sanity after the commit and before packaging. Its manifest
+binds the passing evidence to that revision and the archive's digest; Galaxy
+publication refuses missing or mismatched evidence. The artifact cannot
 contain an uncommitted file. Passing the manifest to `tag create` closes the
 window between the two: a commit made in it leaves the tree clean and
 `galaxy.yml` correct, so only the manifest's source revision can tell that the
@@ -165,7 +175,8 @@ Run `release status` with the version and, if available, the manifest to
 identify the unfinished or broken steps.
 
 If no artifact has been uploaded and no forge release exists, fix the problem
-and repeat from the affected step. Source changes need a new commit and build;
+and repeat from the affected step. Source changes need a new commit and build,
+which reruns sanity, followed by the required installed-artifact acceptance;
 delete the old build directory first, since `build` refuses to write into an
 existing one. If a tag already names the old commit, delete it before tagging
 the rebuilt revision:

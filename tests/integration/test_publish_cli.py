@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from releasing.artifacts import build_manifest, dump_manifest
-from tests.support import write_lf
+from tests.support import with_sanity, write_lf
 
 pytestmark = pytest.mark.integration
 
@@ -40,11 +40,13 @@ def test_partial_upload_reports_recovery_details_and_cleans_staging(
     write_lf(
         manifest,
         dump_manifest(
-            build_manifest(
-                files,
-                repository="foundata/example",
-                version="1.0.0",
-                source_revision=None,
+            with_sanity(
+                build_manifest(
+                    files,
+                    repository="foundata/example",
+                    version="1.0.0",
+                    source_revision=None,
+                )
             )
         ),
     )

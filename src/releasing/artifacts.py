@@ -139,6 +139,16 @@ class ManifestEntry:
 
 
 @dataclass(frozen=True)
+class AnsibleSanity:
+    """Passing sanity evidence bound to a source revision and artifact digests."""
+
+    source_revision: str
+    sessions: tuple[str, ...]
+    tools: dict[str, str]
+    artifacts: dict[str, str]
+
+
+@dataclass(frozen=True)
 class Manifest:
     """The validated set of files for one version of one repository."""
 
@@ -147,6 +157,7 @@ class Manifest:
     source_revision: str | None
     artifacts: tuple[ManifestEntry, ...]
     created: str
+    ansible_sanity: AnsibleSanity | None = None
 
 
 def sha256_file(path: Path) -> str:
@@ -192,6 +203,7 @@ _RESERVED_KEYS = frozenset(
         "sourceRevision",
         "created",
         "artifacts",
+        "ansibleSanity",
     }
 )
 
@@ -213,6 +225,15 @@ def dump_manifest(
         "sourceRevision": manifest.source_revision,
         "created": manifest.created,
     }
+    if manifest.ansible_sanity is not None:
+        sanity = manifest.ansible_sanity
+        document["ansibleSanity"] = {
+            "result": "passed",
+            "sourceRevision": sanity.source_revision,
+            "sessions": list(sanity.sessions),
+            "tools": sanity.tools,
+            "artifacts": sanity.artifacts,
+        }
     for key, value in (extra or {}).items():
         if key in _RESERVED_KEYS:
             raise ArtifactError(f"extra manifest key {key!r} shadows a standard key")
@@ -283,7 +304,79 @@ def parse_manifest(text: str | bytes, *, source: str = "<manifest>") -> Manifest
         ),
         artifacts=tuple(artifacts),
         created=str(data.get("created", "")),
+        ansible_sanity=(
+            _parse_sanity(data["ansibleSanity"]) if "ansibleSanity" in data else None
+        ),
     )
+
+
+def _parse_sanity(data: object) -> AnsibleSanity:
+    if not isinstance(data, dict) or data.get("result") != "passed":
+        raise ArtifactError("ansibleSanity must record a passed run")
+    revision = data.get("sourceRevision")
+    sessions = data.get("sessions")
+    tools = data.get("tools")
+    digests = data.get("artifacts")
+    if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise ArtifactError("ansibleSanity needs a full sourceRevision")
+    if (
+        not isinstance(sessions, list)
+        or not sessions
+        or any(
+            not isinstance(s, str)
+            or not re.fullmatch(r"ansible-test-sanity-[a-zA-Z0-9_.-]+", s)
+            for s in sessions
+        )
+        or len(set(sessions)) != len(sessions)
+    ):
+        raise ArtifactError("ansibleSanity needs distinct concrete sanity sessions")
+    if (
+        not isinstance(tools, dict)
+        or not {"releasing", "uv", "nox"} <= tools.keys()
+        or any(
+            not isinstance(k, str) or not isinstance(v, str) or not v.strip()
+            for k, v in tools.items()
+        )
+    ):
+        raise ArtifactError("ansibleSanity needs releasing, uv and nox tool versions")
+    if (
+        not isinstance(digests, dict)
+        or not digests
+        or any(
+            not isinstance(k, str)
+            or not isinstance(v, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", v)
+            for k, v in digests.items()
+        )
+        or _manifest_name_problems(digests)
+    ):
+        raise ArtifactError(
+            "ansibleSanity needs artifact filenames and SHA-256 digests"
+        )
+    return AnsibleSanity(revision, tuple(sessions), tools, digests)
+
+
+def require_ansible_sanity(manifest: Manifest) -> None:
+    """Refuse Galaxy publication without evidence for these exact source and bytes."""
+    sanity = manifest.ansible_sanity
+    if sanity is None:
+        raise ArtifactError(
+            "Ansible sanity evidence is missing; rebuild with release build"
+        )
+    # Validate library-constructed evidence as strictly as parsed JSON.
+    _parse_sanity(
+        {
+            "result": "passed",
+            "sourceRevision": sanity.source_revision,
+            "sessions": list(sanity.sessions),
+            "tools": sanity.tools,
+            "artifacts": sanity.artifacts,
+        }
+    )
+    if sanity.source_revision != manifest.source_revision:
+        raise ArtifactError("Ansible sanity evidence names a different source revision")
+    if sanity.artifacts != {e.filename: e.sha256 for e in manifest.artifacts}:
+        raise ArtifactError("Ansible sanity evidence names different artifact digests")
 
 
 def _manifest_name_problems(filenames: Iterable[str]) -> list[str]:

@@ -15,10 +15,18 @@ import shutil
 import tempfile
 import tomllib
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
-from releasing import artifacts, changelog, markdown, processes, reporting, version
+from releasing import (
+    _ansible_sanity,
+    artifacts,
+    changelog,
+    markdown,
+    processes,
+    reporting,
+    version,
+)
 from releasing._source_export import BuildError as BuildError
 from releasing._source_export import export as export
 from releasing.config import ReleaseConfig, load_release_config
@@ -167,6 +175,9 @@ def build(
         found = version.check(exported, config, expect=expect)
         _check_changelog(exported, config, found)
         reporting.phase(f"Found {found} in the export")
+        sanity = None
+        if config.ecosystem == "ansible-collection":
+            sanity = _ansible_sanity.run(root, resolved, workspace, dry_run=dry_run)
         prepared = prepare_readmes(
             exported, config, version_string=found, forge=forge_for(config)
         )
@@ -195,6 +206,17 @@ def build(
                 version=found,
                 source_revision=resolved,
             )
+            if sanity is not None:
+                manifest = replace(
+                    manifest,
+                    ansible_sanity=artifacts.AnsibleSanity(
+                        source_revision=resolved,
+                        sessions=sanity.sessions,
+                        tools=sanity.tools,
+                        artifacts={e.filename: e.sha256 for e in manifest.artifacts},
+                    ),
+                )
+                artifacts.require_ansible_sanity(manifest)
             produced = _retain(files, manifest, out)
     return BuildResult(
         directory=out,

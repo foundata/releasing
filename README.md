@@ -89,7 +89,8 @@ and explicit-version artifact operations also work independently; see
   release description, or the unreleased entries become a dated section. See
   [Changelog sections](./docs/changelog.md).
 - `release build`: export a committed revision, prepare the index Markdown
-  inside that export, build, check and record a manifest. See
+  inside that export, build, check and record a manifest. Ansible builds also
+  require passing sanity sessions on that commit. See
   [Building from an exported revision](./docs/build.md).
 - `release tag create`, `check` and `delete`: a guarded annotated tag, and a
   deletion that stays legal only while no release exists. See

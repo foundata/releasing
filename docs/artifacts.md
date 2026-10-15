@@ -80,6 +80,14 @@ Artifact filenames must be unique, non-empty basenames, not paths. Absolute
 paths, directory components, Windows drive or stream names and NUL bytes are
 refused, including in manifests produced by other tools.
 
+Ansible builds also write the reserved `ansibleSanity` field with the passed
+session names, source revision, tool versions and artifact digests. The library
+exposes it as `Manifest.ansible_sanity`. Unknown extra fields remain ignored,
+but malformed sanity evidence is refused. The `artifacts manifest` command
+cannot create this evidence: use [the build gate](./build.md#ansible-sanity).
+Galaxy publication requires it; artifact verification alone checks file
+integrity and does not certify a sanity run.
+
 ## `release artifacts verify artifacts.json`<a id="artifacts-verify"></a>
 
 Fails when a listed file is missing or altered, or when an unlisted wheel or
