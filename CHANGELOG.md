@@ -31,6 +31,12 @@ and the project adheres to
   rebuilt with `release build`; `artifacts manifest` cannot supply this
   evidence. The Python build and PyPI publication paths are unchanged.
 
+### Fixed
+
+- Timed-out sanity commands stop their child processes before temporary build
+  files are removed, preventing locked-directory errors on Windows. Partial
+  command output remains available in the failure log.
+
 
 ## [6.0.0] - 2026-10-12
 

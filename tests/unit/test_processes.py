@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -105,6 +106,40 @@ def test_logged_timeout_keeps_partial_output(tmp_path: Path) -> None:
             timeout=1,
         )
     assert "started" in log.read_text()
+
+
+def test_logged_timeout_stops_descendants(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        listener.settimeout(10)
+        child = (
+            "import socket; "
+            f"s = socket.create_connection({listener.getsockname()!r}, timeout=30); "
+            "s.sendall(b'r'); s.recv(1)"
+        )
+        parent = (
+            "import subprocess, sys; "
+            f"subprocess.Popen([sys.executable, '-c', {child!r}]).wait()"
+        )
+        with pytest.raises(processes.ProcessError, match="timed out"):
+            processes.run(
+                [sys.executable, "-c", parent],
+                cwd=workspace,
+                log=tmp_path / "tree.log",
+                timeout=3,
+            )
+        connection, _ = listener.accept()
+        with connection:
+            connection.settimeout(5)
+            assert connection.recv(1) == b"r"
+            try:
+                assert connection.recv(1) == b""
+            except ConnectionResetError:
+                pass
+    workspace.rmdir()
 
 
 def test_logged_output_cannot_be_redirected_twice(tmp_path: Path) -> None:

@@ -10,6 +10,7 @@ as arguments: a token reaches a child through the environment only.
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 from collections.abc import Mapping, Sequence
@@ -67,6 +68,61 @@ def _story_stream() -> int:
         return subprocess.DEVNULL
 
 
+def _run_logged(
+    argv: Sequence[str],
+    cwd: Path | None,
+    environment: Mapping[str, str] | None,
+    log: Path,
+    timeout: float,
+) -> None:
+    with (
+        log.open("wb") as destination,
+        subprocess.Popen(
+            list(argv),
+            cwd=cwd,
+            env=environment,
+            stdout=destination,
+            stderr=subprocess.STDOUT,
+            start_new_session=sys.platform != "win32",
+        ) as process,
+    ):
+        try:
+            code = process.wait(timeout=timeout)
+        except (subprocess.TimeoutExpired, KeyboardInterrupt):
+            # Stop descendants before their parent disappears. Otherwise they
+            # can retain the log and, on Windows, lock the temporary checkout.
+            try:
+                if sys.platform == "win32":
+                    stopped = subprocess.run(
+                        [
+                            str(executable("taskkill")),
+                            "/F",
+                            "/T",
+                            "/PID",
+                            str(process.pid),
+                        ],
+                        stdout=destination,
+                        stderr=subprocess.STDOUT,
+                        timeout=30,
+                        check=False,
+                    )
+                    if stopped.returncode and process.poll() is None:
+                        raise ProcessError(
+                            f"cannot stop {describe(argv)} process tree; see {log}"
+                        )
+                else:
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+            finally:
+                process.kill()
+                process.wait()
+            raise
+        if code:
+            raise subprocess.CalledProcessError(code, list(argv))
+
+
 def run(
     argv: Sequence[str],
     *,
@@ -88,7 +144,8 @@ def run(
     command line; set it where the program changes something, not for the
     queries that only read the repository.
     ``log`` writes combined output to a file, retaining diagnostics even on a
-    failure or timeout. It cannot be combined with ``stdout`` or ``stream``.
+    failure or timeout. Logged commands stop their process tree on timeout or
+    interruption. It cannot be combined with ``stdout`` or ``stream``.
     """
     if log is not None and (stdout is not None or stream):
         raise ValueError("log cannot be combined with stdout or stream")
@@ -97,16 +154,7 @@ def run(
         reporting.command(argv, cwd=cwd)
     try:
         if log is not None:
-            with log.open("wb") as destination:
-                subprocess.run(
-                    list(argv),
-                    cwd=cwd,
-                    env=values,
-                    stdout=destination,
-                    stderr=subprocess.STDOUT,
-                    timeout=timeout,
-                    check=True,
-                )
+            _run_logged(argv, cwd, values, log, timeout)
             return ""
         if stream:
             subprocess.run(
