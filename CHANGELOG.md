@@ -14,6 +14,11 @@ and the project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [7.0.0] - 2026-10-15
+
 ### Changed
 
 - Ansible collection builds now require a committed, script-runnable Nox setup
@@ -326,7 +331,8 @@ and the project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v6.0.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v7.0.0...HEAD
+[7.0.0]: https://github.com/foundata/releasing/releases/tag/v7.0.0
 [6.0.0]: https://github.com/foundata/releasing/releases/tag/v6.0.0
 [5.0.0]: https://github.com/foundata/releasing/releases/tag/v5.0.0
 [4.2.0]: https://github.com/foundata/releasing/releases/tag/v4.2.0
