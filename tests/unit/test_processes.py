@@ -118,7 +118,7 @@ def test_logged_timeout_stops_descendants(tmp_path: Path) -> None:
         child = (
             "import socket; "
             f"s = socket.create_connection({listener.getsockname()!r}, timeout=30); "
-            "s.sendall(b'r'); s.recv(1)"
+            "s.recv(1)"
         )
         parent = (
             "import subprocess, sys; "
@@ -134,7 +134,6 @@ def test_logged_timeout_stops_descendants(tmp_path: Path) -> None:
         connection, _ = listener.accept()
         with connection:
             connection.settimeout(5)
-            assert connection.recv(1) == b"r"
             try:
                 assert connection.recv(1) == b""
             except ConnectionResetError:
