@@ -74,6 +74,7 @@ def run(
     timeout: float = TIMEOUT,
     environment: Mapping[str, str] | None = None,
     stdout: Path | None = None,
+    log: Path | None = None,
     stream: bool = False,
     echo: bool = False,
 ) -> str:
@@ -86,11 +87,27 @@ def run(
     written to standard error and nothing is returned. ``echo`` narrates the
     command line; set it where the program changes something, not for the
     queries that only read the repository.
+    ``log`` writes combined output to a file, retaining diagnostics even on a
+    failure or timeout. It cannot be combined with ``stdout`` or ``stream``.
     """
+    if log is not None and (stdout is not None or stream):
+        raise ValueError("log cannot be combined with stdout or stream")
     values = None if environment is None else {**os.environ, **environment}
     if echo:
         reporting.command(argv, cwd=cwd)
     try:
+        if log is not None:
+            with log.open("wb") as destination:
+                subprocess.run(
+                    list(argv),
+                    cwd=cwd,
+                    env=values,
+                    stdout=destination,
+                    stderr=subprocess.STDOUT,
+                    timeout=timeout,
+                    check=True,
+                )
+            return ""
         if stream:
             subprocess.run(
                 list(argv),

@@ -75,6 +75,43 @@ def test_a_streamed_child_that_fails_is_reported_like_any_other() -> None:
         processes.run([sys.executable, "-c", "raise SystemExit(3)"], stream=True)
 
 
+@pytest.mark.parametrize("code", [0, 3])
+def test_logged_output_survives_success_and_failure(tmp_path: Path, code: int) -> None:
+    log = tmp_path / "command.log"
+    command = [
+        sys.executable,
+        "-c",
+        "import sys; print('out'); "
+        f"print('err', file=sys.stderr); raise SystemExit({code})",
+    ]
+    if code:
+        with pytest.raises(processes.ProcessError, match="status 3"):
+            processes.run(command, log=log)
+    else:
+        assert processes.run(command, log=log) == ""
+    assert set(log.read_text().splitlines()) == {"out", "err"}
+
+
+def test_logged_timeout_keeps_partial_output(tmp_path: Path) -> None:
+    log = tmp_path / "command.log"
+    with pytest.raises(processes.ProcessError, match="timed out"):
+        processes.run(
+            [
+                sys.executable,
+                "-c",
+                "import time; print('started', flush=True); time.sleep(60)",
+            ],
+            log=log,
+            timeout=1,
+        )
+    assert "started" in log.read_text()
+
+
+def test_logged_output_cannot_be_redirected_twice(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="cannot be combined"):
+        processes.run(["unused"], log=tmp_path / "log", stream=True)
+
+
 def test_the_story_stream_falls_back_when_stderr_has_no_descriptor(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
