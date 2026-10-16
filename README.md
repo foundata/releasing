@@ -52,6 +52,8 @@ Components and tools:
 
 ## Installation<a id="installation"></a>
 
+[![PyPI package version](https://img.shields.io/pypi/v/releasing.svg?logo=pypi)](https://pypi.org/project/releasing)
+
 Add it to a development dependency group of the project that releases:
 
 ```toml
