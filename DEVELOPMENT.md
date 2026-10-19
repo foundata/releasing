@@ -5,12 +5,13 @@ SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-The repository is the `releasing` Python package: the `release` command and
-the `releasing` import package under `src/`. One module per release step, with
-`markdown`, `changelog`, `version`, `config` and `artifacts` free of Git,
-network and subprocess use so they also work inside an exported tree. Python
-3.11 to 3.14 are supported; the 3.11 floor exists for consumers that target
-Debian 12. Use `uv` for development environments and for running the command.
+The repository is the `releasing` Python package: the `release` command and the
+`releasing` import package under `src/`. One module per release step, with
+`markdown`, `requirements`, `changelog`, `version`, `config` and `artifacts`
+free of Git, network and subprocess use so they also work inside an exported
+tree. Python 3.11 to 3.14 are supported; the 3.11 floor exists for consumers
+that target Debian 12. Use `uv` for development environments and for running the
+command.
 
 ## Table of contents<a id="toc"></a>
 
@@ -247,6 +248,14 @@ local-file validation. It retains the public analysis imports alongside
 the original source; the document is never serialized from its syntax tree.
 CLI file replacement and build-workspace cleanup stay with their callers.
 
+`requirements` uses CommonMark block and inline tokens to identify normative
+list items, code, comments and section boundaries. It uses the same source
+normalization map to insert IDs into the original text and validates the
+complete result before the CLI replaces a file. Its inventory preserves the
+structure consumed by ConClear; it has no dependency on ConClear or a guide
+checkout. The module was migrated from the guidelines script under
+`GPL-3.0-or-later` with the copyright holder's authorization.
+
 The adapter uses the parser's rule API, so the dependency is bounded below the
 next major version and a test checks that the installed parser satisfies the
 declared range. The suite passes against `markdown-it-py` 3.0.0 and every 4.x
@@ -302,6 +311,10 @@ the current one.
   tests check what is sent, to which repository and with which token, without
   reaching quay.io.
 - `tests/fixtures/cases.json`: small reviewed inputs and exact expected output.
+- `tests/fixtures/requirements/`: a representative guide and the inventory
+  produced by the former guidelines script, preserved as a compatibility
+  fixture. Requirement tests also cover invalid exports, retirement records,
+  nested explanations, assignment previews and unchanged files on failure.
 - `tests/fixtures/mixed-content*.md`: nested containers, references, tables,
   HTML, code and comments with exact expected Markdown and renderer assertions.
 - `tests/fixtures/corpus/`: 21 project README snapshots, the reviewed expected

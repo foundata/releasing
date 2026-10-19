@@ -14,7 +14,14 @@ and the project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Added
+
+- `release markdown requirements check`, `assign`, `list` and `unlabeled`
+  replace the requirement-ID script from `foundata/guidelines`. They operate
+  on an explicit guide and prefix without Git or a release declaration.
+  Assignment supports `--dry-run`, preserves formatting and validates before
+  writing. JSON exports retain the inventory structure consumed by ConClear,
+  refuse invalid guides and include complete retirement notes.
 
 
 ## [7.0.0] - 2026-10-15

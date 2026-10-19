@@ -117,6 +117,10 @@ and explicit-version artifact operations also work independently; see
 - `release markdown prepare`: rewrite repository-relative link and image
   destinations to absolute URLs without reformatting the document. See
   [Preparing Markdown for package indexes](./docs/markdown.md).
+- `release markdown requirements check`, `assign`, `list` and `unlabeled`:
+  validate stable requirement identifiers, assign new ones, export an inventory
+  or review unlabeled items. See
+  [Maintaining requirement identifiers](./docs/requirements.md).
 - `release quay description-set`: publish the README of a tag as the
   description of Quay repositories, free of the raw HTML that Quay shows as
   text or drops, and read it back. See

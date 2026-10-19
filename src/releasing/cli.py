@@ -5,6 +5,7 @@
 import argparse
 import difflib
 import io
+import json
 import os
 import re
 import stat
@@ -33,6 +34,7 @@ from releasing import (
     push,
     quay,
     reporting,
+    requirements,
     status,
     tag,
     verify,
@@ -312,6 +314,83 @@ def _run_markdown_prepare(args: argparse.Namespace) -> int:
             _emit(document, args)
     except (OSError, UnicodeError, ValueError) as exc:
         reporting.error(str(exc))
+        return 1
+    return 0
+
+
+def _requirement_prefix(value: str) -> str:
+    try:
+        return requirements.validate_prefix(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+
+
+def _add_requirements(parser: argparse.ArgumentParser) -> None:
+    commands = parser.add_subparsers(dest="requirement_command", required=True)
+    for name, help_text in (
+        ("check", "validate requirement identifiers"),
+        ("assign", "assign identifiers to new requirements"),
+        ("list", "print the validated requirement inventory as JSON"),
+        ("unlabeled", "list unlabelled items in normative sections for review"),
+    ):
+        command = commands.add_parser(name, help=help_text)
+        command.add_argument("guide", type=Path, help="UTF-8 Markdown guide")
+        command.add_argument(
+            "--prefix",
+            required=True,
+            type=_requirement_prefix,
+            help="uppercase identifier prefix, such as IG",
+        )
+        if name == "assign":
+            _add_dry_run(command, "show a diff without writing the guide")
+        command.set_defaults(run=_run_requirements)
+
+
+def _run_requirements(args: argparse.Namespace) -> int:
+    path = cast(Path, args.guide)
+    operation = cast(str, args.requirement_command)
+    try:
+        if not path.is_file():
+            raise ValueError("input must be a regular file")
+        if operation == "assign" and path.is_symlink():
+            raise ValueError("in-place input must not be a symbolic link")
+        source = path.read_bytes().decode("utf-8")
+        guide = requirements.parse(source)
+        if operation == "unlabeled":
+            for item in guide.items:
+                if not item.excluded and item.identifier is None:
+                    print(f"{item.line}: [{item.section}] {item.text[:100]}")
+            return 0
+        if operation == "assign":
+            result = requirements.assign(guide, prefix=args.prefix)
+            if result == source:
+                reporting.phase(f"Kept {path} unchanged")
+            elif args.dry_run:
+                _show_diff(path, path, source, result)
+            else:
+                _write(path, result.encode("utf-8"), stat.S_IMODE(path.stat().st_mode))
+                _show_diff(path, path, source, result)
+            return 0
+        errors = requirements.check(guide, prefix=args.prefix)
+        if errors:
+            for error in errors:
+                reporting.error(f"{path}:{error.line}: {error.message}")
+            return 1
+        if operation == "list":
+            json.dump(
+                requirements.listing(guide, prefix=args.prefix, name=path.name),
+                sys.stdout,
+                indent=2,
+                ensure_ascii=False,
+            )
+            print()
+        else:
+            active = sum(item.identifier is not None for item in guide.items)
+            print(
+                f"{path.name}: {active} requirement identifier(s), {len(guide.retired)} retired"
+            )
+    except (OSError, UnicodeError, ValueError) as exc:
+        reporting.error(f"{path}: {exc}")
         return 1
     return 0
 
@@ -1506,7 +1585,7 @@ def build_parser() -> argparse.ArgumentParser:
         )
     )
     markdown_parser = commands.add_parser(
-        "markdown", help="prepare Markdown for package indexes"
+        "markdown", help="prepare Markdown and maintain requirement identifiers"
     )
     markdown_commands = markdown_parser.add_subparsers(
         dest="subcommand", required=True, metavar="SUBCOMMAND", title="subcommands"
@@ -1516,6 +1595,11 @@ def build_parser() -> argparse.ArgumentParser:
             "prepare",
             help="rewrite relative destinations to absolute URLs",
             description=markdown.__doc__,
+        )
+    )
+    _add_requirements(
+        markdown_commands.add_parser(
+            "requirements", help="check, assign and list stable requirement identifiers"
         )
     )
     _accept_quiet_everywhere(parser)

@@ -1,0 +1,51 @@
+{
+  "guide": "guide.md",
+  "requirements": [
+    {
+      "id": "IG0001",
+      "modality": "MUST",
+      "section": "Validation",
+      "anchor": "validation",
+      "line": 20,
+      "text": "A release MUST validate its inputs."
+    },
+    {
+      "id": "IG0007",
+      "modality": "SHOULD",
+      "section": "Validation",
+      "anchor": "validation",
+      "line": 22,
+      "text": "A release SHOULD record its result."
+    },
+    {
+      "id": "IG0004",
+      "modality": "MUST",
+      "section": "Validation",
+      "anchor": "validation",
+      "line": 26,
+      "text": "Keep the record."
+    },
+    {
+      "id": "IG0005",
+      "modality": "MUST",
+      "section": "Validation",
+      "anchor": "validation",
+      "line": 27,
+      "text": "Make the record available."
+    },
+    {
+      "id": "IG0006",
+      "modality": "MAY",
+      "section": "Optional checks",
+      "anchor": "optional-checks",
+      "line": 31,
+      "text": "A maintainer MAY run additional checks."
+    }
+  ],
+  "retired": [
+    {
+      "id": "IG0003",
+      "note": "`IG0003`: Replaced by `IG0007`."
+    }
+  ]
+}
