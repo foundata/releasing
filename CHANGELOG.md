@@ -14,6 +14,11 @@ and the project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [7.1.0] - 2026-10-20
+
 ### Added
 
 - `release markdown requirements check`, `assign`, `list` and `unlabeled`
@@ -344,7 +349,8 @@ and the project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v7.0.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v7.1.0...HEAD
+[7.1.0]: https://github.com/foundata/releasing/releases/tag/v7.1.0
 [7.0.0]: https://github.com/foundata/releasing/releases/tag/v7.0.0
 [6.0.0]: https://github.com/foundata/releasing/releases/tag/v6.0.0
 [5.0.0]: https://github.com/foundata/releasing/releases/tag/v5.0.0

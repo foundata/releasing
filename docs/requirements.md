@@ -20,9 +20,8 @@ UTF-8 Markdown file without a release declaration, Git or network access.
 
 ## Running the commands<a id="running-the-commands"></a>
 
-Use a checkout or installed version of `releasing` that includes these commands;
-they are newer than 7.0.0. The document path and uppercase ASCII `--prefix` are
-required for every operation:
+These commands are available in `releasing` 7.1.0 and later. The document path
+and uppercase ASCII `--prefix` are required for every operation:
 
 ```sh
 release markdown requirements check --prefix IG oci-images.md
@@ -32,8 +31,15 @@ release markdown requirements list --prefix IG oci-images.md
 release markdown requirements unlabeled --prefix IG oci-images.md
 ```
 
-Before a package version containing the commands is published, run from the
-guide's directory using a sibling checkout of this repository:
+Run a pinned version without adding it to the guide's dependencies:
+
+```sh
+uvx --from releasing==7.1.0 release markdown requirements check \
+  --prefix IG oci-images.md
+```
+
+To use a development checkout, run from the guide's directory with this
+repository beside it:
 
 ```sh
 uv run --locked --project ../releasing release markdown requirements check \
