@@ -14,7 +14,15 @@ and the project adheres to
 
 ## [Unreleased]
 
-- Nothing worth mentioning right now.
+### Added
+
+- `release version check` and `release version bump` recognize a shell
+  constant such as `readonly VERSION='1.2.3'` as a version site. The key may
+  follow `readonly`, `export`, `declare` or `typeset`, the last two with `-r`,
+  `-x` or `-g`; `local` does not count. Such a line counts only in a file where
+  no line states the version without a declaration word, so every file that
+  had one site keeps exactly that site. A bump keeps the declaration word and
+  the quoting.
 
 
 ## [7.1.0] - 2026-10-20

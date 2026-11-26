@@ -210,3 +210,34 @@ def test_a_declared_version_file_still_counts(
     )
     assert run(repository, "version", "check") == 1
     assert "latest released section must be [2.6.2]" in capsys.readouterr().err
+
+
+def test_a_shell_constant_is_checked_and_bumped_in_place(
+    repository: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    script = (
+        "#!/usr/bin/env bash\nreadonly VERSION='2.7.0'\nprintf '%s\\n' \"${VERSION}\"\n"
+    )
+    write_lf(repository / "tool.sh", script)
+    write_lf(
+        repository / ".releasing.toml",
+        'repository = "foundata/skeletons"\necosystem = "source-repository"\n'
+        'version-files = ["tool.sh"]\n',
+    )
+    git(repository, "add", ".")
+    git(repository, "commit", "-q", "-m", "tool: state the version")
+    assert run(repository, "version", "check") == 0
+    assert capsys.readouterr().out == "2.7.0\n"
+
+    assert run(repository, "version", "bump", "2.8.0", "--dry-run") == 0
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "-readonly VERSION='2.7.0'\n+readonly VERSION='2.8.0'\n" in output.err
+    assert git(repository, "status", "--porcelain") == ""
+
+    assert run(repository, "version", "bump", "2.8.0") == 0
+    assert (repository / "tool.sh").read_bytes() == script.replace(
+        "2.7.0", "2.8.0"
+    ).encode()
+    assert run(repository, "version", "check") == 1
+    assert "latest released section must be [2.8.0]" in capsys.readouterr().err

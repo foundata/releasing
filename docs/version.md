@@ -22,6 +22,26 @@ version: 1.2.3
   "productVersion": "1.2.3",
 ```
 
+A shell script that keeps its version in a constant states it the same way,
+with a declaration word before the key: `readonly`, `export`, `declare` or
+`typeset`. `declare` and `typeset` may carry the options `-r`, `-x` and `-g`,
+alone or combined:
+
+```sh
+readonly VERSION='1.2.3'
+export VERSION="1.2.3"
+declare -rx VERSION='1.2.3'
+```
+
+A declaration is a site only in a file that has no plain site, that is, no
+site without a declaration word. Beside a plain site, the declaration is
+ignored: the plain line stays the file's one site, and a bump leaves the
+declaration as it is. Two declarations without a plain site are as ambiguous as
+two plain sites. A line without a value, such as `readonly VERSION` after the
+assignment, is not a site. Neither is `local`, because a function's variable is
+not the file's version, nor `declare` or `typeset` with another option such as
+`-i` or `-a`, which changes what the value means.
+
 Accepted versions are `X.Y.Z` with an optional pre-release suffix such as
 `rc1`, `.dev0` or `-rc.1`.
 
@@ -55,10 +75,11 @@ and the command fails saying so.
 ## `release version bump X.Y.Z`<a id="version-bump"></a>
 
 Rewrites every site and raises every lockstep pin's lower bound to the new
-version, keeping quoting, spacing, line endings and trailing commas as they
-were, then runs `uv lock` when a `uv.lock` exists so the lockfile records the
-new version. A unified diff of every rewritten file goes to stderr, with
-the rest of the narration. `--dry-run` shows the same diff and writes nothing.
+version, keeping declaration words, quoting, spacing, line endings and trailing
+commas as they were, then runs `uv lock` when a `uv.lock` exists so the lockfile
+records the new version. A unified diff of every rewritten file goes to stderr,
+with the rest of the narration. `--dry-run` shows the same diff and writes
+nothing.
 
 The bump refuses to run while a version file or pinned file has uncommitted
 changes, because it rewrites them; `--force` overrides that. Other uncommitted

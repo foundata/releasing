@@ -42,6 +42,19 @@ That ecosystem sets `index = "none"` and `version-files = []`. A
 it likes; it is not a version site unless `version-files` names it. See
 [The release declaration](./config.md) for everything else it can say.
 
+A repository whose script reports its own version names that script in
+`version-files`. A constant such as `readonly VERSION='1.2.3'` in it is then a
+[version site](./version.md):
+
+```toml
+repository = "foundata/example-tool"
+ecosystem = "source-repository"
+version-files = ["example-tool.sh"]
+```
+
+The site must agree with the newest released section of the changelog, and the
+release below starts with `release version bump "${version}"` before step 1.
+
 `release config check` prints the effective declaration and fails on a file it
 names but cannot find.
 

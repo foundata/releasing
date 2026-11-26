@@ -99,6 +99,137 @@ def test_files_without_exactly_one_site_are_errors(
         find_sites(root, load_release_config(root))
 
 
+@pytest.mark.parametrize(
+    "line",
+    [
+        "readonly VERSION='1.2.3'",
+        'readonly VERSION="1.2.3"',
+        "readonly VERSION=1.2.3",
+        "readonly\tVERSION='1.2.3'",
+        "  readonly VERSION='1.2.3'",
+        "readonly version='1.2.3'",
+        "export VERSION='1.2.3'",
+        "declare VERSION='1.2.3'",
+        "declare -r VERSION='1.2.3'",
+        "declare -rx VERSION='1.2.3'",
+        "declare -r -x VERSION='1.2.3'",
+        "declare -gr VERSION='1.2.3'",
+        "typeset -r VERSION='1.2.3'",
+        "typeset -x VERSION='1.2.3'",
+    ],
+)
+def test_shell_declarations_are_sites_that_bump_in_place(
+    tmp_path: Path, line: str
+) -> None:
+    content = f'#!/usr/bin/env bash\n{line}\nmain "$@"\n'
+    root = project(tmp_path, 'version-files = ["tool.sh"]\n', {"tool.sh": content})
+    config = load_release_config(root)
+    assert find_sites(root, config) == [Site("tool.sh", 2, "1.2.3")]
+    assert check(root, config) == "1.2.3"
+    bump(root, config, "2.0.0")
+    assert (root / "tool.sh").read_bytes() == content.replace("1.2.3", "2.0.0").encode()
+    assert find_sites(root, config) == [Site("tool.sh", 2, "2.0.0")]
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "local VERSION='1.2.3'",
+        "local -r VERSION='1.2.3'",
+        "declare -i VERSION='1.2.3'",
+        "declare -a VERSION='1.2.3'",
+        "declare -u VERSION='1.2.3'",
+        "declare +x VERSION='1.2.3'",
+        "declare -- VERSION='1.2.3'",
+        "typeset -l VERSION='1.2.3'",
+        "export -n VERSION='1.2.3'",
+        "readonly -a VERSION='1.2.3'",
+        "readonly export VERSION='1.2.3'",
+        "alias VERSION='1.2.3'",
+        "env VERSION='1.2.3'",
+        "Readonly VERSION='1.2.3'",
+        "readonlyVERSION='1.2.3'",
+        "readonly VERSION",
+        "readonly VERSION=",
+        'readonly VERSION="${RELEASE}"',
+        "readonly VERSION='1.2.3' # comment",
+        "readonly VERSION='1.2.3';",
+    ],
+)
+def test_other_shell_words_and_valueless_declarations_are_not_sites(
+    tmp_path: Path, line: str
+) -> None:
+    root = project(
+        tmp_path, 'version-files = ["tool.sh"]\n', {"tool.sh": f"#!/bin/sh\n{line}\n"}
+    )
+    with pytest.raises(VersionError, match=r"tool\.sh: expected exactly one version"):
+        find_sites(root, load_release_config(root))
+
+
+def test_a_declaration_bump_keeps_crlf_line_endings(tmp_path: Path) -> None:
+    content = "#!/bin/sh\r\nreadonly VERSION='1.2.3'\r\nexit 0\r\n"
+    root = project(tmp_path, 'version-files = ["tool.sh"]\n', {"tool.sh": content})
+    config = load_release_config(root)
+    assert find_sites(root, config) == [Site("tool.sh", 2, "1.2.3")]
+    bump(root, config, "2.0.0")
+    assert (root / "tool.sh").read_bytes() == (
+        b"#!/bin/sh\r\nreadonly VERSION='2.0.0'\r\nexit 0\r\n"
+    )
+
+
+# A plain site wins whatever declarations stand beside it, so a file that had
+# one site before declarations counted keeps it and bumps to the same bytes.
+@pytest.mark.parametrize(
+    ("content", "line", "bumped"),
+    [
+        ("VERSION='1.2.3'\n", 1, "VERSION='2.0.0'\n"),
+        (
+            "VERSION='1.2.3'\nexport VERSION='1.2.3'\n",
+            1,
+            "VERSION='2.0.0'\nexport VERSION='1.2.3'\n",
+        ),
+        (
+            "readonly VERSION='0.9.0'\nVERSION='1.2.3'\n",
+            2,
+            "readonly VERSION='0.9.0'\nVERSION='2.0.0'\n",
+        ),
+        (
+            "VERSION='1.2.3'\nreadonly VERSION\n",
+            1,
+            "VERSION='2.0.0'\nreadonly VERSION\n",
+        ),
+    ],
+)
+def test_a_plain_site_takes_precedence_over_declarations(
+    tmp_path: Path, content: str, line: int, bumped: str
+) -> None:
+    root = project(tmp_path, 'version-files = ["tool.sh"]\n', {"tool.sh": content})
+    config = load_release_config(root)
+    assert find_sites(root, config) == [Site("tool.sh", line, "1.2.3")]
+    bump(root, config, "2.0.0")
+    assert (root / "tool.sh").read_bytes() == bumped.encode()
+
+
+@pytest.mark.parametrize(
+    ("content", "found"),
+    [
+        ("readonly VERSION='1.2.3'\nexport VERSION='1.2.3'\n", 2),
+        ("VERSION='1.2.3'\nVERSION='1.2.3'\nreadonly VERSION='1.2.3'\n", 2),
+        ("readonly VERSION\n", 0),
+    ],
+)
+def test_files_without_exactly_one_site_stay_errors(
+    tmp_path: Path, content: str, found: int
+) -> None:
+    root = project(tmp_path, 'version-files = ["tool.sh"]\n', {"tool.sh": content})
+    with pytest.raises(
+        VersionError,
+        match=rf"tool\.sh: expected exactly one version line, found {found}$",
+    ):
+        bump(root, load_release_config(root), "2.0.0")
+    assert (root / "tool.sh").read_bytes() == content.encode()
+
+
 def test_check_returns_the_agreed_version(tmp_path: Path) -> None:
     root = project(
         tmp_path,

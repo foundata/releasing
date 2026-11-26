@@ -4,10 +4,17 @@
 
 A site is one line in a declared file whose key is ``version``,
 ``__version__``, ``VERSION`` or ``"productVersion"``, followed by ``=`` or
-``:`` and the version, optionally quoted, optionally followed by a comma. Each
-declared file must contain exactly one such line, so a file whose spelling
-drifted is an error rather than a silent skip. Nothing here runs Git or another
-program; the command layer adds the tag and working-tree facts.
+``:`` and the version, optionally quoted, optionally followed by a comma. In a
+shell constant such as ``readonly VERSION='1.2.3'``, the key follows
+``readonly``, ``export``, ``declare`` or ``typeset``; ``declare`` and
+``typeset`` may carry the options ``-r``, ``-x`` and ``-g``. ``local`` does not
+count: a function's variable is not the file's version.
+
+Each declared file must contain exactly one site, so a file whose spelling
+drifted is an error rather than a silent skip. A declaration counts only in a
+file without a plain site, one with no such word before the key; beside a
+plain site it is ignored and cannot make the file ambiguous. Nothing here runs
+Git or another program; the command layer adds the tag and working-tree facts.
 """
 
 import re
@@ -19,8 +26,12 @@ from pathlib import Path
 from releasing.config import DependencyPin, ReleaseConfig
 
 VERSION = re.compile(r"\d+\.\d+\.\d+(?:(?:-|\.)?(?:a|b|rc|alpha|beta|dev)\.?\d*)?")
+# Shell declaration words before a key. declare and typeset take only options
+# that keep the value a plain string; -i, -a, -l, -u or -n would change it.
+_DECLARATION = r"(?:readonly|export|(?:declare|typeset)(?:[ \t]+-[grx]+)*)[ \t]+"
 _SITE = re.compile(
-    r'^(?P<prefix>[ \t]*(?:"productVersion"|__version__|VERSION|version)[ \t]*[:=][ \t]*)'
+    r"^(?P<prefix>[ \t]*(?P<declaration>" + _DECLARATION + r")?"
+    r'(?:"productVersion"|__version__|VERSION|version)[ \t]*[:=][ \t]*)'
     r"(?P<quote>[\"']?)(?P<version>" + VERSION.pattern + r")(?P=quote)"
     r"(?P<suffix>,?[ \t]*)$"
 )
@@ -53,16 +64,19 @@ def is_version(value: str) -> bool:
 def find_sites(root: Path, config: ReleaseConfig) -> list[Site]:
     """Locate the single version site in every declared file.
 
-    Raise VersionError naming every file with no site or more than one.
+    A shell declaration is a site only in a file without a plain one. Raise
+    VersionError naming every file with no site or more than one.
     """
     sites: list[Site] = []
     problems: list[str] = []
     for file in config.version_files:
-        matches = [
-            Site(file, number, match["version"])
-            for number, line in enumerate(_lines(root / file), start=1)
-            if (match := _SITE.match(line)) is not None
-        ]
+        plain: list[Site] = []
+        declared: list[Site] = []
+        for number, line in enumerate(_lines(root / file), start=1):
+            if (match := _SITE.match(line)) is not None:
+                found = declared if match["declaration"] else plain
+                found.append(Site(file, number, match["version"]))
+        matches = plain or declared
         if len(matches) != 1:
             problems.append(
                 f"{file}: expected exactly one version line, found {len(matches)}"
@@ -171,9 +185,10 @@ def bump(
     """Rewrite every site and every lockstep pin to ``new_version``; return the edits.
 
     The current version is taken from the sites, which must agree. Files are
-    written only after every edit has been computed. Quoting, spacing, line
-    endings and trailing commas are preserved. The changelog and lockfile are
-    not touched. ``dry_run`` computes the same edits and writes nothing.
+    written only after every edit has been computed. Declaration words,
+    quoting, spacing, line endings and trailing commas are preserved. The
+    changelog and lockfile are not touched. ``dry_run`` computes the same edits
+    and writes nothing.
     """
     if not is_version(new_version):
         raise VersionError(f"not a version: {new_version!r}")
