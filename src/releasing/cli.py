@@ -1307,7 +1307,7 @@ def build_parser() -> argparse.ArgumentParser:
     version_bump = version_commands.add_parser(
         "bump",
         help="rewrite every site and lockstep pin, then run uv lock",
-        description="Print a unified diff of every rewritten file to stdout.",
+        description="Print a unified diff of every rewritten file to stderr.",
     )
     _add_project(version_bump)
     version_bump.add_argument("version", metavar="X.Y.Z", help="the new version")

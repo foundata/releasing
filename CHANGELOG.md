@@ -24,6 +24,11 @@ and the project adheres to
   had one site keeps exactly that site. A bump keeps the declaration word and
   the quoting.
 
+### Fixed
+
+- `release version bump --help` names stderr as the destination of the diff,
+  where the command writes it.
+
 
 ## [7.1.0] - 2026-10-20
 
