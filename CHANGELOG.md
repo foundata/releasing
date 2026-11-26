@@ -14,6 +14,11 @@ and the project adheres to
 
 ## [Unreleased]
 
+- Nothing worth mentioning right now.
+
+
+## [7.2.0] - 2026-11-26
+
 ### Added
 
 - `release version check` and `release version bump` recognize a shell
@@ -362,7 +367,8 @@ and the project adheres to
 - All functionality and files.
 
 
-[unreleased]: https://github.com/foundata/releasing/compare/v7.1.0...HEAD
+[unreleased]: https://github.com/foundata/releasing/compare/v7.2.0...HEAD
+[7.2.0]: https://github.com/foundata/releasing/releases/tag/v7.2.0
 [7.1.0]: https://github.com/foundata/releasing/releases/tag/v7.1.0
 [7.0.0]: https://github.com/foundata/releasing/releases/tag/v7.0.0
 [6.0.0]: https://github.com/foundata/releasing/releases/tag/v6.0.0
